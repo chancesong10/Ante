@@ -31,3 +31,4 @@ This is an early build. Right now:
 
 - React Native + Expo
 - React Navigation
+- (to add) android studio
