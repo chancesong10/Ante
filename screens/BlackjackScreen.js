@@ -6,12 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   StatusBar,
-  Alert,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 
 const emptyHand = () => ({ betAmount: '', doubled: false, blackjack: false, outcome: null });
@@ -25,13 +25,14 @@ export default function BlackjackScreen({ navigation }) {
     discardActiveSession,
   } = useSession();
 
+  const insets = useSafeAreaInsets();
+
   // Ensure an active session exists when mounting
   useEffect(() => {
-  if (!activeSession) {
-    startSession('Blackjack');
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []); // empty dependency array — only runs once when the screen first mounts
+    if (!activeSession) {
+      startSession('Blackjack');
+    }
+  }, []);
 
   const [betAmount, setBetAmount] = useState('');
   const [doubled, setDoubled] = useState(false);
@@ -148,8 +149,15 @@ export default function BlackjackScreen({ navigation }) {
         style={[styles.outcomeButton, currentOutcome === 'win' && styles.winActive]}
         activeOpacity={0.7}
         onPress={() => onSelect('win')}
+        accessibilityRole="button"
+        accessibilityLabel="Win outcome"
       >
-        <Text style={[styles.outcomeText, currentOutcome === 'win' && styles.outcomeTextActive]}>
+        <Text
+          style={[
+            styles.outcomeText,
+            currentOutcome === 'win' && styles.outcomeTextActive,
+          ]}
+        >
           Win
         </Text>
       </TouchableOpacity>
@@ -157,8 +165,15 @@ export default function BlackjackScreen({ navigation }) {
         style={[styles.outcomeButton, currentOutcome === 'loss' && styles.lossActive]}
         activeOpacity={0.7}
         onPress={() => onSelect('loss')}
+        accessibilityRole="button"
+        accessibilityLabel="Loss outcome"
       >
-        <Text style={[styles.outcomeText, currentOutcome === 'loss' && styles.lossTextLossActive]}>
+        <Text
+          style={[
+            styles.outcomeText,
+            currentOutcome === 'loss' && styles.lossTextLossActive,
+          ]}
+        >
           Loss
         </Text>
       </TouchableOpacity>
@@ -166,8 +181,15 @@ export default function BlackjackScreen({ navigation }) {
         style={[styles.outcomeButton, currentOutcome === 'push' && styles.pushActive]}
         activeOpacity={0.7}
         onPress={() => onSelect('push')}
+        accessibilityRole="button"
+        accessibilityLabel="Push outcome"
       >
-        <Text style={[styles.outcomeText, currentOutcome === 'push' && styles.outcomeTextActive]}>
+        <Text
+          style={[
+            styles.outcomeText,
+            currentOutcome === 'push' && styles.outcomeTextActive,
+          ]}
+        >
           Push
         </Text>
       </TouchableOpacity>
@@ -223,16 +245,23 @@ export default function BlackjackScreen({ navigation }) {
   const canSubmitSingle = betAmount && outcome;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
-      {/* Top Navigation Bar with Prominent End Session CTA */}
+      {/* Top Header Navigation Bar */}
       <View style={styles.topNav}>
         <TouchableOpacity
           style={styles.backBtn}
+          hitSlop={TOUCH_TARGET.hitSlop}
           onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+          accessibilityRole="button"
+          accessibilityLabel="Back to Home"
         >
-          <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
+          <Ionicons
+            name="chevron-back"
+            size={moderateScale(22)}
+            color={COLORS.textPrimary}
+          />
         </TouchableOpacity>
 
         <View style={styles.navTitleContainer}>
@@ -244,15 +273,28 @@ export default function BlackjackScreen({ navigation }) {
         <TouchableOpacity
           style={styles.headerEndButton}
           activeOpacity={0.8}
+          hitSlop={TOUCH_TARGET.hitSlop}
           onPress={handleEndSessionPress}
+          accessibilityRole="button"
+          accessibilityLabel="End Session"
         >
-          <Ionicons name="stop-circle" size={16} color={COLORS.danger} style={{ marginRight: 4 }} />
-          <Text style={styles.headerEndButtonText}>End Session</Text>
+          <Ionicons
+            name="stop-circle"
+            size={moderateScale(16)}
+            color={COLORS.danger}
+            style={{ marginRight: 4 }}
+          />
+          <Text style={styles.headerEndButtonText}>End</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: insets.bottom + moderateScale(40),
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Live Net Scoreboard */}
@@ -304,7 +346,7 @@ export default function BlackjackScreen({ navigation }) {
           >
             <Ionicons
               name={split ? 'close-circle' : 'git-branch-outline'}
-              size={18}
+              size={moderateScale(18)}
               color={split ? COLORS.danger : COLORS.primary}
               style={{ marginRight: 6 }}
             />
@@ -400,7 +442,12 @@ export default function BlackjackScreen({ navigation }) {
           activeOpacity={0.85}
           onPress={handleEndSessionPress}
         >
-          <Ionicons name="stop-circle-outline" size={20} color={COLORS.danger} style={{ marginRight: 8 }} />
+          <Ionicons
+            name="stop-circle-outline"
+            size={moderateScale(20)}
+            color={COLORS.danger}
+            style={{ marginRight: 8 }}
+          />
           <Text style={styles.bottomEndSessionText}>End Session & Save to History</Text>
         </TouchableOpacity>
 
@@ -417,7 +464,9 @@ export default function BlackjackScreen({ navigation }) {
                     {r.hands.map((h, i) => (
                       <View key={i} style={styles.historyRow}>
                         <Text style={styles.historyText}>
-                          Hand {i + 1}: ${h.bet}{h.doubled ? ' (2x)' : ''}{h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
+                          Hand {i + 1}: ${h.bet}
+                          {h.doubled ? ' (2x)' : ''}
+                          {h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
                         </Text>
                         <Text
                           style={[
@@ -461,7 +510,9 @@ export default function BlackjackScreen({ navigation }) {
               return (
                 <View key={r.id} style={styles.historyRow}>
                   <Text style={styles.historyText}>
-                    ${r.bet}{r.doubled ? ' (2x)' : ''}{r.blackjack ? ' (BJ)' : ''} — {r.outcome.toUpperCase()}
+                    ${r.bet}
+                    {r.doubled ? ' (2x)' : ''}
+                    {r.blackjack ? ' (BJ)' : ''} — {r.outcome.toUpperCase()}
                   </Text>
                   <Text
                     style={[
@@ -497,15 +548,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: SPACING.pageHorizontal,
+    paddingVertical: moderateScale(10),
     borderBottomWidth: 1,
     borderBottomColor: COLORS.cardBorder,
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: moderateScale(38),
+    height: moderateScale(38),
+    borderRadius: moderateScale(19),
     backgroundColor: COLORS.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -518,13 +569,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   liveIndicatorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
     backgroundColor: COLORS.primary,
   },
   navTitle: {
-    fontSize: 16,
+    fontSize: fluidFont(16),
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
@@ -532,86 +583,87 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(6),
+    borderRadius: RADIUS.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 69, 58, 0.4)',
+    minHeight: TOUCH_TARGET.minSize - 8,
   },
   headerEndButtonText: {
     color: COLORS.danger,
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '700',
   },
   scroll: {
-    padding: 16,
-    paddingBottom: 60,
+    padding: SPACING.pageHorizontal,
   },
   statsBox: {
     backgroundColor: COLORS.card,
-    borderRadius: 18,
-    padding: 18,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.cardPadding,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   statsSubtext: {
     color: COLORS.textSecondary,
-    fontSize: 11,
+    fontSize: fluidFont(11),
     fontWeight: '700',
     letterSpacing: 1.2,
     marginBottom: 4,
   },
   netAmount: {
-    fontSize: 34,
+    fontSize: fluidFont(34),
     fontWeight: '900',
-    marginBottom: 14,
+    marginBottom: SPACING.sm,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACING.xs,
     width: '100%',
   },
   statPill: {
     flex: 1,
     backgroundColor: COLORS.backgroundSecondary,
-    paddingVertical: 8,
+    paddingVertical: moderateScale(8),
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: RADIUS.xs,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   statPillLabel: {
-    fontSize: 10,
+    fontSize: fluidFont(10),
     color: COLORS.textMuted,
     textTransform: 'uppercase',
     fontWeight: '600',
   },
   statPillValue: {
-    fontSize: 14,
+    fontSize: fluidFont(14),
     fontWeight: '700',
     color: COLORS.textPrimary,
     marginTop: 2,
   },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.cardPadding,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   splitToggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
+    borderRadius: RADIUS.sm,
+    padding: moderateScale(12),
+    marginBottom: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    minHeight: TOUCH_TARGET.minSize,
   },
   splitToggleActive: {
     borderColor: COLORS.danger,
@@ -620,60 +672,65 @@ const styles = StyleSheet.create({
   splitToggleText: {
     color: COLORS.primary,
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: fluidFont(13),
   },
   label: {
     color: COLORS.textSecondary,
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '600',
-    marginBottom: 8,
-    marginTop: 10,
+    marginBottom: moderateScale(8),
+    marginTop: moderateScale(8),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   input: {
     backgroundColor: COLORS.backgroundSecondary,
     color: COLORS.textPrimary,
-    fontSize: 18,
-    borderRadius: 12,
-    padding: 14,
+    fontSize: fluidFont(18),
+    borderRadius: RADIUS.sm,
+    padding: moderateScale(14),
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
     fontWeight: '700',
+    minHeight: TOUCH_TARGET.minSize,
   },
   chipRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 6,
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+    marginBottom: moderateScale(6),
   },
   chipButton: {
     flex: 1,
     backgroundColor: COLORS.backgroundSecondary,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: moderateScale(10),
+    borderRadius: RADIUS.xs,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    minHeight: TOUCH_TARGET.minSize - 4,
+    justifyContent: 'center',
   },
   chipText: {
     color: COLORS.textSecondary,
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '600',
   },
   toggleRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
+    gap: SPACING.xs,
+    marginTop: SPACING.sm,
   },
   toggleButton: {
     flex: 1,
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(12),
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    minHeight: TOUCH_TARGET.minSize,
   },
   toggleActive: {
     backgroundColor: COLORS.primaryMuted,
@@ -682,7 +739,7 @@ const styles = StyleSheet.create({
   toggleText: {
     color: COLORS.textSecondary,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: fluidFont(13),
   },
   toggleTextActive: {
     color: COLORS.primary,
@@ -690,17 +747,19 @@ const styles = StyleSheet.create({
   },
   outcomeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACING.xs,
     marginTop: 4,
   },
   outcomeButton: {
     flex: 1,
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(13),
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    minHeight: TOUCH_TARGET.minSize,
   },
   winActive: {
     backgroundColor: COLORS.primary,
@@ -717,7 +776,7 @@ const styles = StyleSheet.create({
   outcomeText: {
     color: COLORS.textPrimary,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: fluidFont(14),
   },
   outcomeTextActive: {
     color: COLORS.textDark,
@@ -727,10 +786,12 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: RADIUS.md,
+    paddingVertical: moderateScale(15),
     alignItems: 'center',
-    marginTop: 20,
+    justifyContent: 'center',
+    marginTop: SPACING.lg,
+    minHeight: TOUCH_TARGET.minSize,
   },
   submitDisabled: {
     backgroundColor: COLORS.cardBorder,
@@ -739,93 +800,94 @@ const styles = StyleSheet.create({
   submitText: {
     color: COLORS.textDark,
     fontWeight: '800',
-    fontSize: 15,
+    fontSize: fluidFont(15),
   },
   bottomEndSessionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: RADIUS.md,
+    paddingVertical: moderateScale(15),
     borderWidth: 1.5,
     borderColor: 'rgba(255, 69, 58, 0.4)',
-    marginBottom: 20,
+    marginBottom: SPACING.md,
+    minHeight: TOUCH_TARGET.minSize,
   },
   bottomEndSessionText: {
     color: COLORS.danger,
-    fontSize: 14,
+    fontSize: fluidFont(14),
     fontWeight: '800',
   },
   splitHandBox: {
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 10,
+    borderRadius: RADIUS.md,
+    padding: moderateScale(14),
+    marginTop: moderateScale(10),
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   splitHandTitle: {
     color: COLORS.primary,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: fluidFont(14),
     marginBottom: 4,
   },
   historySection: {
     marginTop: 4,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: fluidFont(16),
     fontWeight: '700',
     color: COLORS.textPrimary,
-    marginBottom: 12,
+    marginBottom: SPACING.sm,
   },
   splitGroupBox: {
     backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: RADIUS.md,
+    padding: moderateScale(12),
+    marginBottom: SPACING.xs,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   splitGroupLabel: {
     color: COLORS.primary,
     fontWeight: '700',
-    fontSize: 11,
+    fontSize: fluidFont(11),
     marginBottom: 6,
     letterSpacing: 1,
   },
   splitGroupTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 8,
-    marginTop: 6,
+    paddingTop: moderateScale(8),
+    marginTop: moderateScale(6),
     borderTopWidth: 1,
     borderTopColor: COLORS.cardBorder,
   },
   splitGroupTotalLabel: {
     color: COLORS.textSecondary,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: fluidFont(13),
   },
   historyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: RADIUS.sm,
+    padding: moderateScale(12),
+    marginBottom: moderateScale(8),
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   historyText: {
     color: COLORS.textPrimary,
-    fontSize: 13,
+    fontSize: fluidFont(13),
     fontWeight: '500',
   },
   historyNet: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: fluidFont(14),
   },
 });

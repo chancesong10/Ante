@@ -4,15 +4,17 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 
 export default function AnalyticsScreen() {
   const { sessionHistory } = useSession();
+  const insets = useSafeAreaInsets();
 
   // Dynamic calculations from real history
   const totalSessions = sessionHistory.length;
@@ -23,7 +25,7 @@ export default function AnalyticsScreen() {
   const totalPushes = sessionHistory.reduce((sum, s) => sum + s.pushes, 0);
 
   const winRate =
-    (totalWins + totalLosses) > 0
+    totalWins + totalLosses > 0
       ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
       : '0.0';
 
@@ -56,11 +58,16 @@ export default function AnalyticsScreen() {
   const pushPercent = totalHands > 0 ? (totalPushes / totalHands) * 100 : 0;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[
+          styles.contentContainer,
+          {
+            paddingBottom: insets.bottom + moderateScale(96),
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -69,7 +76,7 @@ export default function AnalyticsScreen() {
           <Text style={styles.subtitle}>Dynamic session performance metrics</Text>
         </View>
 
-        {/* Top Summary Card */}
+        {/* Top Summary Hero Card */}
         <View style={[styles.card, SHADOWS.card]}>
           <Text style={styles.cardHeaderLabel}>OVERALL NET PROFIT</Text>
           <Text
@@ -116,7 +123,11 @@ export default function AnalyticsScreen() {
         {/* Empty State Notice when no sessions */}
         {totalSessions === 0 && (
           <View style={styles.emptyNoticeCard}>
-            <Ionicons name="stats-chart-outline" size={28} color={COLORS.textMuted} />
+            <Ionicons
+              name="stats-chart-outline"
+              size={moderateScale(28)}
+              color={COLORS.textMuted}
+            />
             <Text style={styles.emptyNoticeTitle}>No Session Data Available</Text>
             <Text style={styles.emptyNoticeText}>
               All metrics on this screen are calculated live from your recorded session history. Start tracking a session to populate analytics.
@@ -124,7 +135,7 @@ export default function AnalyticsScreen() {
           </View>
         )}
 
-        {/* Dynamic Session Performance Bars (Only when sessions exist) */}
+        {/* Dynamic Session Performance Bars */}
         {totalSessions > 0 && (
           <>
             <Text style={styles.sectionTitle}>Recent Session Trajectory</Text>
@@ -173,13 +184,28 @@ export default function AnalyticsScreen() {
               {/* Distribution Bar */}
               <View style={styles.distBarContainer}>
                 {winPercent > 0 && (
-                  <View style={[styles.distBarSegment, { width: `${winPercent}%`, backgroundColor: COLORS.primary }]} />
+                  <View
+                    style={[
+                      styles.distBarSegment,
+                      { width: `${winPercent}%`, backgroundColor: COLORS.primary },
+                    ]}
+                  />
                 )}
                 {lossPercent > 0 && (
-                  <View style={[styles.distBarSegment, { width: `${lossPercent}%`, backgroundColor: COLORS.danger }]} />
+                  <View
+                    style={[
+                      styles.distBarSegment,
+                      { width: `${lossPercent}%`, backgroundColor: COLORS.danger },
+                    ]}
+                  />
                 )}
                 {pushPercent > 0 && (
-                  <View style={[styles.distBarSegment, { width: `${pushPercent}%`, backgroundColor: '#52525B' }]} />
+                  <View
+                    style={[
+                      styles.distBarSegment,
+                      { width: `${pushPercent}%`, backgroundColor: '#52525B' },
+                    ]}
+                  />
                 )}
               </View>
 
@@ -187,15 +213,21 @@ export default function AnalyticsScreen() {
               <View style={styles.legendRow}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
-                  <Text style={styles.legendLabel}>Wins: {totalWins} ({winPercent.toFixed(0)}%)</Text>
+                  <Text style={styles.legendLabel}>
+                    Wins: {totalWins} ({winPercent.toFixed(0)}%)
+                  </Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                  <Text style={styles.legendLabel}>Losses: {totalLosses} ({lossPercent.toFixed(0)}%)</Text>
+                  <Text style={styles.legendLabel}>
+                    Losses: {totalLosses} ({lossPercent.toFixed(0)}%)
+                  </Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: '#52525B' }]} />
-                  <Text style={styles.legendLabel}>Pushes: {totalPushes} ({pushPercent.toFixed(0)}%)</Text>
+                  <Text style={styles.legendLabel}>
+                    Pushes: {totalPushes} ({pushPercent.toFixed(0)}%)
+                  </Text>
                 </View>
               </View>
             </View>
@@ -265,53 +297,52 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   contentContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 40,
+    paddingHorizontal: SPACING.pageHorizontal,
+    paddingTop: SPACING.sm,
   },
   header: {
-    marginTop: 12,
-    marginBottom: 16,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.md,
   },
   title: {
-    fontSize: 26,
+    fontSize: fluidFont(26),
     fontWeight: '900',
     color: COLORS.textPrimary,
     letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 2,
   },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 18,
-    padding: 18,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.cardPadding,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
   },
   cardHeaderLabel: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     fontWeight: '700',
     color: COLORS.textSecondary,
     letterSpacing: 1.5,
-    marginBottom: 6,
+    marginBottom: 4,
     textAlign: 'center',
   },
   heroAmount: {
-    fontSize: 36,
+    fontSize: fluidFont(34),
     fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   subStatsRow: {
     flexDirection: 'row',
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(12),
+    paddingHorizontal: moderateScale(8),
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
@@ -325,85 +356,85 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   subStatLabel: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     color: COLORS.textSecondary,
     marginBottom: 3,
   },
   subStatValue: {
-    fontSize: 15,
+    fontSize: fluidFont(15),
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
   emptyNoticeCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: RADIUS.md,
+    padding: SPACING.xl,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
   },
   emptyNoticeTitle: {
-    fontSize: 15,
+    fontSize: fluidFont(15),
     fontWeight: '700',
     color: COLORS.textPrimary,
-    marginTop: 8,
+    marginTop: SPACING.xs,
   },
   emptyNoticeText: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     color: COLORS.textMuted,
     textAlign: 'center',
     marginTop: 4,
-    lineHeight: 16,
+    lineHeight: fluidFont(16),
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: fluidFont(16),
     fontWeight: '700',
     color: COLORS.textPrimary,
-    marginBottom: 12,
+    marginBottom: SPACING.sm,
   },
   chartContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'flex-end',
-    height: 120,
-    paddingTop: 16,
+    height: moderateScale(120),
+    paddingTop: SPACING.md,
   },
   barColumn: {
     alignItems: 'center',
     flex: 1,
   },
   barValueText: {
-    fontSize: 10,
+    fontSize: fluidFont(10),
     fontWeight: '700',
     marginBottom: 6,
   },
   barTrack: {
-    width: 14,
-    height: 70,
+    width: moderateScale(14),
+    height: moderateScale(70),
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 7,
+    borderRadius: moderateScale(7),
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
   barFill: {
     width: '100%',
-    borderRadius: 7,
+    borderRadius: moderateScale(7),
   },
   barLabel: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     color: COLORS.textMuted,
     marginTop: 6,
     fontWeight: '600',
   },
   distBarContainer: {
-    height: 14,
-    borderRadius: 7,
+    height: moderateScale(14),
+    borderRadius: moderateScale(7),
     backgroundColor: COLORS.backgroundSecondary,
     flexDirection: 'row',
     overflow: 'hidden',
-    marginBottom: 14,
+    marginBottom: SPACING.sm,
   },
   distBarSegment: {
     height: '100%',
@@ -411,7 +442,7 @@ const styles = StyleSheet.create({
   legendRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: SPACING.xs,
     justifyContent: 'space-between',
   },
   legendItem: {
@@ -420,36 +451,37 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
   },
   legendLabel: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     color: COLORS.textSecondary,
     fontWeight: '600',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 20,
+    gap: SPACING.xs,
+    marginBottom: SPACING.lg,
   },
   gridCard: {
-    width: '48%',
+    flexBasis: '48%',
+    flexGrow: 1,
     backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: RADIUS.md,
+    padding: moderateScale(14),
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   gridLabel: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     color: COLORS.textSecondary,
     marginBottom: 6,
   },
   gridValue: {
-    fontSize: 17,
+    fontSize: fluidFont(17),
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
