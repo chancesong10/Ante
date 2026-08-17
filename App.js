@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeScreen from './screens/HomeScreen';
 import AnalyticsScreen from './screens/AnalyticsScreen';
@@ -14,6 +15,7 @@ import BlackjackScreen from './screens/BlackjackScreen';
 
 import StartSessionModal from './components/StartSessionModal';
 import { COLORS } from './constants/theme';
+import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useSession } from './context/SessionContext';
 
 const Tab = createBottomTabNavigator();
@@ -25,14 +27,37 @@ function EmptyAddSlot() {
 }
 
 function MainTabNavigator({ onOpenAddModal }) {
+  const insets = useSafeAreaInsets();
+
+  // Dynamic calculation for bottom floating tab bar across iOS home indicators & Android gesture/button bars
+  const bottomOffset = insets.bottom > 0 ? insets.bottom + moderateScale(4) : moderateScale(16);
+  const tabBarHeight = moderateScale(62);
+  const iconSize = moderateScale(22);
+  const addBtnSize = moderateScale(48);
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            bottom: bottomOffset,
+            height: tabBarHeight,
+            left: moderateScale(16),
+            right: moderateScale(16),
+            borderRadius: tabBarHeight / 2,
+          },
+        ],
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.tabBarInactive,
-        tabBarLabelStyle: styles.tabBarLabel,
+        tabBarLabelStyle: [
+          styles.tabBarLabel,
+          {
+            fontSize: fluidFont(11),
+          },
+        ],
       }}
     >
       {/* 1. Home */}
@@ -46,7 +71,7 @@ function MainTabNavigator({ onOpenAddModal }) {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'home' : 'home-outline'}
-              size={22}
+              size={iconSize}
               color={color}
             />
           ),
@@ -62,14 +87,14 @@ function MainTabNavigator({ onOpenAddModal }) {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'stats-chart' : 'stats-chart-outline'}
-              size={22}
+              size={iconSize}
               color={color}
             />
           ),
         }}
       />
 
-      {/* 3. Center Prominent & Perfectly Centered 'Add' Action Button */}
+      {/* 3. Center Prominent & Ergonomic Action Button */}
       <Tab.Screen
         name="AddAction"
         component={EmptyAddSlot}
@@ -80,10 +105,22 @@ function MainTabNavigator({ onOpenAddModal }) {
               {...props}
               style={styles.centerAddButtonContainer}
               activeOpacity={0.85}
+              hitSlop={TOUCH_TARGET.hitSlop}
               onPress={onOpenAddModal}
+              accessibilityRole="button"
+              accessibilityLabel="Start New Session"
             >
-              <View style={styles.centerAddButton}>
-                <Ionicons name="add" size={30} color={COLORS.textDark} />
+              <View
+                style={[
+                  styles.centerAddButton,
+                  {
+                    width: addBtnSize,
+                    height: addBtnSize,
+                    borderRadius: addBtnSize / 2,
+                  },
+                ]}
+              >
+                <Ionicons name="add" size={moderateScale(28)} color={COLORS.textDark} />
               </View>
             </TouchableOpacity>
           ),
@@ -105,14 +142,14 @@ function MainTabNavigator({ onOpenAddModal }) {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'time' : 'time-outline'}
-              size={22}
+              size={iconSize}
               color={color}
             />
           ),
         }}
       />
 
-      {/* 5. Profile (Completely empty for now) */}
+      {/* 5. Profile */}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
@@ -121,7 +158,7 @@ function MainTabNavigator({ onOpenAddModal }) {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'person' : 'person-outline'}
-              size={22}
+              size={iconSize}
               color={color}
             />
           ),
@@ -139,7 +176,7 @@ function AppContent() {
     <View style={styles.rootContainer}>
       <StatusBar style="light" backgroundColor={COLORS.background} />
       <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           <Stack.Screen name="MainTabs">
             {() => (
               <MainTabNavigator
@@ -165,9 +202,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SessionProvider>
-      <AppContent />
-    </SessionProvider>
+    <SafeAreaProvider>
+      <SessionProvider>
+        <AppContent />
+      </SessionProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -178,11 +217,6 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 24,
-    height: 64,
-    borderRadius: 32,
     backgroundColor: COLORS.tabBar,
     borderTopWidth: 0,
     paddingHorizontal: 8,
@@ -193,9 +227,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 10,
+    borderWidth: 1,
+    borderColor: COLORS.tabBarBorder,
   },
   tabBarLabel: {
-    fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -205,9 +240,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   centerAddButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
