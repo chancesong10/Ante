@@ -27,10 +27,11 @@ export default function BlackjackScreen({ navigation }) {
 
   // Ensure an active session exists when mounting
   useEffect(() => {
-    if (!activeSession) {
-      startSession('Blackjack');
-    }
-  }, [activeSession]);
+  if (!activeSession) {
+    startSession('Blackjack');
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []); // empty dependency array — only runs once when the screen first mounts
 
   const [betAmount, setBetAmount] = useState('');
   const [doubled, setDoubled] = useState(false);
