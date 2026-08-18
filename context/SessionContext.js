@@ -61,15 +61,17 @@ export function SessionProvider({ children }) {
 
   // Start a new session
   const startSession = (gameType = 'Blackjack') => {
-    const newSession = {
-      id: Date.now().toString(),
-      gameType,
-      startTime: Date.now(),
-      hands: [],
-    };
-    setActiveSession(newSession);
-    return newSession;
+  const newSession = {
+    id: Date.now().toString(),
+    gameType,
+    startTime: Date.now(),
+    hands: [],
+    buyIn: null,
+    cashOut: null,
   };
+  setActiveSession(newSession);
+  return newSession;
+};
 
   // Log a hand into the active session
   const logHandToActiveSession = (handRecord) => {
@@ -82,6 +84,18 @@ export function SessionProvider({ children }) {
       };
     });
   };
+
+  const setSessionBuyInCashOut = (buyIn, cashOut) => {
+  if (!activeSession) return;
+  setActiveSession((prev) => {
+    if (!prev) return null;
+    return {
+      ...prev,
+      buyIn,
+      cashOut,
+    };
+  });
+};
 
   const removeHandFromActiveSession = (handId) => {
     if (!activeSession) return;
@@ -96,13 +110,40 @@ export function SessionProvider({ children }) {
 
   // End and finalize the active session
   const endActiveSession = () => {
-    if (!activeSession) return null;
+  if (!activeSession) return null;
 
-    const endTime = Date.now();
-    const startTime = activeSession.startTime;
+  const endTime = Date.now();
+  const startTime = activeSession.startTime;
+  const isBuyInMode = activeSession.buyIn !== null && activeSession.cashOut !== null;
+
+  let completedRecord;
+
+  if (isBuyInMode) {
+    const netProfit = activeSession.cashOut - activeSession.buyIn;
+
+    completedRecord = {
+      id: activeSession.id,
+      gameType: activeSession.gameType,
+      startTime,
+      endTime,
+      formattedDate: formatSessionDateTime(startTime),
+      rawDate: new Date(startTime).toISOString(),
+      durationFormatted: formatDuration(startTime, endTime),
+      mode: 'buyInCashOut',
+      buyIn: activeSession.buyIn,
+      cashOut: activeSession.cashOut,
+      hands: [],
+      totalHands: 0,
+      wins: 0,
+      losses: 0,
+      pushes: 0,
+      netProfit,
+      grossWins: netProfit > 0 ? netProfit : 0,
+      grossLosses: netProfit < 0 ? Math.abs(netProfit) : 0,
+      winRate: netProfit > 0 ? 100 : 0,
+    };
+  } else {
     const hands = activeSession.hands;
-
-    // Flatten split hands for accurate counts
     const allHands = hands.flatMap((r) => (r.type === 'split' ? r.hands : [r]));
     const totalHands = allHands.length;
     const wins = allHands.filter((h) => h.outcome === 'win').length;
@@ -117,7 +158,7 @@ export function SessionProvider({ children }) {
       if (h.netChange < 0) grossLosses += Math.abs(h.netChange);
     });
 
-    const completedRecord = {
+    completedRecord = {
       id: activeSession.id,
       gameType: activeSession.gameType,
       startTime,
@@ -125,6 +166,7 @@ export function SessionProvider({ children }) {
       formattedDate: formatSessionDateTime(startTime),
       rawDate: new Date(startTime).toISOString(),
       durationFormatted: formatDuration(startTime, endTime),
+      mode: 'hands',
       hands,
       totalHands,
       wins,
@@ -135,11 +177,12 @@ export function SessionProvider({ children }) {
       grossLosses,
       winRate: (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0,
     };
+  }
 
-    setSessionHistory((prev) => [completedRecord, ...prev]);
-    setActiveSession(null);
-    return completedRecord;
-  };
+  setSessionHistory((prev) => [completedRecord, ...prev]);
+  setActiveSession(null);
+  return completedRecord;
+};
 
   // Discard current active session without saving
   const discardActiveSession = () => {
@@ -159,6 +202,7 @@ export function SessionProvider({ children }) {
         startSession,
         logHandToActiveSession,
         removeHandFromActiveSession,
+        setSessionBuyInCashOut, // add this line
         endActiveSession,
         discardActiveSession,
         deleteSession,

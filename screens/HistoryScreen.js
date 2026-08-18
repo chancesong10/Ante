@@ -23,16 +23,22 @@ export default function HistoryScreen({ navigation }) {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
+  const gameIcon = (gameType) => {
+    if (gameType === 'Poker') return 'cash-outline';
+    return 'game-controller';
+  };
+
   const renderSessionItem = ({ item }) => {
     const isExpanded = expandedId === item.id;
     const isWin = item.netProfit > 0;
     const isLoss = item.netProfit < 0;
+    const isBuyInMode = item.mode === 'buyInCashOut';
 
     return (
       <SwipeableRow
         onDelete={() => deleteSession(item.id)}
         confirmTitle="Delete this session?"
-        confirmMessage="This will permanently remove this session and its hand history. This cannot be undone."
+        confirmMessage="This will permanently remove this session and its history. This cannot be undone."
       >
         <View style={[styles.card, SHADOWS.card]}>
           <TouchableOpacity
@@ -41,7 +47,7 @@ export default function HistoryScreen({ navigation }) {
             style={styles.cardHeader}
           >
             <View style={styles.iconCircle}>
-              <Ionicons name="game-controller" size={18} color={COLORS.primary} />
+              <Ionicons name={gameIcon(item.gameType)} size={18} color={COLORS.primary} />
             </View>
 
             <View style={styles.sessionMeta}>
@@ -71,91 +77,141 @@ export default function HistoryScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          <View style={styles.statsStrip}>
-            <View style={styles.statCol}>
-              <Text style={styles.statLabel}>Hands</Text>
-              <Text style={styles.statVal}>{item.totalHands}</Text>
+          {!isBuyInMode && (
+            <View style={styles.statsStrip}>
+              <View style={styles.statCol}>
+                <Text style={styles.statLabel}>Hands</Text>
+                <Text style={styles.statVal}>{item.totalHands}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statCol}>
+                <Text style={styles.statLabel}>Record (W-L-P)</Text>
+                <Text style={styles.statVal}>
+                  {item.wins}-{item.losses}-{item.pushes}
+                </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statCol}>
+                <Text style={styles.statLabel}>Win Rate</Text>
+                <Text style={[styles.statVal, isWin && { color: COLORS.primary }]}>
+                  {item.winRate.toFixed(1)}%
+                </Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCol}>
-              <Text style={styles.statLabel}>Record (W-L-P)</Text>
-              <Text style={styles.statVal}>
-                {item.wins}-{item.losses}-{item.pushes}
-              </Text>
+          )}
+
+          {isBuyInMode && (
+            <View style={styles.statsStrip}>
+              <View style={styles.statCol}>
+                <Text style={styles.statLabel}>Buy-In</Text>
+                <Text style={styles.statVal}>${item.buyIn.toFixed(2)}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statCol}>
+                <Text style={styles.statLabel}>Cash-Out</Text>
+                <Text style={styles.statVal}>${item.cashOut.toFixed(2)}</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCol}>
-              <Text style={styles.statLabel}>Win Rate</Text>
-              <Text style={[styles.statVal, isWin && { color: COLORS.primary }]}>
-                {item.winRate.toFixed(1)}%
-              </Text>
-            </View>
-          </View>
+          )}
 
           {isExpanded && (
             <View style={styles.expandedSection}>
               <View style={styles.expandedDivider} />
-              <Text style={styles.expandedTitle}>Logged Hands ({item.hands.length})</Text>
-              {item.hands.map((h, idx) => {
-                if (h.type === 'split') {
-                  return (
-                    <View key={idx} style={styles.splitRowBox}>
-                      <Text style={styles.splitRowLabel}>Split Pair</Text>
-                      {h.hands.map((subHand, sIdx) => (
-                        <View key={sIdx} style={styles.handRow}>
-                          <Text style={styles.handDetail}>
-                            Hand {sIdx + 1}: ${subHand.bet}
-                            {subHand.doubled ? ' (2x)' : ''}
-                            {subHand.blackjack ? ' (BJ)' : ''} —{' '}
-                            {subHand.outcome.toUpperCase()}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.handNet,
-                              {
-                                color:
-                                  subHand.netChange > 0
-                                    ? COLORS.primary
-                                    : subHand.netChange < 0
-                                    ? COLORS.danger
-                                    : COLORS.textPrimary,
-                              },
-                            ]}
-                          >
-                            {subHand.netChange > 0 ? '+' : ''}$
-                            {subHand.netChange.toFixed(2)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  );
-                }
 
-                return (
-                  <View key={idx} style={styles.handRow}>
-                    <Text style={styles.handDetail}>
-                      Hand {idx + 1}: ${h.bet}
-                      {h.doubled ? ' (2x)' : ''}
-                      {h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
-                    </Text>
+              {isBuyInMode ? (
+                <View style={styles.buyInSummary}>
+                  <Text style={styles.expandedTitle}>Session Summary</Text>
+                  <View style={styles.buyInRow}>
+                    <Text style={styles.buyInLabel}>Buy-In</Text>
+                    <Text style={styles.buyInValue}>${item.buyIn.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.buyInRow}>
+                    <Text style={styles.buyInLabel}>Cash-Out</Text>
+                    <Text style={styles.buyInValue}>${item.cashOut.toFixed(2)}</Text>
+                  </View>
+                  <View style={[styles.buyInRow, styles.buyInTotalRow]}>
+                    <Text style={styles.buyInTotalLabel}>Net Result</Text>
                     <Text
                       style={[
-                        styles.handNet,
+                        styles.buyInTotalValue,
                         {
-                          color:
-                            h.netChange > 0
-                              ? COLORS.primary
-                              : h.netChange < 0
-                              ? COLORS.danger
-                              : COLORS.textPrimary,
+                          color: isWin
+                            ? COLORS.primary
+                            : isLoss
+                            ? COLORS.danger
+                            : COLORS.textPrimary,
                         },
                       ]}
                     >
-                      {h.netChange > 0 ? '+' : ''}${h.netChange.toFixed(2)}
+                      {isWin ? '+' : ''}${item.netProfit.toFixed(2)}
                     </Text>
                   </View>
-                );
-              })}
+                </View>
+              ) : (
+                <>
+                  <Text style={styles.expandedTitle}>Logged Hands ({item.hands.length})</Text>
+                  {item.hands.map((h, idx) => {
+                    if (h.type === 'split') {
+                      return (
+                        <View key={idx} style={styles.splitRowBox}>
+                          <Text style={styles.splitRowLabel}>Split Pair</Text>
+                          {h.hands.map((subHand, sIdx) => (
+                            <View key={sIdx} style={styles.handRow}>
+                              <Text style={styles.handDetail}>
+                                Hand {sIdx + 1}: ${subHand.bet}
+                                {subHand.doubled ? ' (2x)' : ''}
+                                {subHand.blackjack ? ' (BJ)' : ''} —{' '}
+                                {subHand.outcome.toUpperCase()}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.handNet,
+                                  {
+                                    color:
+                                      subHand.netChange > 0
+                                        ? COLORS.primary
+                                        : subHand.netChange < 0
+                                        ? COLORS.danger
+                                        : COLORS.textPrimary,
+                                  },
+                                ]}
+                              >
+                                {subHand.netChange > 0 ? '+' : ''}$
+                                {subHand.netChange.toFixed(2)}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      );
+                    }
+
+                    return (
+                      <View key={idx} style={styles.handRow}>
+                        <Text style={styles.handDetail}>
+                          Hand {idx + 1}: ${h.bet}
+                          {h.doubled ? ' (2x)' : ''}
+                          {h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.handNet,
+                            {
+                              color:
+                                h.netChange > 0
+                                  ? COLORS.primary
+                                  : h.netChange < 0
+                                  ? COLORS.danger
+                                  : COLORS.textPrimary,
+                            },
+                          ]}
+                        >
+                          {h.netChange > 0 ? '+' : ''}${h.netChange.toFixed(2)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </>
+              )}
             </View>
           )}
         </View>
@@ -193,7 +249,7 @@ export default function HistoryScreen({ navigation }) {
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={styles.swipeHint}>Swipe a session left to delete it</Text>
+            <Text style={styles.swipeHint}>Swipe a session right to delete it</Text>
           </>
         )}
 
@@ -409,6 +465,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
     marginBottom: 4,
+  },
+  buyInSummary: {
+    gap: 4,
+  },
+  buyInRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  buyInLabel: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  buyInValue: {
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    fontWeight: '700',
+  },
+  buyInTotalRow: {
+    marginTop: 4,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.cardBorder,
+  },
+  buyInTotalLabel: {
+    fontSize: 14,
+    color: COLORS.textPrimary,
+    fontWeight: '800',
+  },
+  buyInTotalValue: {
+    fontSize: 16,
+    fontWeight: '900',
   },
   emptyContainer: {
     flex: 1,
