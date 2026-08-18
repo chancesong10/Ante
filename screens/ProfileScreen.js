@@ -14,12 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET, DEVICE } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { usePreferences } from '../context/PreferencesContext';
 
 export default function ProfileScreen() {
   const { sessionHistory } = useSession();
   const insets = useSafeAreaInsets();
-  const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [quickChipEnabled, setQuickChipEnabled] = useState(true);
+  const { quickChipsEnabled, setQuickChipsEnabled } = usePreferences();
 
   const totalSessions = sessionHistory.length;
   const totalNet = sessionHistory.reduce((sum, s) => sum + s.netProfit, 0);
@@ -39,7 +39,7 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Profile & Settings</Text>
+          <Text style={styles.title}>Profile</Text>
           <Text style={styles.subtitle}>Preferences and bankroll configurations</Text>
         </View>
 
@@ -96,28 +96,13 @@ export default function ProfileScreen() {
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Quick Chips</Text>
-              <Text style={styles.settingDesc}>Display fast $10, $25, $50 buttons</Text>
+              <Text style={styles.settingDesc}>Display fast $10, $25, $50 buttons when logging a bet</Text>
             </View>
             <Switch
-              value={quickChipEnabled}
-              onValueChange={setQuickChipEnabled}
+              value={quickChipsEnabled}
+              onValueChange={setQuickChipsEnabled}
               trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-              thumbColor={quickChipEnabled ? COLORS.primary : '#A0A0A0'}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Haptic Feedback</Text>
-              <Text style={styles.settingDesc}>Vibrate on bet logging and outcomes</Text>
-            </View>
-            <Switch
-              value={hapticsEnabled}
-              onValueChange={setHapticsEnabled}
-              trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-              thumbColor={hapticsEnabled ? COLORS.primary : '#A0A0A0'}
+              thumbColor={quickChipsEnabled ? COLORS.primary : '#A0A0A0'}
             />
           </View>
         </View>

@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PreferencesProvider } from './context/PreferencesContext';
 
 import HomeScreen from './screens/HomeScreen';
 import AnalyticsScreen from './screens/AnalyticsScreen';
@@ -205,9 +206,11 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <SessionProvider>
-          <AppContent />
-        </SessionProvider>
+        <PreferencesProvider>
+          <SessionProvider>
+            <AppContent />
+          </SessionProvider>
+        </PreferencesProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
