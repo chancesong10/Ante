@@ -83,6 +83,17 @@ export function SessionProvider({ children }) {
     });
   };
 
+  const removeHandFromActiveSession = (handId) => {
+    if (!activeSession) return;
+    setActiveSession((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        hands: prev.hands.filter((h) => h.id !== handId),
+      };
+    });
+  };
+
   // End and finalize the active session
   const endActiveSession = () => {
     if (!activeSession) return null;
@@ -147,6 +158,7 @@ export function SessionProvider({ children }) {
         sessionHistory,
         startSession,
         logHandToActiveSession,
+        removeHandFromActiveSession,
         endActiveSession,
         discardActiveSession,
         deleteSession,
