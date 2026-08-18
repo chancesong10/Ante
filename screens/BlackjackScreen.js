@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,12 +55,12 @@ export default function BlackjackScreen({ navigation }) {
   };
 
   const toggleSplit = () => {
-    if (!split) {
-      setSplitHand1({ ...emptyHand(), betAmount });
-      setSplitHand2({ ...emptyHand(), betAmount });
-    }
-    setSplit(!split);
-  };
+  if (!split) {
+    setSplitHand1({ ...emptyHand(), betAmount });
+    setSplitHand2({ ...emptyHand(), betAmount });
+  }
+  setSplit(!split);
+};
 
   const calcNet = (bet, doubledFlag, blackjackFlag, outcomeVal) => {
     let stake = doubledFlag ? bet * 2 : bet;
@@ -243,6 +244,7 @@ export default function BlackjackScreen({ navigation }) {
   const canSubmitSplit =
     splitHand1.betAmount && splitHand1.outcome && splitHand2.betAmount && splitHand2.outcome;
   const canSubmitSingle = betAmount && outcome;
+  const canToggleSplit = betAmount && parseFloat(betAmount) > 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -340,20 +342,32 @@ export default function BlackjackScreen({ navigation }) {
         <View style={[styles.card, SHADOWS.card]}>
           {/* Split Mode Toggle */}
           <TouchableOpacity
-            style={[styles.splitToggleButton, split && styles.splitToggleActive]}
+            style={[
+              styles.splitToggleButton,
+              split && styles.splitToggleActive,
+              !split && !canToggleSplit && styles.splitToggleDisabled,
+            ]}
             activeOpacity={0.8}
             onPress={toggleSplit}
+            disabled={!split && !canToggleSplit}
           >
             <Ionicons
               name={split ? 'close-circle' : 'git-branch-outline'}
-              size={moderateScale(18)}
-              color={split ? COLORS.danger : COLORS.primary}
+              size={18}
+              color={
+                split
+                  ? COLORS.danger
+                  : !canToggleSplit
+                  ? COLORS.textMuted
+                  : COLORS.primary
+              }
               style={{ marginRight: 6 }}
             />
             <Text
               style={[
                 styles.splitToggleText,
                 split && { color: COLORS.danger },
+                !split && !canToggleSplit && { color: COLORS.textMuted },
               ]}
             >
               {split ? 'Cancel Split Hand' : 'Split Hand Mode'}
@@ -435,21 +449,6 @@ export default function BlackjackScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* PROMINENT END SESSION FOOTER BUTTON */}
-        <TouchableOpacity
-          style={styles.bottomEndSessionButton}
-          activeOpacity={0.85}
-          onPress={handleEndSessionPress}
-        >
-          <Ionicons
-            name="stop-circle-outline"
-            size={moderateScale(20)}
-            color={COLORS.danger}
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.bottomEndSessionText}>End Session & Save to History</Text>
-        </TouchableOpacity>
 
         {/* Live Session Hand Log */}
         {sessionHands.length > 0 && (
@@ -668,6 +667,9 @@ const styles = StyleSheet.create({
   splitToggleActive: {
     borderColor: COLORS.danger,
     backgroundColor: COLORS.dangerMuted,
+  },
+  splitToggleDisabled: {
+  opacity: 0.4,
   },
   splitToggleText: {
     color: COLORS.primary,
