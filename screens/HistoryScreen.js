@@ -5,15 +5,17 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 
 export default function HistoryScreen({ navigation }) {
   const { sessionHistory, deleteSession } = useSession();
+  const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
 
@@ -40,12 +42,15 @@ export default function HistoryScreen({ navigation }) {
           style={styles.cardHeader}
         >
           <View style={styles.iconCircle}>
-            <Ionicons name="game-controller" size={18} color={COLORS.primary} />
+            <Ionicons
+              name="game-controller"
+              size={moderateScale(18)}
+              color={COLORS.primary}
+            />
           </View>
 
           <View style={styles.sessionMeta}>
             <Text style={styles.gameType}>{item.gameType} Session</Text>
-            {/* Explicit date and time with relative formatting */}
             <Text style={styles.sessionDateTime}>{item.formattedDate}</Text>
           </View>
 
@@ -65,7 +70,11 @@ export default function HistoryScreen({ navigation }) {
               {isWin ? '+' : ''}${item.netProfit.toFixed(2)}
             </Text>
             <View style={styles.durationRow}>
-              <Ionicons name="time-outline" size={12} color={COLORS.textMuted} />
+              <Ionicons
+                name="time-outline"
+                size={moderateScale(12)}
+                color={COLORS.textMuted}
+              />
               <Text style={styles.durationText}>{item.durationFormatted}</Text>
             </View>
           </View>
@@ -100,7 +109,6 @@ export default function HistoryScreen({ navigation }) {
             <Text style={styles.expandedTitle}>Logged Hands ({item.hands.length})</Text>
             {item.hands.map((h, idx) => {
               if (h.type === 'split') {
-                const splitTotal = h.hands[0].netChange + h.hands[1].netChange;
                 return (
                   <View key={idx} style={styles.splitRowBox}>
                     <Text style={styles.splitRowLabel}>Split Pair</Text>
@@ -162,9 +170,15 @@ export default function HistoryScreen({ navigation }) {
 
             <TouchableOpacity
               style={styles.deleteBtn}
+              hitSlop={TOUCH_TARGET.hitSlop}
               onPress={() => deleteSession(item.id)}
             >
-              <Ionicons name="trash-outline" size={14} color={COLORS.danger} style={{ marginRight: 4 }} />
+              <Ionicons
+                name="trash-outline"
+                size={moderateScale(14)}
+                color={COLORS.danger}
+                style={{ marginRight: 4 }}
+              />
               <Text style={styles.deleteBtnText}>Delete Log Entry</Text>
             </TouchableOpacity>
           </View>
@@ -174,7 +188,7 @@ export default function HistoryScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <View style={styles.container}>
         {/* Header */}
@@ -193,6 +207,7 @@ export default function HistoryScreen({ navigation }) {
                 key={f}
                 style={[styles.filterPill, filter === f && styles.filterPillActive]}
                 onPress={() => setFilter(f)}
+                hitSlop={TOUCH_TARGET.hitSlop}
               >
                 <Text
                   style={[
@@ -211,7 +226,11 @@ export default function HistoryScreen({ navigation }) {
         {sessionHistory.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
-              <Ionicons name="time-outline" size={36} color={COLORS.textMuted} />
+              <Ionicons
+                name="time-outline"
+                size={moderateScale(36)}
+                color={COLORS.textMuted}
+              />
             </View>
             <Text style={styles.emptyTitle}>No Sessions Logged</Text>
             <Text style={styles.emptySubtitle}>
@@ -221,9 +240,14 @@ export default function HistoryScreen({ navigation }) {
         ) : (
           <FlatList
             data={filteredHistory}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             renderItem={renderSessionItem}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[
+              styles.listContent,
+              {
+                paddingBottom: insets.bottom + moderateScale(96),
+              },
+            ]}
             showsVerticalScrollIndicator={false}
           />
         )}
@@ -240,32 +264,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.pageHorizontal,
   },
   header: {
-    marginTop: 12,
-    marginBottom: 16,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.md,
   },
   title: {
-    fontSize: 26,
+    fontSize: fluidFont(26),
     fontWeight: '900',
     color: COLORS.textPrimary,
     letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 2,
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
+    gap: SPACING.xs,
+    marginBottom: SPACING.md,
   },
   filterPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: moderateScale(7),
+    borderRadius: RADIUS.pill,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
@@ -275,7 +299,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   filterPillText: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
@@ -284,13 +308,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listContent: {
-    paddingBottom: 40,
-    gap: 12,
+    gap: SPACING.sm,
   },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: RADIUS.md,
+    padding: SPACING.cardPadding,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
@@ -299,13 +322,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: RADIUS.sm,
     backgroundColor: COLORS.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.sm,
     borderWidth: 1,
     borderColor: 'rgba(0, 255, 0, 0.2)',
   },
@@ -313,12 +336,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gameType: {
-    fontSize: 15,
+    fontSize: fluidFont(15),
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
   sessionDateTime: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 2,
     fontWeight: '500',
@@ -327,26 +350,26 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   netProfitText: {
-    fontSize: 16,
+    fontSize: fluidFont(16),
     fontWeight: '900',
   },
   durationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     marginTop: 2,
   },
   durationText: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     color: COLORS.textMuted,
   },
   statsStrip: {
     flexDirection: 'row',
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginTop: 12,
+    borderRadius: RADIUS.xs,
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(12),
+    marginTop: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
@@ -360,56 +383,56 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: fluidFont(10),
     color: COLORS.textMuted,
     textTransform: 'uppercase',
     fontWeight: '600',
   },
   statVal: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '700',
     color: COLORS.textPrimary,
     marginTop: 2,
   },
   expandedSection: {
-    marginTop: 12,
+    marginTop: SPACING.sm,
   },
   expandedDivider: {
     height: 1,
     backgroundColor: COLORS.cardBorder,
-    marginBottom: 10,
+    marginBottom: moderateScale(10),
   },
   expandedTitle: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '700',
     color: COLORS.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 8,
+    marginBottom: moderateScale(8),
   },
   handRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: moderateScale(5),
   },
   handDetail: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
   },
   handNet: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '700',
   },
   splitRowBox: {
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 8,
-    padding: 8,
-    marginVertical: 4,
+    borderRadius: RADIUS.xs,
+    padding: moderateScale(8),
+    marginVertical: moderateScale(4),
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   splitRowLabel: {
-    fontSize: 10,
+    fontSize: fluidFont(10),
     fontWeight: '700',
     color: COLORS.primary,
     marginBottom: 4,
@@ -418,12 +441,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
-    paddingVertical: 6,
+    marginTop: SPACING.sm,
+    paddingVertical: moderateScale(6),
   },
   deleteBtnText: {
     color: COLORS.danger,
-    fontSize: 11,
+    fontSize: fluidFont(11),
     fontWeight: '600',
   },
 
@@ -432,30 +455,30 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    marginTop: 60,
+    paddingHorizontal: SPACING.xl,
+    marginTop: moderateScale(50),
   },
   emptyIconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: moderateScale(68),
+    height: moderateScale(68),
+    borderRadius: moderateScale(34),
     backgroundColor: COLORS.card,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: fluidFont(18),
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: fluidFont(13),
     color: COLORS.textMuted,
     textAlign: 'center',
     marginTop: 6,
-    lineHeight: 18,
+    lineHeight: fluidFont(18),
   },
 });
