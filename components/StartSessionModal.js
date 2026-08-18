@@ -6,14 +6,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   TouchableWithoutFeedback,
-  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 
 export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack }) {
   const { activeSession, startSession, endActiveSession } = useSession();
+  const insets = useSafeAreaInsets();
 
   const handleStartBlackjack = () => {
     if (!activeSession) {
@@ -40,12 +42,22 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.sheetContainer}>
+            <View
+              style={[
+                styles.sheetContainer,
+                {
+                  paddingBottom:
+                    insets.bottom > 0
+                      ? insets.bottom + moderateScale(12)
+                      : moderateScale(24),
+                },
+              ]}
+            >
               <View style={styles.handleBar} />
 
               {/* Header */}
               <View style={styles.headerRow}>
-                <View>
+                <View style={{ flex: 1, marginRight: 8 }}>
                   <Text style={styles.sheetTitle}>
                     {activeSession ? 'Session In Progress' : 'Start New Session'}
                   </Text>
@@ -58,9 +70,15 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={onClose}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  hitSlop={TOUCH_TARGET.hitSlop}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close Modal"
                 >
-                  <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+                  <Ionicons
+                    name="close"
+                    size={moderateScale(20)}
+                    color={COLORS.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -86,8 +104,15 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                       onClose();
                       if (onNavigateToBlackjack) onNavigateToBlackjack();
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Resume Session"
                   >
-                    <Ionicons name="play" size={18} color={COLORS.textDark} style={{ marginRight: 6 }} />
+                    <Ionicons
+                      name="play"
+                      size={moderateScale(18)}
+                      color={COLORS.textDark}
+                      style={{ marginRight: 6 }}
+                    />
                     <Text style={styles.primaryButtonText}>Resume Session</Text>
                   </TouchableOpacity>
 
@@ -95,8 +120,15 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                     style={styles.endSessionBtn}
                     activeOpacity={0.8}
                     onPress={handleEndSession}
+                    accessibilityRole="button"
+                    accessibilityLabel="End Session and Save"
                   >
-                    <Ionicons name="stop-circle-outline" size={18} color={COLORS.danger} style={{ marginRight: 6 }} />
+                    <Ionicons
+                      name="stop-circle-outline"
+                      size={moderateScale(18)}
+                      color={COLORS.danger}
+                      style={{ marginRight: 6 }}
+                    />
                     <Text style={styles.endSessionText}>End Session & Save to History</Text>
                   </TouchableOpacity>
                 </View>
@@ -109,7 +141,11 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                     onPress={handleStartBlackjack}
                   >
                     <View style={styles.gameIconBox}>
-                      <Ionicons name="game-controller" size={24} color={COLORS.primary} />
+                      <Ionicons
+                        name="game-controller"
+                        size={moderateScale(24)}
+                        color={COLORS.primary}
+                      />
                     </View>
                     <View style={styles.gameInfo}>
                       <View style={styles.gameTitleRow}>
@@ -122,15 +158,26 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                         Track bets, doubles, splits, and calculate real-time net profit
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={moderateScale(20)}
+                      color={COLORS.primary}
+                    />
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[styles.primaryButton, SHADOWS.card]}
                     activeOpacity={0.85}
                     onPress={handleStartBlackjack}
+                    accessibilityRole="button"
+                    accessibilityLabel="Start Blackjack Session"
                   >
-                    <Ionicons name="add-circle-outline" size={20} color={COLORS.textDark} style={{ marginRight: 6 }} />
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={moderateScale(20)}
+                      color={COLORS.textDark}
+                      style={{ marginRight: 6 }}
+                    />
                     <Text style={styles.primaryButtonText}>Start Blackjack Session</Text>
                   </TouchableOpacity>
                 </View>
@@ -141,6 +188,8 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                 style={styles.cancelButton}
                 activeOpacity={0.8}
                 onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
@@ -160,68 +209,69 @@ const styles = StyleSheet.create({
   },
   sheetContainer: {
     backgroundColor: COLORS.backgroundSecondary,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
     borderBottomWidth: 0,
-    paddingTop: 12,
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    paddingTop: moderateScale(12),
+    paddingHorizontal: SPACING.pageHorizontal,
   },
   handleBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: moderateScale(40),
+    height: moderateScale(4),
+    borderRadius: moderateScale(2),
     backgroundColor: COLORS.cardBorder,
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
   },
   sheetTitle: {
-    fontSize: 20,
+    fontSize: fluidFont(20),
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
   sheetSubtitle: {
-    fontSize: 13,
+    fontSize: fluidFont(13),
     color: COLORS.textSecondary,
     marginTop: 3,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: moderateScale(34),
+    height: moderateScale(34),
+    borderRadius: moderateScale(17),
     backgroundColor: COLORS.card,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
   },
   newContent: {
-    gap: 14,
-    marginBottom: 14,
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
   gameOptionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: RADIUS.md,
+    padding: moderateScale(16),
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   gameIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: RADIUS.sm,
     backgroundColor: COLORS.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: SPACING.sm,
     borderWidth: 1,
     borderColor: 'rgba(0, 255, 0, 0.25)',
   },
@@ -235,55 +285,55 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   gameTitle: {
-    fontSize: 15,
+    fontSize: fluidFont(15),
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
   badge: {
     backgroundColor: COLORS.primaryMuted,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: moderateScale(7),
+    paddingVertical: moderateScale(2),
+    borderRadius: RADIUS.xs,
   },
   badgeText: {
     color: COLORS.primary,
-    fontSize: 10,
+    fontSize: fluidFont(10),
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   gameDescription: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 3,
-    lineHeight: 16,
+    lineHeight: fluidFont(16),
   },
   activeContent: {
-    gap: 12,
-    marginBottom: 14,
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
   activeInfoCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: RADIUS.sm,
+    padding: moderateScale(14),
     borderWidth: 1,
     borderColor: 'rgba(0, 255, 0, 0.3)',
-    gap: 12,
+    gap: SPACING.sm,
   },
   livePulseDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: moderateScale(10),
+    height: moderateScale(10),
+    borderRadius: moderateScale(5),
     backgroundColor: COLORS.primary,
   },
   activeGameTitle: {
-    fontSize: 15,
+    fontSize: fluidFont(15),
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
   activeGameMeta: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 2,
   },
@@ -292,12 +342,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(14),
+    minHeight: TOUCH_TARGET.minSize,
   },
   primaryButtonText: {
     color: COLORS.textDark,
-    fontSize: 15,
+    fontSize: fluidFont(15),
     fontWeight: '800',
   },
   endSessionBtn: {
@@ -305,27 +356,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(14),
     borderWidth: 1,
     borderColor: 'rgba(255, 69, 58, 0.4)',
+    minHeight: TOUCH_TARGET.minSize,
   },
   endSessionText: {
     color: COLORS.danger,
-    fontSize: 14,
+    fontSize: fluidFont(14),
     fontWeight: '700',
   },
   cancelButton: {
     backgroundColor: COLORS.card,
-    borderRadius: 14,
-    paddingVertical: 13,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(13),
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    minHeight: TOUCH_TARGET.minSize,
   },
   cancelButtonText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: fluidFont(14),
     fontWeight: '600',
   },
 });
