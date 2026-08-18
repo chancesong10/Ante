@@ -13,6 +13,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import SwipeableRow from '../components/SwipeableRow';
+import { usePreferences } from '../context/PreferencesContext';
 
 const emptyHand = () => ({ betAmount: '', doubled: false, blackjack: false, outcome: null });
 
@@ -42,6 +43,8 @@ export default function BlackjackScreen({ navigation }) {
 
   const [splitHand1, setSplitHand1] = useState(emptyHand());
   const [splitHand2, setSplitHand2] = useState(emptyHand());
+
+  const { quickChipsEnabled } = usePreferences();
 
   const resetForm = () => {
     setBetAmount('');
@@ -336,17 +339,19 @@ export default function BlackjackScreen({ navigation }) {
                 onChangeText={setBetAmount}
               />
 
-              <View style={styles.chipRow}>
-                {['10', '25', '50', '100', '250'].map((chip) => (
-                  <TouchableOpacity
-                    key={chip}
-                    style={styles.chipButton}
-                    onPress={() => setBetAmount(chip)}
-                  >
-                    <Text style={styles.chipText}>${chip}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {quickChipsEnabled && (
+                <View style={styles.chipRow}>
+                  {['10', '25', '50', '100', '250'].map((chip) => (
+                    <TouchableOpacity
+                      key={chip}
+                      style={styles.chipButton}
+                      onPress={() => setBetAmount(chip)}
+                    >
+                      <Text style={styles.chipText}>${chip}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
               <View style={styles.toggleRow}>
                 <TouchableOpacity

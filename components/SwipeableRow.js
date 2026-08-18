@@ -35,10 +35,10 @@ export default function SwipeableRow({
     );
   };
 
-  const renderRightActions = (progress, dragX) => {
+  const renderLeftActions = (progress, dragX) => {
     const trans = dragX.interpolate({
-      inputRange: [-80, 0],
-      outputRange: [0, 80],
+      inputRange: [0, 80],
+      outputRange: [-80, 0],
       extrapolate: 'clamp',
     });
     return (
@@ -53,11 +53,11 @@ export default function SwipeableRow({
   return (
     <Swipeable
       ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      rightThreshold={40}
-      overshootRight={false}
+      renderLeftActions={renderLeftActions}
+      leftThreshold={40}
+      overshootLeft={false}
       onSwipeableOpen={(direction) => {
-        if (direction === 'right') {
+        if (direction === 'left') {
           handleConfirm();
         }
       }}
