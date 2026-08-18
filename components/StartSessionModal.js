@@ -13,7 +13,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 
-export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack }) {
+export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker }) {
   const { activeSession, startSession, endActiveSession } = useSession();
   const insets = useSafeAreaInsets();
 
@@ -24,6 +24,16 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
     onClose();
     if (onNavigateToBlackjack) {
       onNavigateToBlackjack();
+    }
+  };
+
+  const handleStartPoker = () => {
+    if (!activeSession) {
+      startSession('Poker');
+    }
+    onClose();
+    if (onNavigateToPoker) {
+      onNavigateToPoker();
     }
   };
 
@@ -96,7 +106,11 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                     activeOpacity={0.8}
                     onPress={() => {
                       onClose();
-                      if (onNavigateToBlackjack) onNavigateToBlackjack();
+                      if (activeSession?.gameType === 'Poker') {
+                        if (onNavigateToPoker) onNavigateToPoker();
+                      } else {
+                        if (onNavigateToBlackjack) onNavigateToBlackjack();
+                      }
                     }}
                     accessibilityRole="button"
                     accessibilityLabel="Resume Session"
@@ -146,6 +160,28 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                       </View>
                       <Text style={styles.gameDescription}>
                         Track bets, doubles, splits, and calculate real-time net profit
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.gameOptionCard}
+                    activeOpacity={0.8}
+                    onPress={handleStartPoker}
+                  >
+                    <View style={styles.gameIconBox}>
+                      <Ionicons name="cash-outline" size={24} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.gameInfo}>
+                      <View style={styles.gameTitleRow}>
+                        <Text style={styles.gameTitle}>Poker Session Tracker</Text>
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>Ready</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.gameDescription}>
+                        Log your buy-in and cash-out to track your net result
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />

@@ -9,6 +9,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PreferencesProvider } from './context/PreferencesContext';
 
+import PokerScreen from './screens/PokerScreen';
 import HomeScreen from './screens/HomeScreen';
 import AnalyticsScreen from './screens/AnalyticsScreen';
 import HistoryScreen from './screens/HistoryScreen';
@@ -187,6 +188,7 @@ function AppContent() {
             )}
           </Stack.Screen>
           <Stack.Screen name="Blackjack" component={BlackjackScreen} />
+          <Stack.Screen name="Poker" component={PokerScreen} />
         </Stack.Navigator>
       </NavigationContainer>
 
@@ -196,6 +198,9 @@ function AppContent() {
         onClose={() => setAddModalVisible(false)}
         onNavigateToBlackjack={() => {
           navigationRef.navigate('Blackjack');
+        }}
+        onNavigateToPoker={() => {
+          navigationRef.navigate('Poker');
         }}
       />
     </View>
