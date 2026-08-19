@@ -13,7 +13,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 
-export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker }) {
+export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker, onNavigateToSportsBetting,}) {
   const { activeSession, startSession, endActiveSession } = useSession();
   const insets = useSafeAreaInsets();
 
@@ -36,6 +36,16 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
       onNavigateToPoker();
     }
   };
+
+  const handleStartSportsBetting = () => {
+  if (!activeSession) {
+    startSession('Sports Betting');
+  }
+  onClose();
+  if (onNavigateToSportsBetting) {
+    onNavigateToSportsBetting();
+  }
+};
 
   const handleEndSession = () => {
     endActiveSession();
@@ -108,6 +118,8 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                       onClose();
                       if (activeSession?.gameType === 'Poker') {
                         if (onNavigateToPoker) onNavigateToPoker();
+                      } else if (activeSession?.gameType === 'Sports Betting') {
+                        if (onNavigateToSportsBetting) onNavigateToSportsBetting();
                       } else {
                         if (onNavigateToBlackjack) onNavigateToBlackjack();
                       }
@@ -182,6 +194,28 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                       </View>
                       <Text style={styles.gameDescription}>
                         Log your buy-in and cash-out to track your net result
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.gameOptionCard}
+                    activeOpacity={0.8}
+                    onPress={handleStartSportsBetting}
+                  >
+                    <View style={styles.gameIconBox}>
+                      <Ionicons name="basketball-outline" size={24} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.gameInfo}>
+                      <View style={styles.gameTitleRow}>
+                        <Text style={styles.gameTitle}>Sports Betting Tracker</Text>
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>Ready</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.gameDescription}>
+                        Log stake, odds, and outcome — payout calculated automatically
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
