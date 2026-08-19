@@ -19,7 +19,6 @@ export default function PokerScreen({ navigation }) {
   const {
     activeSession,
     startSession,
-    setSessionBuyInCashOut,
     endActiveSession,
     discardActiveSession,
   } = useSession();
@@ -50,8 +49,7 @@ export default function PokerScreen({ navigation }) {
       return;
     }
 
-    setSessionBuyInCashOut(parsedBuyIn, parsedCashOut);
-    endActiveSession();
+    endActiveSession(parsedBuyIn, parsedCashOut);
     navigation.navigate('MainTabs', { screen: 'History' });
   };
 
