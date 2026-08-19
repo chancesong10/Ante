@@ -125,6 +125,17 @@ export function SessionProvider({ children }) {
     });
   };
 
+  const updateActiveSessionMetadata = (metadata) => {
+    if (!activeSession) return;
+    setActiveSession((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        ...metadata,
+      };
+    });
+  };
+
   const endActiveSession = (overrideBuyIn = null, overrideCashOut = null) => {
     if (!activeSession) return null;
 
@@ -137,7 +148,7 @@ export function SessionProvider({ children }) {
 
     let completedRecord;
 
-        if (isBuyInMode) {
+    if (isBuyInMode) {
       const netProfit = finalCashOut - finalBuyIn;
 
       completedRecord = {
@@ -166,8 +177,11 @@ export function SessionProvider({ children }) {
       const allHands = hands.flatMap((r) => (r.type === 'split' ? r.hands : [r]));
       const totalHands = allHands.length;
       const wins = allHands.filter((h) => h.outcome === 'win').length;
-      const losses = allHands.filter((h) => h.outcome === 'loss').length;
-      const pushes = allHands.filter((h) => h.outcome === 'push').length;
+      const losses = allHands.filter((h) => h.outcome === 'loss' || h.outcome === 'fold').length;
+      const pushes = allHands.filter((h) => h.outcome === 'push' || h.outcome === 'split').length;
+      const folds = allHands.filter((h) => h.outcome === 'fold').length;
+      const bluffedFolds = allHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'bluffed').length;
+      const goodFolds = allHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'good_fold').length;
       const netProfit = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
 
       let grossWins = 0;
@@ -191,10 +205,16 @@ export function SessionProvider({ children }) {
         wins,
         losses,
         pushes,
+        folds,
+        bluffedFolds,
+        goodFolds,
         netProfit,
         grossWins,
         grossLosses,
         winRate: (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0,
+        smallBlind: activeSession.smallBlind,
+        bigBlind: activeSession.bigBlind,
+        chipDenominations: activeSession.chipDenominations,
       };
     }
 
@@ -223,6 +243,7 @@ export function SessionProvider({ children }) {
         sessionHistory,
         isLoaded,
         startSession,
+        updateActiveSessionMetadata,
         logHandToActiveSession,
         removeHandFromActiveSession,
         setSessionBuyInCashOut,
