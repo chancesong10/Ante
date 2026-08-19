@@ -13,9 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { usePreferences } from '../context/PreferencesContext';
 
 export default function AnalyticsScreen({ navigation }) {
   const { sessionHistory } = useSession();
+  const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
 
   // Dynamic calculations from real history
@@ -94,7 +96,9 @@ export default function AnalyticsScreen({ navigation }) {
               },
             ]}
           >
-            {totalNetProfit > 0 ? '+' : ''}${totalNetProfit.toFixed(2)}
+            {privacyMode
+              ? '••••••'
+              : `${totalNetProfit > 0 ? '+' : totalNetProfit < 0 ? '-' : ''}${currencySymbol}${Math.abs(totalNetProfit).toFixed(2)}`}
           </Text>
 
           <View style={styles.subStatsRow}>
@@ -158,7 +162,9 @@ export default function AnalyticsScreen({ navigation }) {
                           { color: isPositive ? COLORS.success : COLORS.danger },
                         ]}
                       >
-                        {isPositive ? '+' : ''}${Math.round(session.netProfit)}
+                        {privacyMode
+                          ? '••'
+                          : `${isPositive ? '+' : '-'}${currencySymbol}${Math.abs(Math.round(session.netProfit))}`}
                       </Text>
                       <View style={styles.barTrack}>
                         <View
@@ -247,7 +253,9 @@ export default function AnalyticsScreen({ navigation }) {
                 bestSession > 0 && { color: COLORS.success },
               ]}
             >
-              {bestSession > 0 ? '+' : ''}${bestSession.toFixed(2)}
+              {privacyMode
+                ? '••••••'
+                : `${bestSession > 0 ? '+' : bestSession < 0 ? '-' : ''}${currencySymbol}${Math.abs(bestSession).toFixed(2)}`}
             </Text>
           </View>
 
@@ -259,7 +267,9 @@ export default function AnalyticsScreen({ navigation }) {
                 worstSession < 0 && { color: COLORS.danger },
               ]}
             >
-              {worstSession > 0 ? '+' : ''}${worstSession.toFixed(2)}
+              {privacyMode
+                ? '••••••'
+                : `${worstSession > 0 ? '+' : worstSession < 0 ? '-' : ''}${currencySymbol}${Math.abs(worstSession).toFixed(2)}`}
             </Text>
           </View>
 
@@ -275,7 +285,9 @@ export default function AnalyticsScreen({ navigation }) {
                   : null,
               ]}
             >
-              {avgSessionNet > 0 ? '+' : ''}${avgSessionNet.toFixed(2)}
+              {privacyMode
+                ? '••••••'
+                : `${avgSessionNet > 0 ? '+' : avgSessionNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(avgSessionNet).toFixed(2)}`}
             </Text>
           </View>
 

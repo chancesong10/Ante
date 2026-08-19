@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
@@ -28,6 +29,7 @@ const calcPayout = (stake, americanOdds) => {
 
 export default function SportsBettingScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { currencySymbol = '$' } = usePreferences();
   const {
     activeSession,
     startSession,
@@ -157,7 +159,7 @@ export default function SportsBettingScreen({ navigation }) {
               },
             ]}
           >
-            {totalNet > 0 ? '+' : ''}${totalNet.toFixed(2)}
+            {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(totalNet).toFixed(2)}
           </Text>
 
           <View style={styles.statsRow}>
@@ -210,7 +212,7 @@ export default function SportsBettingScreen({ navigation }) {
             ))}
           </View>
 
-          <Text style={styles.label}>Stake ($)</Text>
+          <Text style={styles.label}>Stake ({currencySymbol})</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -249,7 +251,7 @@ export default function SportsBettingScreen({ navigation }) {
             <View style={styles.payoutPreview}>
               <Text style={styles.payoutPreviewLabel}>PROJECTED PROFIT IF WIN</Text>
               <Text style={styles.payoutPreviewValue}>
-                +${projectedPayout.toFixed(2)}
+                +{currencySymbol}{projectedPayout.toFixed(2)}
               </Text>
             </View>
           )}
@@ -313,7 +315,7 @@ export default function SportsBettingScreen({ navigation }) {
                       {b.matchup} — {b.betType}
                     </Text>
                     <Text style={styles.historySubtext}>
-                      ${b.bet} @ {b.odds > 0 ? '+' : ''}{b.odds} — {b.outcome.toUpperCase()}
+                      {currencySymbol}{b.bet} @ {b.odds > 0 ? '+' : ''}{b.odds} — {b.outcome.toUpperCase()}
                     </Text>
                   </View>
                   <Text
@@ -329,7 +331,7 @@ export default function SportsBettingScreen({ navigation }) {
                       },
                     ]}
                   >
-                    {b.netChange > 0 ? '+' : ''}${b.netChange.toFixed(2)}
+                    {b.netChange > 0 ? '+' : b.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(b.netChange).toFixed(2)}
                   </Text>
                 </View>
               </SwipeableRow>

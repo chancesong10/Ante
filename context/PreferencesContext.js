@@ -5,12 +5,17 @@ const PreferencesContext = createContext();
 
 const DEFAULT_PREFERENCES = {
   quickChipsEnabled: true,
+  username: 'Ante Highroller',
+  currency: 'USD ($)',
+  currencySymbol: '$',
+  privacyMode: false,
+  hapticsEnabled: true,
+  stopLossAlert: false,
+  stopLossAmount: 250,
 };
 
 export function PreferencesProvider({ children }) {
-  const [quickChipsEnabled, setQuickChipsEnabledState] = useState(
-    DEFAULT_PREFERENCES.quickChipsEnabled
-  );
+  const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [isLoaded, setIsLoaded] = useState(false);
   const hasLoadedOnce = useRef(false);
 
@@ -21,9 +26,21 @@ export function PreferencesProvider({ children }) {
     (async () => {
       const stored = await loadPreferences();
       if (stored) {
-        setQuickChipsEnabledState(
-          stored.quickChipsEnabled ?? DEFAULT_PREFERENCES.quickChipsEnabled
-        );
+        let symbol = stored.currencySymbol;
+        let curr = stored.currency;
+        if (curr?.startsWith('CAD') || symbol === 'CA$') {
+          symbol = '$';
+          curr = 'CAD ($)';
+        } else if (curr?.startsWith('BTC') || symbol === '₿') {
+          symbol = '$';
+          curr = 'USD ($)';
+        }
+        setPreferences((prev) => ({
+          ...prev,
+          ...stored,
+          ...(symbol ? { currencySymbol: symbol } : {}),
+          ...(curr ? { currency: curr } : {}),
+        }));
       }
       setIsLoaded(true);
     })();
@@ -31,18 +48,32 @@ export function PreferencesProvider({ children }) {
 
   useEffect(() => {
     if (!isLoaded) return;
-    savePreferences({ quickChipsEnabled });
-  }, [quickChipsEnabled, isLoaded]);
+    savePreferences(preferences);
+  }, [preferences, isLoaded]);
+
+  const updatePreferences = (partial) => {
+    setPreferences((prev) => ({
+      ...prev,
+      ...partial,
+    }));
+  };
 
   const setQuickChipsEnabled = (value) => {
-    setQuickChipsEnabledState(value);
+    updatePreferences({ quickChipsEnabled: value });
+  };
+
+  const resetPreferences = () => {
+    setPreferences(DEFAULT_PREFERENCES);
   };
 
   return (
     <PreferencesContext.Provider
       value={{
-        quickChipsEnabled,
+        ...preferences,
+        preferences,
+        updatePreferences,
         setQuickChipsEnabled,
+        resetPreferences,
       }}
     >
       {children}
@@ -56,4 +87,4 @@ export function usePreferences() {
     throw new Error('usePreferences must be used within a PreferencesProvider');
   }
   return context;
-}
+}

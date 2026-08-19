@@ -10,10 +10,12 @@ import {
   StatusBar,
   Modal,
   TextInput,
+  Platform,
+  KeyboardAvoidingView,
   TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
@@ -24,33 +26,32 @@ const CURRENCY_OPTIONS = [
   { id: 'USD', name: 'US Dollar', symbol: '$' },
   { id: 'EUR', name: 'Euro', symbol: '€' },
   { id: 'GBP', name: 'British Pound', symbol: '£' },
-  { id: 'CAD', name: 'Canadian Dollar', symbol: 'CA$' },
-  { id: 'BTC', name: 'Bitcoin (mBTC)', symbol: '₿' },
+  { id: 'CAD', name: 'Canadian Dollar', symbol: '$' },
 ];
 
 export default function ProfileScreen() {
-  const { sessionHistory } = useSession();
+  const { sessionHistory, clearAllSessions } = useSession();
   const insets = useSafeAreaInsets();
   const {
-    quickChipsEnabled,
+    quickChipsEnabled = true,
     setQuickChipsEnabled,
     currencySymbol = '$',
     currency = 'USD ($)',
     privacyMode = false,
-    hapticsEnabled = true,
     stopLossAlert = false,
     stopLossAmount = 250,
-    sessionReminder = false,
-    sessionReminderMins = 60,
     updatePreferences,
+    resetPreferences,
   } = usePreferences();
 
   const [deviceId, setDeviceId] = useState('ante_vault_seed');
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
   const [limitsModalVisible, setLimitsModalVisible] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
+
+  // Temporary local state for modal controls
+  const [tempStopLossAlert, setTempStopLossAlert] = useState(stopLossAlert);
   const [tempLossLimit, setTempLossLimit] = useState(String(stopLossAmount));
-  const [tempReminderMins, setTempReminderMins] = useState(String(sessionReminderMins));
   const [copiedSeed, setCopiedSeed] = useState(false);
 
   useEffect(() => {
@@ -66,23 +67,37 @@ export default function ProfileScreen() {
     const totalNet = sessionHistory.reduce((sum, s) => sum + (s.netProfit || 0), 0);
     const totalWins = sessionHistory.reduce((sum, s) => sum + (s.wins || 0), 0);
     const totalLosses = sessionHistory.reduce((sum, s) => sum + (s.losses || 0), 0);
-    const totalHands = sessionHistory.reduce((sum, s) => sum + (s.totalHands || 0), 0);
 
-    // Calculate total lifetime wagered across all games
     let totalWagered = 0;
+    let totalBetsCount = 0;
+
+    const games = {
+      Blackjack: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
+      Poker: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
+      'Sports Betting': { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
+      General: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
+    };
+
     sessionHistory.forEach((session) => {
-      if (session.buyIn && session.buyIn > 0) {
-        totalWagered += session.buyIn;
-      } else if (session.hands && session.hands.length > 0) {
-        session.hands.forEach((hand) => {
-          if (hand.type === 'split' && hand.hands) {
-            hand.hands.forEach((subHand) => {
-              totalWagered += (subHand.bet || 0) * (subHand.doubled ? 2 : 1);
-            });
-          } else {
-            totalWagered += (hand.bet || 0) * (hand.doubled ? 2 : 1);
-          }
-        });
+      const gameType = games[session.gameType] ? session.gameType : 'General';
+      games[gameType].sessions += 1;
+      games[gameType].net += session.netProfit || 0;
+
+      if (session.mode === 'hands' && Array.isArray(session.hands)) {
+        const hands = session.hands.flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]));
+        const handBets = hands.reduce((sum, h) => sum + (h.bet || 0) * (h.doubled ? 2 : 1), 0);
+        totalWagered += handBets;
+        totalBetsCount += hands.length;
+        games[gameType].totalBets += hands.length;
+        games[gameType].wins += session.wins || hands.filter((h) => h.outcome === 'win').length;
+        games[gameType].losses += session.losses || hands.filter((h) => h.outcome === 'loss').length;
+      } else {
+        const stake = session.buyIn || Math.abs(session.netProfit || 0);
+        totalWagered += stake;
+        totalBetsCount += 1;
+        games[gameType].totalBets += 1;
+        if (session.netProfit > 0) games[gameType].wins += 1;
+        else if (session.netProfit < 0) games[gameType].losses += 1;
       }
     });
 
@@ -91,29 +106,12 @@ export default function ProfileScreen() {
         ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
         : '0.0';
 
-    // Game breakdown calculation
-    const games = {
-      Blackjack: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
-      Poker: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
-      'Sports Betting': { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
-      General: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
-    };
-
-    sessionHistory.forEach((s) => {
-      const type = games[s.gameType] ? s.gameType : 'General';
-      games[type].sessions += 1;
-      games[type].net += s.netProfit || 0;
-      games[type].wins += s.wins || (s.netProfit > 0 ? 1 : 0);
-      games[type].losses += s.losses || (s.netProfit < 0 ? 1 : 0);
-      games[type].totalBets += s.totalHands || 1;
-    });
-
     return {
       totalSessions,
       totalNet,
       totalWagered,
       winRate,
-      totalHands,
+      totalHands: totalBetsCount,
       games,
     };
   }, [sessionHistory]);
@@ -134,22 +132,12 @@ export default function ProfileScreen() {
   };
 
   const handleExportData = () => {
-    const summary = {
-      exportDate: new Date().toISOString(),
-      vaultId: deviceId,
-      totalSessions: stats.totalSessions,
-      totalNetProfit: stats.totalNet,
-      totalWagered: stats.totalWagered,
-      winRate: `${stats.winRate}%`,
-      sessions: sessionHistory,
-    };
-
     Alert.alert(
-      'Vault Data Exported',
+      'Vault Ledger Exported',
       `Summary generated for ${stats.totalSessions} session(s) with ${currencySymbol}${stats.totalNet.toFixed(
         2
-      )} net outcome.\n\nJSON package prepared securely in local storage.`,
-      [{ text: 'Done', style: 'default' }]
+      )} lifetime outcome.\n\nJSON export package is ready on device.`,
+      [{ text: 'OK', style: 'default' }]
     );
   };
 
@@ -164,20 +152,29 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             await clearAllAppData();
-            Alert.alert('Vault Reset', 'All local data has been purged.');
+            if (clearAllSessions) clearAllSessions();
+            if (resetPreferences) resetPreferences();
+            Alert.alert('Vault Purged', 'All local data and history have been cleared.');
           },
         },
       ]
     );
   };
 
+  const handleOpenLimitsModal = () => {
+    setTempStopLossAlert(stopLossAlert);
+    setTempLossLimit(String(stopLossAmount));
+    setLimitsModalVisible(true);
+  };
+
   const handleSaveLimits = () => {
-    const parsedLoss = parseFloat(tempLossLimit) || 250;
-    const parsedMins = parseInt(tempReminderMins, 10) || 60;
-    updatePreferences({
-      stopLossAmount: parsedLoss,
-      sessionReminderMins: parsedMins,
-    });
+    const parsedLoss = Math.max(1, parseFloat(tempLossLimit) || 250);
+    if (updatePreferences) {
+      updatePreferences({
+        stopLossAlert: tempStopLossAlert,
+        stopLossAmount: parsedLoss,
+      });
+    }
     setLimitsModalVisible(false);
   };
 
@@ -208,7 +205,7 @@ export default function ProfileScreen() {
         <View style={[styles.profileCard, SHADOWS.card]}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarCircle}>
-              <Ionicons name="person" size={moderateScale(30)} color={COLORS.primary} />
+              <Ionicons name="person" size={moderateScale(28)} color={COLORS.primary} />
             </View>
             <View style={styles.onlineBadge}>
               <View style={styles.onlineDot} />
@@ -234,7 +231,7 @@ export default function ProfileScreen() {
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>LIFETIME VAULT STATS</Text>
           <TouchableOpacity
-            onPress={() => updatePreferences({ privacyMode: !privacyMode })}
+            onPress={() => updatePreferences && updatePreferences({ privacyMode: !privacyMode })}
             hitSlop={TOUCH_TARGET.hitSlop}
             style={styles.privacyToggleBtn}
           >
@@ -287,7 +284,7 @@ export default function ProfileScreen() {
               <Ionicons name="flame" size={moderateScale(15)} color={COLORS.primary} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
-              {privacyMode ? '••••••' : `${currencySymbol}${stats.totalWagered.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+              {privacyMode ? '••••••' : `${currencySymbol}${stats.totalWagered.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
             <Text style={styles.gridCardFoot}>Lifetime volume</Text>
           </View>
@@ -459,7 +456,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Quick Chip Buttons</Text>
-              <Text style={styles.menuSubtitle}>Fast $10, $25, $50 buttons during betting</Text>
+              <Text style={styles.menuSubtitle}>Fast cumulative chip buttons during betting</Text>
             </View>
             <Switch
               value={quickChipsEnabled}
@@ -503,7 +500,7 @@ export default function ProfileScreen() {
             </View>
             <Switch
               value={privacyMode}
-              onValueChange={(val) => updatePreferences({ privacyMode: val })}
+              onValueChange={(val) => updatePreferences && updatePreferences({ privacyMode: val })}
               trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
               thumbColor={privacyMode ? COLORS.primary : '#8E9BAE'}
             />
@@ -517,11 +514,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.menuRow}
             activeOpacity={0.7}
-            onPress={() => {
-              setTempLossLimit(String(stopLossAmount));
-              setTempReminderMins(String(sessionReminderMins));
-              setLimitsModalVisible(true);
-            }}
+            onPress={handleOpenLimitsModal}
           >
             <View style={styles.menuIconCircle}>
               <Ionicons name="shield-outline" size={moderateScale(18)} color={COLORS.danger} />
@@ -530,30 +523,6 @@ export default function ProfileScreen() {
               <Text style={styles.menuTitle}>Session Loss Alert</Text>
               <Text style={styles.menuSubtitle}>
                 {stopLossAlert ? `Active warning at ${currencySymbol}${stopLossAmount}` : 'No threshold configured'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-
-          <View style={styles.menuDivider} />
-
-          {/* Duration Reminder */}
-          <TouchableOpacity
-            style={styles.menuRow}
-            activeOpacity={0.7}
-            onPress={() => {
-              setTempLossLimit(String(stopLossAmount));
-              setTempReminderMins(String(sessionReminderMins));
-              setLimitsModalVisible(true);
-            }}
-          >
-            <View style={styles.menuIconCircle}>
-              <Ionicons name="timer-outline" size={moderateScale(18)} color={COLORS.warning} />
-            </View>
-            <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Session Duration Timer</Text>
-              <Text style={styles.menuSubtitle}>
-                {sessionReminder ? `Reminder every ${sessionReminderMins} minutes` : 'Disabled'}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
@@ -661,50 +630,54 @@ export default function ProfileScreen() {
       >
         <TouchableWithoutFeedback onPress={() => setCurrencyModalVisible(false)}>
           <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.modalSheet, SHADOWS.card]}>
-                <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Select Currency</Text>
-                  <TouchableOpacity
-                    onPress={() => setCurrencyModalVisible(false)}
-                    hitSlop={TOUCH_TARGET.hitSlop}
-                  >
-                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={[styles.modalSheet, SHADOWS.card]}
+            >
+              <View style={styles.modalHeaderRow}>
+                <Text style={styles.modalTitle}>Select Currency</Text>
+                <TouchableOpacity
+                  onPress={() => setCurrencyModalVisible(false)}
+                  hitSlop={TOUCH_TARGET.hitSlop}
+                >
+                  <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-                {CURRENCY_OPTIONS.map((item) => {
-                  const isSelected = currencySymbol === item.symbol;
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.currencyOption,
-                        isSelected && styles.currencyOptionSelected,
-                      ]}
-                      onPress={() => {
+              {CURRENCY_OPTIONS.map((item) => {
+                const isSelected = currency ? currency.startsWith(item.id) : currencySymbol === item.symbol;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.currencyOption,
+                      isSelected && styles.currencyOptionSelected,
+                    ]}
+                    onPress={() => {
+                      if (updatePreferences) {
                         updatePreferences({
                           currency: `${item.id} (${item.symbol})`,
                           currencySymbol: item.symbol,
                         });
-                        setCurrencyModalVisible(false);
-                      }}
-                    >
-                      <View style={styles.currencySymbolBox}>
-                        <Text style={styles.currencySymbolLarge}>{item.symbol}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.currencyItemName}>{item.name}</Text>
-                        <Text style={styles.currencyItemId}>{item.id}</Text>
-                      </View>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </TouchableWithoutFeedback>
+                      }
+                      setCurrencyModalVisible(false);
+                    }}
+                  >
+                    <View style={styles.currencySymbolBox}>
+                      <Text style={styles.currencySymbolLarge}>{item.symbol}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.currencyItemName}>{item.name}</Text>
+                      <Text style={styles.currencyItemId}>{item.id}</Text>
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </TouchableOpacity>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -716,10 +689,17 @@ export default function ProfileScreen() {
         animationType="fade"
         onRequestClose={() => setLimitsModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setLimitsModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.modalSheet, SHADOWS.card]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <TouchableWithoutFeedback onPress={() => setLimitsModalVisible(false)}>
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
+                style={[styles.modalSheet, SHADOWS.card]}
+              >
                 <View style={styles.modalHeaderRow}>
                   <Text style={styles.modalTitle}>Responsible Play Limits</Text>
                   <TouchableOpacity
@@ -735,10 +715,10 @@ export default function ProfileScreen() {
                   <View style={styles.limitTopRow}>
                     <Text style={styles.limitLabel}>Session Stop-Loss Alert</Text>
                     <Switch
-                      value={stopLossAlert}
-                      onValueChange={(val) => updatePreferences({ stopLossAlert: val })}
+                      value={tempStopLossAlert}
+                      onValueChange={setTempStopLossAlert}
                       trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-                      thumbColor={stopLossAlert ? COLORS.primary : '#8E9BAE'}
+                      thumbColor={tempStopLossAlert ? COLORS.primary : '#8E9BAE'}
                     />
                   </View>
                   <Text style={styles.limitSub}>
@@ -757,35 +737,6 @@ export default function ProfileScreen() {
                   </View>
                 </View>
 
-                <View style={styles.portfolioDivider} />
-
-                {/* Duration Reminder Config */}
-                <View style={styles.limitBlock}>
-                  <View style={styles.limitTopRow}>
-                    <Text style={styles.limitLabel}>Session Duration Reminder</Text>
-                    <Switch
-                      value={sessionReminder}
-                      onValueChange={(val) => updatePreferences({ sessionReminder: val })}
-                      trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-                      thumbColor={sessionReminder ? COLORS.primary : '#8E9BAE'}
-                    />
-                  </View>
-                  <Text style={styles.limitSub}>
-                    Receive a reality-check notification during extended live tracking.
-                  </Text>
-                  <View style={styles.inputContainer}>
-                    <TextInput
-                      style={styles.textInput}
-                      keyboardType="numeric"
-                      value={tempReminderMins}
-                      onChangeText={setTempReminderMins}
-                      placeholder="60"
-                      placeholderTextColor={COLORS.textMuted}
-                    />
-                    <Text style={styles.inputSuffix}>Minutes</Text>
-                  </View>
-                </View>
-
                 <TouchableOpacity
                   style={styles.saveModalBtn}
                   activeOpacity={0.85}
@@ -793,10 +744,10 @@ export default function ProfileScreen() {
                 >
                   <Text style={styles.saveModalBtnText}>Save Limits</Text>
                 </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* SAFER PLAY INFO MODAL */}
@@ -808,37 +759,39 @@ export default function ProfileScreen() {
       >
         <TouchableWithoutFeedback onPress={() => setHelpModalVisible(false)}>
           <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.modalSheet, SHADOWS.card]}>
-                <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Safer Play & Support</Text>
-                  <TouchableOpacity
-                    onPress={() => setHelpModalVisible(false)}
-                    hitSlop={TOUCH_TARGET.hitSlop}
-                  >
-                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.helpText}>
-                  Ante is designed strictly as a mathematical and bankroll tracking tool. Always wager within your predetermined limits.
-                </Text>
-
-                <View style={styles.helpBox}>
-                  <Text style={styles.helpBoxTitle}>National Council on Problem Gambling</Text>
-                  <Text style={styles.helpBoxSub}>24/7 Confidential Helpline</Text>
-                  <Text style={styles.helpPhone}>1-800-522-4700</Text>
-                </View>
-
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={[styles.modalSheet, SHADOWS.card]}
+            >
+              <View style={styles.modalHeaderRow}>
+                <Text style={styles.modalTitle}>Safer Play & Support</Text>
                 <TouchableOpacity
-                  style={styles.saveModalBtn}
-                  activeOpacity={0.85}
                   onPress={() => setHelpModalVisible(false)}
+                  hitSlop={TOUCH_TARGET.hitSlop}
                 >
-                  <Text style={styles.saveModalBtnText}>Got it</Text>
+                  <Ionicons name="close" size={22} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               </View>
-            </TouchableWithoutFeedback>
+
+              <Text style={styles.helpText}>
+                Ante is designed strictly as a mathematical and bankroll tracking tool. Always wager within your predetermined limits.
+              </Text>
+
+              <View style={styles.helpBox}>
+                <Text style={styles.helpBoxTitle}>National Council on Problem Gambling</Text>
+                <Text style={styles.helpBoxSub}>24/7 Confidential Helpline</Text>
+                <Text style={styles.helpPhone}>1-800-522-4700</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.saveModalBtn}
+                activeOpacity={0.85}
+                onPress={() => setHelpModalVisible(false)}
+              >
+                <Text style={styles.saveModalBtnText}>Got it</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -911,9 +864,9 @@ const styles = StyleSheet.create({
     marginRight: SPACING.sm + 2,
   },
   avatarCircle: {
-    width: moderateScale(56),
-    height: moderateScale(56),
-    borderRadius: moderateScale(28),
+    width: moderateScale(54),
+    height: moderateScale(54),
+    borderRadius: moderateScale(27),
     backgroundColor: COLORS.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -954,7 +907,7 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 1,
-    fontFamily: 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   rankBadgeRow: {
     marginTop: 6,
@@ -1350,4 +1303,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
-

@@ -5,6 +5,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 
 const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
@@ -16,6 +17,7 @@ const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
 
 export default function HistoryScreen({ navigation }) {
   const { sessionHistory, deleteSession } = useSession();
+  const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
@@ -70,7 +72,9 @@ export default function HistoryScreen({ navigation }) {
                   },
                 ]}
               >
-                {isWin ? '+' : ''}${item.netProfit.toFixed(2)}
+                {privacyMode
+                  ? '••••••'
+                  : `${isWin ? '+' : isLoss ? '-' : ''}${currencySymbol}${Math.abs(item.netProfit).toFixed(2)}`}
               </Text>
               <View style={styles.durationRow}>
                 <Ionicons name="time-outline" size={12} color={COLORS.textMuted} />
@@ -106,12 +110,16 @@ export default function HistoryScreen({ navigation }) {
             <View style={styles.statsStrip}>
               <View style={styles.statCol}>
                 <Text style={styles.statLabel}>Buy-In</Text>
-                <Text style={styles.statVal}>${item.buyIn.toFixed(2)}</Text>
+                <Text style={styles.statVal}>
+                  {privacyMode ? '••••••' : `${currencySymbol}${item.buyIn.toFixed(2)}`}
+                </Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statCol}>
                 <Text style={styles.statLabel}>Cash-Out</Text>
-                <Text style={styles.statVal}>${item.cashOut.toFixed(2)}</Text>
+                <Text style={styles.statVal}>
+                  {privacyMode ? '••••••' : `${currencySymbol}${item.cashOut.toFixed(2)}`}
+                </Text>
               </View>
             </View>
           )}
@@ -125,11 +133,15 @@ export default function HistoryScreen({ navigation }) {
                   <Text style={styles.expandedTitle}>Session Summary</Text>
                   <View style={styles.buyInRow}>
                     <Text style={styles.buyInLabel}>Buy-In</Text>
-                    <Text style={styles.buyInValue}>${item.buyIn.toFixed(2)}</Text>
+                    <Text style={styles.buyInValue}>
+                      {privacyMode ? '••••••' : `${currencySymbol}${item.buyIn.toFixed(2)}`}
+                    </Text>
                   </View>
                   <View style={styles.buyInRow}>
                     <Text style={styles.buyInLabel}>Cash-Out</Text>
-                    <Text style={styles.buyInValue}>${item.cashOut.toFixed(2)}</Text>
+                    <Text style={styles.buyInValue}>
+                      {privacyMode ? '••••••' : `${currencySymbol}${item.cashOut.toFixed(2)}`}
+                    </Text>
                   </View>
                   <View style={[styles.buyInRow, styles.buyInTotalRow]}>
                     <Text style={styles.buyInTotalLabel}>Net Result</Text>
@@ -145,7 +157,9 @@ export default function HistoryScreen({ navigation }) {
                         },
                       ]}
                     >
-                      {isWin ? '+' : ''}${item.netProfit.toFixed(2)}
+                      {privacyMode
+                        ? '••••••'
+                        : `${isWin ? '+' : isLoss ? '-' : ''}${currencySymbol}${Math.abs(item.netProfit).toFixed(2)}`}
                     </Text>
                   </View>
                 </View>
@@ -160,7 +174,7 @@ export default function HistoryScreen({ navigation }) {
                           {h.hands.map((subHand, sIdx) => (
                             <View key={sIdx} style={styles.handRow}>
                               <Text style={styles.handDetail}>
-                                Hand {sIdx + 1}: ${subHand.bet}
+                                Hand {sIdx + 1}: {currencySymbol}{subHand.bet}
                                 {subHand.doubled ? ' (2x)' : ''}
                                 {subHand.blackjack ? ' (BJ)' : ''} —{' '}
                                 {subHand.outcome.toUpperCase()}
@@ -178,8 +192,8 @@ export default function HistoryScreen({ navigation }) {
                                   },
                                 ]}
                               >
-                                {subHand.netChange > 0 ? '+' : ''}$
-                                {subHand.netChange.toFixed(2)}
+                                {subHand.netChange > 0 ? '+' : subHand.netChange < 0 ? '-' : ''}{currencySymbol}
+                                {Math.abs(subHand.netChange).toFixed(2)}
                               </Text>
                             </View>
                           ))}
@@ -191,8 +205,8 @@ export default function HistoryScreen({ navigation }) {
                       <View key={idx} style={styles.handRow}>
                         <Text style={styles.handDetail}>
                           {h.matchup
-                            ? `${h.matchup} (${h.betType}): $${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${h.outcome.toUpperCase()}`
-                            : `Hand ${idx + 1}: $${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${h.outcome.toUpperCase()}`}
+                            ? `${h.matchup} (${h.betType}): ${currencySymbol}${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${h.outcome.toUpperCase()}`
+                            : `Hand ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${h.outcome.toUpperCase()}`}
                         </Text>
                         <Text
                           style={[
@@ -207,7 +221,7 @@ export default function HistoryScreen({ navigation }) {
                             },
                           ]}
                         >
-                          {h.netChange > 0 ? '+' : ''}${h.netChange.toFixed(2)}
+                          {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(h.netChange).toFixed(2)}
                         </Text>
                       </View>
                     );

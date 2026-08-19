@@ -13,14 +13,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { usePreferences } from '../context/PreferencesContext';
 
 export default function GeneralTrackerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { currencySymbol = '$' } = usePreferences();
   const {
     activeSession,
     startSession,
     endActiveSession,
     discardActiveSession,
+    setSessionBuyInCashOut,
   } = useSession();
 
   useEffect(() => {
@@ -43,6 +46,14 @@ export default function GeneralTrackerScreen({ navigation }) {
     !isNaN(parsedCashOut) &&
     parsedBuyIn >= 0 &&
     parsedCashOut >= 0;
+
+  useEffect(() => {
+    if (activeSession && setSessionBuyInCashOut) {
+      const b = !isNaN(parsedBuyIn) && parsedBuyIn >= 0 ? parsedBuyIn : null;
+      const c = !isNaN(parsedCashOut) && parsedCashOut >= 0 ? parsedCashOut : null;
+      setSessionBuyInCashOut(b, c);
+    }
+  }, [parsedBuyIn, parsedCashOut, activeSession?.id]);
 
   const liveNet = hasValidNumbers ? parsedCashOut - parsedBuyIn : 0;
 
@@ -121,7 +132,7 @@ export default function GeneralTrackerScreen({ navigation }) {
               },
             ]}
           >
-            {hasValidNumbers ? `${liveNet > 0 ? '+' : ''}$${liveNet.toFixed(2)}` : '—'}
+            {hasValidNumbers ? `${liveNet > 0 ? '+' : liveNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(liveNet).toFixed(2)}` : '—'}
           </Text>
           <Text style={styles.statsHint}>
             For slots, craps, roulette, or anything you'd rather log simply
@@ -138,7 +149,7 @@ export default function GeneralTrackerScreen({ navigation }) {
             onChangeText={setLabel}
           />
 
-          <Text style={styles.label}>Buy-In ($)</Text>
+          <Text style={styles.label}>Buy-In ({currencySymbol})</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -148,7 +159,7 @@ export default function GeneralTrackerScreen({ navigation }) {
             onChangeText={setBuyIn}
           />
 
-          <Text style={styles.label}>Cash-Out ($)</Text>
+          <Text style={styles.label}>Cash-Out ({currencySymbol})</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
