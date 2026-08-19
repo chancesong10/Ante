@@ -150,7 +150,7 @@ export default function SportsBettingScreen({ navigation }) {
               {
                 color:
                   totalNet > 0
-                    ? COLORS.primary
+                    ? COLORS.success
                     : totalNet < 0
                     ? COLORS.danger
                     : COLORS.textPrimary,
@@ -163,7 +163,7 @@ export default function SportsBettingScreen({ navigation }) {
           <View style={styles.statsRow}>
             <View style={styles.statPill}>
               <Text style={styles.statPillLabel}>Wins</Text>
-              <Text style={[styles.statPillValue, { color: COLORS.primary }]}>{wins}</Text>
+              <Text style={[styles.statPillValue, { color: COLORS.success }]}>{wins}</Text>
             </View>
             <View style={styles.statPill}>
               <Text style={styles.statPillLabel}>Losses</Text>
@@ -322,7 +322,7 @@ export default function SportsBettingScreen({ navigation }) {
                       {
                         color:
                           b.netChange > 0
-                            ? COLORS.primary
+                            ? COLORS.success
                             : b.netChange < 0
                             ? COLORS.danger
                             : COLORS.textPrimary,
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
-  payoutPreviewValue: { fontSize: 20, fontWeight: '900', color: COLORS.primary, marginTop: 2 },
+  payoutPreviewValue: { fontSize: 20, fontWeight: '900', color: COLORS.success, marginTop: 2 },
   outcomeRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
   outcomeButton: {
     flex: 1,
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  winActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  winActive: { backgroundColor: COLORS.success, borderColor: COLORS.success },
   lossActive: { backgroundColor: COLORS.danger, borderColor: COLORS.danger },
   pushActive: { backgroundColor: '#3F3F46', borderColor: '#52525B' },
   outcomeText: { color: COLORS.textPrimary, fontWeight: '700', fontSize: 14 },

@@ -94,7 +94,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                     {
                       color:
                         activeNet > 0
-                          ? COLORS.primary
+                          ? COLORS.success
                           : activeNet < 0
                           ? COLORS.danger
                           : COLORS.textPrimary,
@@ -156,7 +156,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
               {
                 color:
                   totalNet > 0
-                    ? COLORS.primary
+                    ? COLORS.success
                     : totalNet < 0
                     ? COLORS.danger
                     : COLORS.textPrimary,
@@ -178,7 +178,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
               <Text
                 style={[
                   styles.metricValue,
-                  totalSessions > 0 && { color: COLORS.primary },
+                  totalSessions > 0 && { color: COLORS.success },
                 ]}
               >
                 {winRate}%
@@ -261,7 +261,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                       {
                         color:
                           session.netProfit > 0
-                            ? COLORS.primary
+                            ? COLORS.success
                             : session.netProfit < 0
                             ? COLORS.danger
                             : COLORS.textPrimary,

@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: SPACING.sm,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 0, 0.25)',
+    borderColor: COLORS.primaryGlow,
   },
   gameInfo: {
     flex: 1,
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     padding: moderateScale(14),
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 0, 0.3)',
+    borderColor: COLORS.primaryGlow,
     gap: SPACING.sm,
   },
   livePulseDot: {

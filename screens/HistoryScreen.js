@@ -63,7 +63,7 @@ const gameIcon = (gameType) => {
                   styles.netProfitText,
                   {
                     color: isWin
-                      ? COLORS.primary
+                      ? COLORS.success
                       : isLoss
                       ? COLORS.danger
                       : COLORS.textPrimary,
@@ -95,7 +95,7 @@ const gameIcon = (gameType) => {
               <View style={styles.statDivider} />
               <View style={styles.statCol}>
                 <Text style={styles.statLabel}>Win Rate</Text>
-                <Text style={[styles.statVal, isWin && { color: COLORS.primary }]}>
+                <Text style={[styles.statVal, isWin && { color: COLORS.success }]}>
                   {item.winRate.toFixed(1)}%
                 </Text>
               </View>
@@ -138,7 +138,7 @@ const gameIcon = (gameType) => {
                         styles.buyInTotalValue,
                         {
                           color: isWin
-                            ? COLORS.primary
+                            ? COLORS.success
                             : isLoss
                             ? COLORS.danger
                             : COLORS.textPrimary,
@@ -171,7 +171,7 @@ const gameIcon = (gameType) => {
                                   {
                                     color:
                                       subHand.netChange > 0
-                                        ? COLORS.primary
+                                        ? COLORS.success
                                         : subHand.netChange < 0
                                         ? COLORS.danger
                                         : COLORS.textPrimary,
@@ -200,7 +200,7 @@ const gameIcon = (gameType) => {
                             {
                               color:
                                 h.netChange > 0
-                                  ? COLORS.primary
+                                  ? COLORS.success
                                   : h.netChange < 0
                                   ? COLORS.danger
                                   : COLORS.textPrimary,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 0, 0.2)',
+    borderColor: COLORS.cardBorder,
   },
   sessionMeta: {
     flex: 1,

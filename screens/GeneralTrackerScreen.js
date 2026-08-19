@@ -114,7 +114,7 @@ export default function GeneralTrackerScreen({ navigation }) {
                 color: !hasValidNumbers
                   ? COLORS.textPrimary
                   : liveNet > 0
-                  ? COLORS.primary
+                  ? COLORS.success
                   : liveNet < 0
                   ? COLORS.danger
                   : COLORS.textPrimary,
