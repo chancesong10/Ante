@@ -26,6 +26,7 @@ export default function HistoryScreen({ navigation }) {
 const gameIcon = (gameType) => {
   if (gameType === 'Poker') return 'cash-outline';
   if (gameType === 'Sports Betting') return 'basketball-outline';
+  if (gameType === 'General') return 'dice-outline';
   return 'game-controller';
 };
 

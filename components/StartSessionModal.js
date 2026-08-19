@@ -13,7 +13,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 
-export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker, onNavigateToSportsBetting,}) {
+export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker, onNavigateToSportsBetting, onNavigateToGeneral,}) {
   const { activeSession, startSession, endActiveSession } = useSession();
   const insets = useSafeAreaInsets();
 
@@ -44,6 +44,16 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
   onClose();
   if (onNavigateToSportsBetting) {
     onNavigateToSportsBetting();
+  }
+};
+
+const handleStartGeneral = () => {
+  if (!activeSession) {
+    startSession('General');
+  }
+  onClose();
+  if (onNavigateToGeneral) {
+    onNavigateToGeneral();
   }
 };
 
@@ -216,6 +226,28 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
                       </View>
                       <Text style={styles.gameDescription}>
                         Log stake, odds, and outcome — payout calculated automatically
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.gameOptionCard}
+                    activeOpacity={0.8}
+                    onPress={handleStartGeneral}
+                  >
+                    <View style={styles.gameIconBox}>
+                      <Ionicons name="dice-outline" size={24} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.gameInfo}>
+                      <View style={styles.gameTitleRow}>
+                        <Text style={styles.gameTitle}>General Tracker</Text>
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>Ready</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.gameDescription}>
+                        Simple buy-in / cash-out for anything else
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
