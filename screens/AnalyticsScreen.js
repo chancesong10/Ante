@@ -87,7 +87,7 @@ export default function AnalyticsScreen({ navigation }) {
               {
                 color:
                   totalNetProfit > 0
-                    ? COLORS.primary
+                    ? COLORS.success
                     : totalNetProfit < 0
                     ? COLORS.danger
                     : COLORS.textPrimary,
@@ -103,7 +103,7 @@ export default function AnalyticsScreen({ navigation }) {
               <Text
                 style={[
                   styles.subStatValue,
-                  totalSessions > 0 && { color: COLORS.primary },
+                  totalSessions > 0 && { color: COLORS.success },
                 ]}
               >
                 {winRate}%
@@ -155,7 +155,7 @@ export default function AnalyticsScreen({ navigation }) {
                       <Text
                         style={[
                           styles.barValueText,
-                          { color: isPositive ? COLORS.primary : COLORS.danger },
+                          { color: isPositive ? COLORS.success : COLORS.danger },
                         ]}
                       >
                         {isPositive ? '+' : ''}${Math.round(session.netProfit)}
@@ -167,7 +167,7 @@ export default function AnalyticsScreen({ navigation }) {
                             {
                               height: `${barHeightPercent}%`,
                               backgroundColor: isPositive
-                                ? COLORS.primary
+                                ? COLORS.success
                                 : COLORS.danger,
                             },
                           ]}
@@ -189,7 +189,7 @@ export default function AnalyticsScreen({ navigation }) {
                   <View
                     style={[
                       styles.distBarSegment,
-                      { width: `${winPercent}%`, backgroundColor: COLORS.primary },
+                      { width: `${winPercent}%`, backgroundColor: COLORS.success },
                     ]}
                   />
                 )}
@@ -214,7 +214,7 @@ export default function AnalyticsScreen({ navigation }) {
               {/* Legend & Counts */}
               <View style={styles.legendRow}>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
+                  <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
                   <Text style={styles.legendLabel}>
                     Wins: {totalWins} ({winPercent.toFixed(0)}%)
                   </Text>
@@ -244,7 +244,7 @@ export default function AnalyticsScreen({ navigation }) {
             <Text
               style={[
                 styles.gridValue,
-                bestSession > 0 && { color: COLORS.primary },
+                bestSession > 0 && { color: COLORS.success },
               ]}
             >
               {bestSession > 0 ? '+' : ''}${bestSession.toFixed(2)}
@@ -269,7 +269,7 @@ export default function AnalyticsScreen({ navigation }) {
               style={[
                 styles.gridValue,
                 avgSessionNet > 0
-                  ? { color: COLORS.primary }
+                  ? { color: COLORS.success }
                   : avgSessionNet < 0
                   ? { color: COLORS.danger }
                   : null,

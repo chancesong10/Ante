@@ -73,7 +73,7 @@ export default function ProfileScreen() {
                 {
                   color:
                     totalNet > 0
-                      ? COLORS.primary
+                      ? COLORS.success
                       : totalNet < 0
                       ? COLORS.danger
                       : COLORS.textPrimary,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: SPACING.sm,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 0, 0.3)',
+    borderColor: COLORS.primaryGlow,
   },
   profileMeta: {
     flex: 1,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     paddingVertical: moderateScale(4),
     borderRadius: RADIUS.xs,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 0, 0.3)',
+    borderColor: COLORS.primaryGlow,
   },
   statusBadgeText: {
     color: COLORS.primary,

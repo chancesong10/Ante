@@ -109,7 +109,7 @@ export default function PokerScreen({ navigation }) {
                 color: !hasValidNumbers
                   ? COLORS.textPrimary
                   : liveNet > 0
-                  ? COLORS.primary
+                  ? COLORS.success
                   : liveNet < 0
                   ? COLORS.danger
                   : COLORS.textPrimary,

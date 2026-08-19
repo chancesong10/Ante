@@ -267,7 +267,7 @@ export default function BlackjackScreen({ navigation }) {
               {
                 color:
                   totalNet > 0
-                    ? COLORS.primary
+                    ? COLORS.success
                     : totalNet < 0
                     ? COLORS.danger
                     : COLORS.textPrimary,
@@ -280,7 +280,7 @@ export default function BlackjackScreen({ navigation }) {
           <View style={styles.statsRow}>
             <View style={styles.statPill}>
               <Text style={styles.statPillLabel}>Wins</Text>
-              <Text style={[styles.statPillValue, { color: COLORS.primary }]}>{wins}</Text>
+              <Text style={[styles.statPillValue, { color: COLORS.success }]}>{wins}</Text>
             </View>
             <View style={styles.statPill}>
               <Text style={styles.statPillLabel}>Losses</Text>
@@ -428,7 +428,7 @@ export default function BlackjackScreen({ navigation }) {
                               {
                                 color:
                                   h.netChange > 0
-                                    ? COLORS.primary
+                                    ? COLORS.success
                                     : h.netChange < 0
                                     ? COLORS.danger
                                     : COLORS.textPrimary,
@@ -447,7 +447,7 @@ export default function BlackjackScreen({ navigation }) {
                             {
                               color:
                                 groupNet > 0
-                                  ? COLORS.primary
+                                  ? COLORS.success
                                   : groupNet < 0
                                   ? COLORS.danger
                                   : COLORS.textPrimary,
@@ -479,7 +479,7 @@ export default function BlackjackScreen({ navigation }) {
                         {
                           color:
                             r.netChange > 0
-                              ? COLORS.primary
+                              ? COLORS.success
                               : r.netChange < 0
                               ? COLORS.danger
                               : COLORS.textPrimary,
@@ -716,8 +716,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
   },
   winActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.success,
+    borderColor: COLORS.success,
   },
   lossActive: {
     backgroundColor: COLORS.danger,
