@@ -102,7 +102,7 @@ export default function ProfileScreen() {
               value={quickChipsEnabled}
               onValueChange={setQuickChipsEnabled}
               trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-              thumbColor={quickChipsEnabled ? COLORS.primary : '#A0A0A0'}
+              thumbColor={quickChipsEnabled ? COLORS.primary : COLORS.textMuted}
             />
           </View>
         </View>

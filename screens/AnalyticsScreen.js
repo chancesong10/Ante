@@ -205,7 +205,7 @@ export default function AnalyticsScreen({ navigation }) {
                   <View
                     style={[
                       styles.distBarSegment,
-                      { width: `${pushPercent}%`, backgroundColor: '#52525B' },
+                      { width: `${pushPercent}%`, backgroundColor: COLORS.neutral },
                     ]}
                   />
                 )}
@@ -226,7 +226,7 @@ export default function AnalyticsScreen({ navigation }) {
                   </Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: '#52525B' }]} />
+                  <View style={[styles.legendDot, { backgroundColor: COLORS.neutral }]} />
                   <Text style={styles.legendLabel}>
                     Pushes: {totalPushes} ({pushPercent.toFixed(0)}%)
                   </Text>

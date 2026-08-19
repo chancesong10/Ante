@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 69, 58, 0.4)',
+    borderColor: COLORS.dangerBorder,
   },
   headerEndButtonText: {
     color: COLORS.danger,

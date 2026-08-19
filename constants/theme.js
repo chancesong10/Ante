@@ -26,9 +26,13 @@ export const COLORS = {
   successGlow: 'rgba(16, 185, 129, 0.25)',
   successMuted: 'rgba(16, 185, 129, 0.12)',
   danger: '#F43F5E',
+  dangerGlow: 'rgba(244, 63, 94, 0.25)',
   dangerMuted: 'rgba(244, 63, 94, 0.12)',
+  dangerBorder: 'rgba(244, 63, 94, 0.4)',
   warning: '#F59E0B',
   info: '#38BDF8',
+  neutral: '#334155',
+  neutralBorder: '#475569',
   
   // UI Elements
   tabBar: '#0E1422',

@@ -298,7 +298,7 @@ export default function SportsBettingScreen({ navigation }) {
         {sessionBets.length > 0 && (
           <View style={styles.historySection}>
             <Text style={styles.sectionTitle}>Bets in Current Session</Text>
-            <Text style={styles.swipeHint}>Swipe a bet right to delete it</Text>
+            <Text style={styles.swipeHint}>Swipe a bet to delete</Text>
 
             {sessionBets.map((b) => (
               <SwipeableRow
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 69, 58, 0.4)',
+    borderColor: COLORS.dangerBorder,
   },
   headerEndButtonText: { color: COLORS.danger, fontSize: 12, fontWeight: '700' },
   scroll: { padding: 16 },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   },
   winActive: { backgroundColor: COLORS.success, borderColor: COLORS.success },
   lossActive: { backgroundColor: COLORS.danger, borderColor: COLORS.danger },
-  pushActive: { backgroundColor: '#3F3F46', borderColor: '#52525B' },
+  pushActive: { backgroundColor: COLORS.neutral, borderColor: COLORS.neutralBorder },
   outcomeText: { color: COLORS.textPrimary, fontWeight: '700', fontSize: 14 },
   outcomeTextActive: { color: COLORS.textDark },
   submitButton: {

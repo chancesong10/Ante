@@ -6,12 +6,26 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+
+const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
+  if (gameType === 'Poker') {
+    return <Ionicons name="cash-outline" size={size} color={color} />;
+  }
+  if (gameType === 'Sports Betting') {
+    return <Ionicons name="basketball-outline" size={size} color={color} />;
+  }
+  if (gameType === 'General') {
+    return <Ionicons name="dice-outline" size={size} color={color} />;
+  }
+  return <MaterialCommunityIcons name="cards" size={size} color={color} />;
+};
 
 export default function HomeScreen({ navigation, onOpenAddModal }) {
   const { activeSession, sessionHistory, endActiveSession, startSession } = useSession();
@@ -57,21 +71,19 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Responsive Header */}
+        {/* Responsive Header with Logo and Brand */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.brandTitle}>ANTE</Text>
-            <Text style={styles.headerSubtitle}>Session & Bankroll Tracker</Text>
+          <View style={styles.brandRow}>
+            <Image
+              source={require('../assets/logo_transparent.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <View style={styles.brandTextContainer}>
+              <Text style={styles.brandTitle}>ANTE</Text>
+              <Text style={styles.headerSubtitle}>Session & Bankroll Tracker</Text>
+            </View>
           </View>
-          <TouchableOpacity
-            style={styles.headerIconBtn}
-            hitSlop={TOUCH_TARGET.hitSlop}
-            onPress={() => navigation.navigate('Analytics')}
-            accessibilityRole="button"
-            accessibilityLabel="Analytics"
-          >
-            <Ionicons name="stats-chart" size={moderateScale(18)} color={COLORS.primary} />
-          </TouchableOpacity>
         </View>
 
         {/* ACTIVE SESSION CARD (Rendered whenever a session is active) */}
@@ -244,11 +256,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                 onPress={() => navigation.navigate('History')}
               >
                 <View style={styles.sessionIconBox}>
-                  <Ionicons
-                    name="game-controller"
-                    size={moderateScale(18)}
-                    color={COLORS.primary}
-                  />
+                  {renderGameIcon(session.gameType, moderateScale(18), COLORS.primary)}
                 </View>
                 <View style={styles.sessionInfo}>
                   <Text style={styles.sessionTitle}>{session.gameType} Session</Text>
@@ -296,31 +304,32 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.lg,
     marginTop: SPACING.xxs,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(12),
+  },
+  headerLogo: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+  },
+  brandTextContainer: {
+    justifyContent: 'center',
+  },
   brandTitle: {
-    fontSize: fluidFont(26),
+    fontSize: fluidFont(24),
     fontWeight: '900',
-    color: COLORS.primary,
+    color: COLORS.textPrimary,
     letterSpacing: 2,
   },
   headerSubtitle: {
     fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 2,
-  },
-  headerIconBtn: {
-    width: moderateScale(38),
-    height: moderateScale(38),
-    borderRadius: moderateScale(19),
-    backgroundColor: COLORS.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
   },
 
   // Active Session Card
@@ -422,7 +431,7 @@ const styles = StyleSheet.create({
     paddingVertical: moderateScale(12),
     minHeight: TOUCH_TARGET.minSize,
     borderWidth: 1,
-    borderColor: 'rgba(255, 69, 58, 0.4)',
+    borderColor: COLORS.dangerBorder,
   },
   endButtonText: {
     color: COLORS.danger,
