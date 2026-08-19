@@ -314,8 +314,8 @@ const styles = StyleSheet.create({
     gap: moderateScale(12),
   },
   headerLogo: {
-    width: moderateScale(44),
-    height: moderateScale(44),
+    width: moderateScale(56),
+    height: moderateScale(56),
   },
   brandTextContainer: {
     justifyContent: 'center',
