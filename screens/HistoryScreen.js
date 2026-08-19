@@ -23,10 +23,11 @@ export default function HistoryScreen({ navigation }) {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  const gameIcon = (gameType) => {
-    if (gameType === 'Poker') return 'cash-outline';
-    return 'game-controller';
-  };
+const gameIcon = (gameType) => {
+  if (gameType === 'Poker') return 'cash-outline';
+  if (gameType === 'Sports Betting') return 'basketball-outline';
+  return 'game-controller';
+};
 
   const renderSessionItem = ({ item }) => {
     const isExpanded = expandedId === item.id;
@@ -188,9 +189,9 @@ export default function HistoryScreen({ navigation }) {
                     return (
                       <View key={idx} style={styles.handRow}>
                         <Text style={styles.handDetail}>
-                          Hand {idx + 1}: ${h.bet}
-                          {h.doubled ? ' (2x)' : ''}
-                          {h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
+                          {h.matchup
+                            ? `${h.matchup} (${h.betType}): $${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${h.outcome.toUpperCase()}`
+                            : `Hand ${idx + 1}: $${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${h.outcome.toUpperCase()}`}
                         </Text>
                         <Text
                           style={[

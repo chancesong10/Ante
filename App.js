@@ -15,6 +15,7 @@ import AnalyticsScreen from './screens/AnalyticsScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import BlackjackScreen from './screens/BlackjackScreen';
+import SportsBettingScreen from './screens/SportsBettingScreen';
 
 import StartSessionModal from './components/StartSessionModal';
 import { COLORS } from './constants/theme';
@@ -189,6 +190,7 @@ function AppContent() {
           </Stack.Screen>
           <Stack.Screen name="Blackjack" component={BlackjackScreen} />
           <Stack.Screen name="Poker" component={PokerScreen} />
+          <Stack.Screen name="SportsBetting" component={SportsBettingScreen} />
         </Stack.Navigator>
       </NavigationContainer>
 
@@ -202,6 +204,7 @@ function AppContent() {
         onNavigateToPoker={() => {
           navigationRef.navigate('Poker');
         }}
+        onNavigateToSportsBetting={() => navigationRef.navigate('SportsBetting')}
       />
     </View>
   );
