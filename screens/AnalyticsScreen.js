@@ -5,6 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
+  TouchableOpacity,
+
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +14,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 
-export default function AnalyticsScreen() {
+export default function AnalyticsScreen({ navigation }) {
   const { sessionHistory } = useSession();
   const insets = useSafeAreaInsets();
 
@@ -282,7 +284,32 @@ export default function AnalyticsScreen() {
             <Text style={styles.gridValue}>{totalHands}</Text>
           </View>
         </View>
-      </ScrollView>
+
+        <Text style={styles.sectionTitle}>Behavioral Insights</Text>
+          <TouchableOpacity
+            style={[styles.card, SHADOWS.card, styles.insightLinkCard]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Insights', { gameType: 'Blackjack' })}
+          >
+            <View>
+              <Text style={styles.insightLinkTitle}>Blackjack Insights</Text>
+              <Text style={styles.insightLinkSubtitle}>Streaks, bet sizing, and patterns</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.card, SHADOWS.card, styles.insightLinkCard]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Insights', { gameType: 'Sports Betting' })}
+          >
+            <View>
+              <Text style={styles.insightLinkTitle}>Sports Betting Insights</Text>
+              <Text style={styles.insightLinkSubtitle}>Streaks, bet sizing, and patterns</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+        </ScrollView>
     </SafeAreaView>
   );
 }
@@ -485,4 +512,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
+  insightLinkCard: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+insightLinkTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
+insightLinkSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
 });
