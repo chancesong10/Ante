@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { Dimensions } from 'react-native';
 
 export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker, onNavigateToSportsBetting, onNavigateToGeneral,}) {
   const { activeSession, startSession, endActiveSession } = useSession();
@@ -67,6 +68,7 @@ const handleStartGeneral = () => {
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={onClose}>
@@ -76,6 +78,7 @@ const handleStartGeneral = () => {
               style={[
                 styles.sheetContainer,
                 {
+                  minHeight: Dimensions.get('window').height * 0.75 + insets.bottom,
                   paddingBottom:
                     insets.bottom > 0
                       ? insets.bottom + moderateScale(12)
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     paddingTop: moderateScale(12),
     paddingHorizontal: SPACING.pageHorizontal,
-    minHeight: '40%',
+    minHeight: Dimensions.get('window').height * 0.75,
   },
   handleBar: {
     width: moderateScale(40),
