@@ -13,6 +13,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { usePreferences } from '../context/PreferencesContext';
 
 const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
   if (gameType === 'Poker') {
@@ -29,6 +30,7 @@ const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
 
 export default function HomeScreen({ navigation, onOpenAddModal }) {
   const { activeSession, sessionHistory, endActiveSession, startSession } = useSession();
+  const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
 
   // Dynamic calculations from real session history
@@ -113,7 +115,9 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                     },
                   ]}
                 >
-                  {activeNet > 0 ? '+' : ''}${activeNet.toFixed(2)}
+                  {privacyMode
+                    ? '••••••'
+                    : `${activeNet > 0 ? '+' : activeNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(activeNet).toFixed(2)}`}
                 </Text>
               </View>
               <View style={styles.activeHandsBadge}>
@@ -175,7 +179,9 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
               },
             ]}
           >
-            {totalNet > 0 ? '+' : ''}${totalNet.toFixed(2)}
+            {privacyMode
+              ? '••••••'
+              : `${totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(totalNet).toFixed(2)}`}
           </Text>
 
           {/* Key Metrics Row */}
@@ -276,7 +282,9 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                       },
                     ]}
                   >
-                    {session.netProfit > 0 ? '+' : ''}${session.netProfit.toFixed(2)}
+                    {privacyMode
+                      ? '••••••'
+                      : `${session.netProfit > 0 ? '+' : session.netProfit < 0 ? '-' : ''}${currencySymbol}${Math.abs(session.netProfit).toFixed(2)}`}
                   </Text>
                   <Text style={styles.sessionDuration}>{session.durationFormatted}</Text>
                 </View>

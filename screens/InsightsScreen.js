@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { usePreferences } from '../context/PreferencesContext';
 import { computeInsights } from '../utils/statsEngine';
 
 function StatLine({ label, value, valueColor }) {
@@ -19,6 +20,7 @@ function StatLine({ label, value, valueColor }) {
 export default function InsightsScreen({ route, navigation }) {
   const { gameType } = route.params;
   const { sessionHistory } = useSession();
+  const { currencySymbol = '$' } = usePreferences();
   const insets = useSafeAreaInsets();
 
   const stats = computeInsights(sessionHistory, gameType);
@@ -43,7 +45,7 @@ export default function InsightsScreen({ route, navigation }) {
   const lenPerf = stats.sessionLengthPerformance;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : ''}$${v.toFixed(2)}`;
+  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -161,15 +163,15 @@ export default function InsightsScreen({ route, navigation }) {
                 <Text style={styles.cardLabel}>WIN RATE BY BET SIZE</Text>
                 <Text style={styles.cardHint}>Based on your own small / medium / large bet ranges</Text>
                 <StatLine
-                  label={`Small (avg $${tiers.small.avgBet.toFixed(0)}, n=${tiers.small.sample})`}
+                  label={`Small (avg ${currencySymbol}${tiers.small.avgBet.toFixed(0)}, n=${tiers.small.sample})`}
                   value={fmtPct(tiers.small.winRate)}
                 />
                 <StatLine
-                  label={`Medium (avg $${tiers.medium.avgBet.toFixed(0)}, n=${tiers.medium.sample})`}
+                  label={`Medium (avg ${currencySymbol}${tiers.medium.avgBet.toFixed(0)}, n=${tiers.medium.sample})`}
                   value={fmtPct(tiers.medium.winRate)}
                 />
                 <StatLine
-                  label={`Large (avg $${tiers.large.avgBet.toFixed(0)}, n=${tiers.large.sample})`}
+                  label={`Large (avg ${currencySymbol}${tiers.large.avgBet.toFixed(0)}, n=${tiers.large.sample})`}
                   value={fmtPct(tiers.large.winRate)}
                 />
               </View>
@@ -178,8 +180,8 @@ export default function InsightsScreen({ route, navigation }) {
             {/* Volatility */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-              <StatLine label="Net Result Std. Deviation" value={`$${vol.netResultStdDev.toFixed(2)}`} />
-              <StatLine label="Bet Size Std. Deviation" value={`$${vol.betSizeStdDev.toFixed(2)}`} />
+              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} />
+              <StatLine label="Bet Size Std. Deviation" value={`${currencySymbol}${vol.betSizeStdDev.toFixed(2)}`} />
               <StatLine
                 label="Bet Sizing Consistency"
                 value={vol.betSizeConsistency !== null ? `${vol.betSizeConsistency.toFixed(0)}/100` : '—'}
@@ -192,8 +194,8 @@ export default function InsightsScreen({ route, navigation }) {
             {/* Bet Size After Outcome */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>BET SIZE AFTER OUTCOME</Text>
-              <StatLine label="After a Win" value={`$${stats.avgBetAfterWin.toFixed(2)}`} />
-              <StatLine label="After a Loss" value={`$${stats.avgBetAfterLoss.toFixed(2)}`} />
+              <StatLine label="After a Win" value={`${currencySymbol}${stats.avgBetAfterWin.toFixed(2)}`} />
+              <StatLine label="After a Loss" value={`${currencySymbol}${stats.avgBetAfterLoss.toFixed(2)}`} />
               {chasesLosses && (
                 <View style={styles.insightNote}>
                   <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />

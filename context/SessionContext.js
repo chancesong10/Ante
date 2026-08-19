@@ -211,6 +211,11 @@ export function SessionProvider({ children }) {
     setSessionHistory((prev) => prev.filter((s) => s.id !== sessionId));
   };
 
+  const clearAllSessions = () => {
+    setActiveSession(null);
+    setSessionHistory([]);
+  };
+
   return (
     <SessionContext.Provider
       value={{
@@ -224,6 +229,7 @@ export function SessionProvider({ children }) {
         endActiveSession,
         discardActiveSession,
         deleteSession,
+        clearAllSessions,
       }}
     >
       {children}

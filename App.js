@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,7 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { PreferencesProvider } from './context/PreferencesContext';
+import { PreferencesProvider, usePreferences } from './context/PreferencesContext';
 
 import PokerScreen from './screens/PokerScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -20,6 +20,7 @@ import GeneralTrackerScreen from './screens/GeneralTrackerScreen';
 import InsightsScreen from './screens/InsightsScreen';
 
 import StartSessionModal from './components/StartSessionModal';
+import ResponsibleGamingAlertModal from './components/ResponsibleGamingAlertModal';
 import { COLORS } from './constants/theme';
 import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useSession } from './context/SessionContext';
@@ -177,6 +178,99 @@ function MainTabNavigator({ onOpenAddModal }) {
 function AppContent() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const navigationRef = useNavigationContainerRef();
+  const { activeSession, endActiveSession } = useSession();
+  const {
+    stopLossAlert = false,
+    stopLossAmount = 250,
+    currencySymbol = '$',
+  } = usePreferences();
+
+  // Responsible Gaming Alert state
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+
+  // Tracking snooze loss tiers per session
+  const [alertTracking, setAlertTracking] = useState({
+    sessionId: null,
+    alertedLossTier: 0,
+  });
+
+  // Calculate live session metrics
+  const sessionMetrics = useMemo(() => {
+    if (!activeSession) {
+      return { netOutcome: 0, totalBets: 0, durationMinutes: 0 };
+    }
+
+    const durationMinutes = Math.max(
+      0,
+      Math.floor((Date.now() - activeSession.startTime) / 60000)
+    );
+
+    let netOutcome = 0;
+    let totalBets = 0;
+
+    if (activeSession.mode === 'hands' || Array.isArray(activeSession.hands)) {
+      const allHands = (activeSession.hands || []).flatMap((r) =>
+        r.type === 'split' && r.hands ? r.hands : [r]
+      );
+      totalBets = allHands.length;
+      netOutcome = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
+    } else if (activeSession.buyIn !== null) {
+      totalBets = 1;
+      const cashOut = activeSession.cashOut !== null ? activeSession.cashOut : 0;
+      netOutcome = cashOut - activeSession.buyIn;
+    }
+
+    return { netOutcome, totalBets, durationMinutes };
+  }, [activeSession]);
+
+  // Monitor Stop-Loss limit (cumulative session loss dropping past threshold)
+  useEffect(() => {
+    if (!activeSession || !stopLossAlert || stopLossAmount <= 0) return;
+
+    let tracking = alertTracking;
+    if (tracking.sessionId !== activeSession.id) {
+      tracking = {
+        sessionId: activeSession.id,
+        alertedLossTier: 0,
+      };
+      setAlertTracking(tracking);
+    }
+
+    const netLoss = -sessionMetrics.netOutcome;
+    if (netLoss >= stopLossAmount) {
+      const currentTier = Math.floor(netLoss / stopLossAmount);
+      if (currentTier > tracking.alertedLossTier) {
+        setAlertModalVisible(true);
+      }
+    }
+  }, [activeSession, sessionMetrics.netOutcome, stopLossAlert, stopLossAmount, alertTracking]);
+
+  const handleEndSession = () => {
+    setAlertModalVisible(false);
+    if (activeSession) {
+      endActiveSession();
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('MainTabs', { screen: 'History' });
+      }
+    }
+  };
+
+  const handleAcknowledge = () => {
+    setAlertModalVisible(false);
+    if (!activeSession) return;
+
+    // Snooze to current loss tier so it only alerts if losses deepen further
+    setAlertTracking(() => {
+      const netLoss = -sessionMetrics.netOutcome;
+      const currentLossTier =
+        netLoss >= stopLossAmount ? Math.floor(netLoss / stopLossAmount) : 0;
+
+      return {
+        sessionId: activeSession.id,
+        alertedLossTier: currentLossTier,
+      };
+    });
+  };
 
   return (
     <View style={styles.rootContainer}>
@@ -210,6 +304,18 @@ function AppContent() {
         }}
         onNavigateToSportsBetting={() => navigationRef.navigate('SportsBetting')}
         onNavigateToGeneral={() => navigationRef.navigate('GeneralTracker')}
+      />
+
+      {/* Responsible Gaming Limits In-App Safety Alert Modal */}
+      <ResponsibleGamingAlertModal
+        visible={alertModalVisible}
+        netOutcome={sessionMetrics.netOutcome}
+        durationMinutes={sessionMetrics.durationMinutes}
+        totalBets={sessionMetrics.totalBets}
+        thresholdAmount={stopLossAmount}
+        currencySymbol={currencySymbol}
+        onEndSession={handleEndSession}
+        onAcknowledge={handleAcknowledge}
       />
     </View>
   );

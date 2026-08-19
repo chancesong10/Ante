@@ -13,14 +13,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
+import { usePreferences } from '../context/PreferencesContext';
 
 export default function PokerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { currencySymbol = '$' } = usePreferences();
   const {
     activeSession,
     startSession,
     endActiveSession,
     discardActiveSession,
+    setSessionBuyInCashOut,
   } = useSession();
 
   useEffect(() => {
@@ -37,6 +40,14 @@ export default function PokerScreen({ navigation }) {
   const parsedCashOut = parseFloat(cashOut);
   const hasValidNumbers =
     buyIn !== '' && cashOut !== '' && !isNaN(parsedBuyIn) && !isNaN(parsedCashOut) && parsedBuyIn >= 0 && parsedCashOut >= 0;
+
+  useEffect(() => {
+    if (activeSession && setSessionBuyInCashOut) {
+      const b = !isNaN(parsedBuyIn) && parsedBuyIn >= 0 ? parsedBuyIn : null;
+      const c = !isNaN(parsedCashOut) && parsedCashOut >= 0 ? parsedCashOut : null;
+      setSessionBuyInCashOut(b, c);
+    }
+  }, [parsedBuyIn, parsedCashOut, activeSession?.id]);
 
   const liveNet = hasValidNumbers ? parsedCashOut - parsedBuyIn : 0;
 
@@ -116,7 +127,7 @@ export default function PokerScreen({ navigation }) {
               },
             ]}
           >
-            {hasValidNumbers ? `${liveNet > 0 ? '+' : ''}$${liveNet.toFixed(2)}` : '—'}
+            {hasValidNumbers ? `${liveNet > 0 ? '+' : liveNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(liveNet).toFixed(2)}` : '—'}
           </Text>
           <Text style={styles.statsHint}>
             Enter your buy-in and cash-out to see your result
@@ -124,7 +135,7 @@ export default function PokerScreen({ navigation }) {
         </View>
 
         <View style={[styles.card, SHADOWS.card]}>
-          <Text style={styles.label}>Buy-In ($)</Text>
+          <Text style={styles.label}>Buy-In ({currencySymbol})</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -134,7 +145,7 @@ export default function PokerScreen({ navigation }) {
             onChangeText={setBuyIn}
           />
 
-          <Text style={styles.label}>Cash-Out ($)</Text>
+          <Text style={styles.label}>Cash-Out ({currencySymbol})</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"

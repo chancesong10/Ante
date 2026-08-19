@@ -44,7 +44,20 @@ export default function BlackjackScreen({ navigation }) {
   const [splitHand1, setSplitHand1] = useState(emptyHand());
   const [splitHand2, setSplitHand2] = useState(emptyHand());
 
-  const { quickChipsEnabled } = usePreferences();
+  const { quickChipsEnabled, currencySymbol = '$' } = usePreferences();
+
+  const handleChipPress = (chipValue) => {
+    const current = parseFloat(betAmount) || 0;
+    const next = current + parseFloat(chipValue);
+    setBetAmount(String(next));
+  };
+
+  const handleSplitChipPress = (which, chipValue) => {
+    const hand = which === 1 ? splitHand1 : splitHand2;
+    const current = parseFloat(hand.betAmount) || 0;
+    const next = current + parseFloat(chipValue);
+    updateSplitHand(which, 'betAmount', String(next));
+  };
 
   const resetForm = () => {
     setBetAmount('');
@@ -185,7 +198,7 @@ export default function BlackjackScreen({ navigation }) {
       <View style={styles.splitHandBox}>
         <Text style={styles.splitHandTitle}>Split Hand {which}</Text>
 
-        <Text style={styles.label}>Bet Amount ($)</Text>
+        <Text style={styles.label}>Bet Amount ({currencySymbol})</Text>
         <TextInput
           style={styles.input}
           keyboardType="numeric"
@@ -194,6 +207,20 @@ export default function BlackjackScreen({ navigation }) {
           value={hand.betAmount}
           onChangeText={(v) => updateSplitHand(which, 'betAmount', v)}
         />
+
+        {quickChipsEnabled && (
+          <View style={styles.chipRow}>
+            {['10', '25', '50', '100', '250'].map((chip) => (
+              <TouchableOpacity
+                key={chip}
+                style={styles.chipButton}
+                onPress={() => handleSplitChipPress(which, chip)}
+              >
+                <Text style={styles.chipText}>{currencySymbol}{chip}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <View style={styles.toggleRow}>
           <TouchableOpacity
@@ -274,7 +301,7 @@ export default function BlackjackScreen({ navigation }) {
               },
             ]}
           >
-            {totalNet > 0 ? '+' : ''}${totalNet.toFixed(2)}
+            {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(totalNet).toFixed(2)}
           </Text>
 
           <View style={styles.statsRow}>
@@ -329,7 +356,7 @@ export default function BlackjackScreen({ navigation }) {
 
           {!split ? (
             <>
-              <Text style={styles.label}>Bet Amount ($)</Text>
+              <Text style={styles.label}>Bet Amount ({currencySymbol})</Text>
               <TextInput
                 style={styles.input}
                 keyboardType="numeric"
@@ -345,9 +372,9 @@ export default function BlackjackScreen({ navigation }) {
                     <TouchableOpacity
                       key={chip}
                       style={styles.chipButton}
-                      onPress={() => setBetAmount(chip)}
+                      onPress={() => handleChipPress(chip)}
                     >
-                      <Text style={styles.chipText}>${chip}</Text>
+                      <Text style={styles.chipText}>{currencySymbol}{chip}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -420,7 +447,7 @@ export default function BlackjackScreen({ navigation }) {
                       {r.hands.map((h, i) => (
                         <View key={i} style={styles.historyRow}>
                           <Text style={styles.historyText}>
-                            Hand {i + 1}: ${h.bet}{h.doubled ? ' (2x)' : ''}{h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
+                            Hand {i + 1}: {currencySymbol}{h.bet}{h.doubled ? ' (2x)' : ''}{h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
                           </Text>
                           <Text
                             style={[
@@ -435,7 +462,7 @@ export default function BlackjackScreen({ navigation }) {
                               },
                             ]}
                           >
-                            {h.netChange > 0 ? '+' : ''}${h.netChange.toFixed(2)}
+                            {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(h.netChange).toFixed(2)}
                           </Text>
                         </View>
                       ))}
@@ -454,7 +481,7 @@ export default function BlackjackScreen({ navigation }) {
                             },
                           ]}
                         >
-                          {groupNet > 0 ? '+' : ''}${groupNet.toFixed(2)}
+                          {groupNet > 0 ? '+' : groupNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(groupNet).toFixed(2)}
                         </Text>
                       </View>
                     </View>
@@ -471,7 +498,7 @@ export default function BlackjackScreen({ navigation }) {
                 >
                   <View style={styles.historyRow}>
                     <Text style={styles.historyText}>
-                      ${r.bet}{r.doubled ? ' (2x)' : ''}{r.blackjack ? ' (BJ)' : ''} — {r.outcome.toUpperCase()}
+                      {currencySymbol}{r.bet}{r.doubled ? ' (2x)' : ''}{r.blackjack ? ' (BJ)' : ''} — {r.outcome.toUpperCase()}
                     </Text>
                     <Text
                       style={[
@@ -486,7 +513,7 @@ export default function BlackjackScreen({ navigation }) {
                         },
                       ]}
                     >
-                      {r.netChange > 0 ? '+' : ''}${r.netChange.toFixed(2)}
+                      {r.netChange > 0 ? '+' : r.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(r.netChange).toFixed(2)}
                     </Text>
                   </View>
                 </SwipeableRow>
