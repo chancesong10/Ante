@@ -26,7 +26,7 @@ export default function InsightsScreen({ route, navigation }) {
 
   const streakColor =
     stats.currentStreakType === 'win'
-      ? COLORS.primary
+      ? COLORS.success
       : stats.currentStreakType === 'loss'
       ? COLORS.danger
       : COLORS.textPrimary;
@@ -85,11 +85,15 @@ export default function InsightsScreen({ route, navigation }) {
 
             <View style={styles.rowCards}>
               <View style={[styles.halfCard, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LONGEST WIN STREAK</Text>
-                <Text style={[styles.halfValue, { color: COLORS.primary }]}>{stats.longestWinStreak}</Text>
+                <View style={styles.halfCardHeader}>
+                  <Text style={styles.cardLabel}>LONGEST WIN STREAK</Text>
+                </View>
+                <Text style={[styles.halfValue, { color: COLORS.success }]}>{stats.longestWinStreak}</Text>
               </View>
               <View style={[styles.halfCard, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LONGEST LOSS STREAK</Text>
+                <View style={styles.halfCardHeader}>
+                  <Text style={styles.cardLabel}>LONGEST LOSS STREAK</Text>
+                </View>
                 <Text style={[styles.halfValue, { color: COLORS.danger }]}>{stats.longestLossStreak}</Text>
               </View>
             </View>
@@ -207,7 +211,7 @@ export default function InsightsScreen({ route, navigation }) {
                 <StatLine
                   label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
                   value={fmtMoney(dow.best.avgNet)}
-                  valueColor={COLORS.primary}
+                  valueColor={COLORS.success}
                 />
                 <StatLine
                   label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
@@ -231,7 +235,7 @@ export default function InsightsScreen({ route, navigation }) {
                   value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
                 />
                 <StatLine
-                  label={`Long: 25+ hands (n=${lenPerf.long.sample})`}
+                  label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
                   value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
                 />
                 <Text style={styles.cardFootnote}>
@@ -291,8 +295,14 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    justifyContent: 'space-between',
+    minHeight: 100,
   },
-  halfValue: { fontSize: 22, fontWeight: '900' },
+  halfCardHeader: {
+    minHeight: 34,
+    justifyContent: 'flex-start',
+  },
+  halfValue: { fontSize: 24, fontWeight: '900' },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
   statRowLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', flex: 1, marginRight: 8 },
   statRowValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '800' },

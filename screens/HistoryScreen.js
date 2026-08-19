@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import SwipeableRow from '../components/SwipeableRow';
+
+const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
+  if (gameType === 'Poker') return <Ionicons name="cash-outline" size={size} color={color} />;
+  if (gameType === 'Sports Betting') return <Ionicons name="basketball-outline" size={size} color={color} />;
+  if (gameType === 'General') return <Ionicons name="dice-outline" size={size} color={color} />;
+  return <MaterialCommunityIcons name="cards" size={size} color={color} />;
+};
 
 export default function HistoryScreen({ navigation }) {
   const { sessionHistory, deleteSession } = useSession();
@@ -22,13 +29,6 @@ export default function HistoryScreen({ navigation }) {
   const toggleExpand = (id) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
-
-const gameIcon = (gameType) => {
-  if (gameType === 'Poker') return 'cash-outline';
-  if (gameType === 'Sports Betting') return 'basketball-outline';
-  if (gameType === 'General') return 'dice-outline';
-  return 'game-controller';
-};
 
   const renderSessionItem = ({ item }) => {
     const isExpanded = expandedId === item.id;
@@ -49,7 +49,7 @@ const gameIcon = (gameType) => {
             style={styles.cardHeader}
           >
             <View style={styles.iconCircle}>
-              <Ionicons name={gameIcon(item.gameType)} size={18} color={COLORS.primary} />
+              {renderGameIcon(item.gameType, 18, COLORS.primary)}
             </View>
 
             <View style={styles.sessionMeta}>
@@ -251,7 +251,7 @@ const gameIcon = (gameType) => {
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={styles.swipeHint}>Swipe a session right to delete it</Text>
+            <Text style={styles.swipeHint}>Swipe a session to delete</Text>
           </>
         )}
 

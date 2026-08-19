@@ -8,7 +8,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
@@ -174,7 +174,7 @@ const handleStartGeneral = () => {
                     onPress={handleStartBlackjack}
                   >
                     <View style={styles.gameIconBox}>
-                      <Ionicons name="game-controller" size={24} color={COLORS.primary} />
+                      <MaterialCommunityIcons name="cards" size={24} color={COLORS.primary} />
                     </View>
                     <View style={styles.gameInfo}>
                       <View style={styles.gameTitleRow}>
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     paddingVertical: moderateScale(14),
     borderWidth: 1,
-    borderColor: 'rgba(255, 69, 58, 0.4)',
+    borderColor: COLORS.dangerBorder,
     minHeight: TOUCH_TARGET.minSize,
   },
   endSessionText: {

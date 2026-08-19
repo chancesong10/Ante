@@ -403,7 +403,7 @@ export default function BlackjackScreen({ navigation }) {
         {sessionHands.length > 0 && (
           <View style={styles.historySection}>
             <Text style={styles.sectionTitle}>Hands in Current Session</Text>
-            <Text style={styles.swipeHint}>Swipe a hand left to delete it</Text>
+            <Text style={styles.swipeHint}>Swipe a hand to delete</Text>
 
             {sessionHands.map((r) => {
               if (r.type === 'split') {
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 69, 58, 0.4)',
+    borderColor: COLORS.dangerBorder,
   },
   headerEndButtonText: {
     color: COLORS.danger,
@@ -724,8 +724,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.danger,
   },
   pushActive: {
-    backgroundColor: '#3F3F46',
-    borderColor: '#52525B',
+    backgroundColor: COLORS.neutral,
+    borderColor: COLORS.neutralBorder,
   },
   outcomeText: {
     color: COLORS.textPrimary,
