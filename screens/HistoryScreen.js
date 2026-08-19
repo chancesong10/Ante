@@ -201,6 +201,49 @@ export default function HistoryScreen({ navigation }) {
                       );
                     }
 
+                    if (item.gameType === 'Poker' || h.gameType === 'Poker') {
+                      const posStr = h.position ? ` (${h.position})` : '';
+                      const betVal = h.heroInvestment !== undefined ? h.heroInvestment : h.bet;
+                      let label = `Hand ${idx + 1}${posStr}: Bet ${currencySymbol}${betVal}`;
+                      if (h.outcome === 'win') {
+                        label += ` | Pot ${currencySymbol}${h.pot || 0} — WON`;
+                      } else if (h.outcome === 'fold') {
+                        const foldTag =
+                          h.foldReason === 'bluffed'
+                            ? ' [BLUFFED]'
+                            : h.foldReason === 'good_fold'
+                            ? ' [GOOD FOLD]'
+                            : '';
+                        label += ` (${h.streetFolded || 'Fold'}) — FOLD${foldTag}`;
+                      } else if (h.outcome === 'split') {
+                        label += ` | Pot ${currencySymbol}${h.pot || 0} — SPLIT (${h.splitCount || 2}W)`;
+                      } else {
+                        label += ` | Pot ${currencySymbol}${h.pot || 0} — LOST`;
+                      }
+
+                      return (
+                        <View key={idx} style={styles.handRow}>
+                          <Text style={styles.handDetail}>{label}</Text>
+                          <Text
+                            style={[
+                              styles.handNet,
+                              {
+                                color:
+                                  h.netChange > 0
+                                    ? COLORS.success
+                                    : h.netChange < 0
+                                    ? COLORS.danger
+                                    : COLORS.textPrimary,
+                              },
+                            ]}
+                          >
+                            {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}{currencySymbol}
+                            {Math.abs(h.netChange).toFixed(2)}
+                          </Text>
+                        </View>
+                      );
+                    }
+
                     return (
                       <View key={idx} style={styles.handRow}>
                         <Text style={styles.handDetail}>
