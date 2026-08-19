@@ -6,12 +6,18 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PreferencesProvider } from './context/PreferencesContext';
 
+import PokerScreen from './screens/PokerScreen';
 import HomeScreen from './screens/HomeScreen';
 import AnalyticsScreen from './screens/AnalyticsScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import BlackjackScreen from './screens/BlackjackScreen';
+import SportsBettingScreen from './screens/SportsBettingScreen';
+import GeneralTrackerScreen from './screens/GeneralTrackerScreen';
+import InsightsScreen from './screens/InsightsScreen';
 
 import StartSessionModal from './components/StartSessionModal';
 import { COLORS } from './constants/theme';
@@ -185,6 +191,10 @@ function AppContent() {
             )}
           </Stack.Screen>
           <Stack.Screen name="Blackjack" component={BlackjackScreen} />
+          <Stack.Screen name="Poker" component={PokerScreen} />
+          <Stack.Screen name="SportsBetting" component={SportsBettingScreen} />
+          <Stack.Screen name="GeneralTracker" component={GeneralTrackerScreen} />
+          <Stack.Screen name="Insights" component={InsightsScreen} />
         </Stack.Navigator>
       </NavigationContainer>
 
@@ -195,6 +205,11 @@ function AppContent() {
         onNavigateToBlackjack={() => {
           navigationRef.navigate('Blackjack');
         }}
+        onNavigateToPoker={() => {
+          navigationRef.navigate('Poker');
+        }}
+        onNavigateToSportsBetting={() => navigationRef.navigate('SportsBetting')}
+        onNavigateToGeneral={() => navigationRef.navigate('GeneralTracker')}
       />
     </View>
   );
@@ -202,11 +217,15 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <SessionProvider>
-        <AppContent />
-      </SessionProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <PreferencesProvider>
+          <SessionProvider>
+            <AppContent />
+          </SessionProvider>
+        </PreferencesProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
