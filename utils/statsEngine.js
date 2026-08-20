@@ -206,17 +206,26 @@ export function calcBlackjackFrequency(hands) {
 }
 
 // --- NEW: Win rate by bet-size tier (based on the user's own tercile split) ---
+//
+// Terciles are computed over DISTINCT bet values, not the raw (duplicate-heavy)
+// array, and the small/medium boundaries are strict (`<`) with "large" catching
+// the remainder (`>=`). Both matter: a player who repeatedly bets the same
+// round numbers (very common — $10, $25, $50 over and over) would otherwise
+// have every tied value at a cutoff fall into the lower bucket, silently
+// merging two intended tiers into one. See reports/blackjack-insights-audit.pdf
+// for the original finding this fixes.
 export function calcBetTierWinRates(hands) {
   if (hands.length < 6) return null; // not enough for 3 meaningful buckets
 
-  const sortedBets = hands.map((h) => h.bet || 0).sort((a, b) => a - b);
-  const tercile1 = sortedBets[Math.floor(sortedBets.length / 3)];
-  const tercile2 = sortedBets[Math.floor((sortedBets.length * 2) / 3)];
+  const uniqueBets = [...new Set(hands.map((h) => h.bet || 0))].sort((a, b) => a - b);
+  const tercile1 = uniqueBets[Math.floor(uniqueBets.length / 3)];
+  const tercile2 = uniqueBets[Math.floor((uniqueBets.length * 2) / 3)];
 
   const tiers = { small: [], medium: [], large: [] };
   hands.forEach((h) => {
-    if (h.bet <= tercile1) tiers.small.push(h);
-    else if (h.bet <= tercile2) tiers.medium.push(h);
+    const bet = h.bet || 0;
+    if (bet < tercile1) tiers.small.push(h);
+    else if (bet < tercile2) tiers.medium.push(h);
     else tiers.large.push(h);
   });
 

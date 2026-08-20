@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +13,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function GeneralTrackerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -36,6 +36,8 @@ export default function GeneralTrackerScreen({ navigation }) {
   const [buyIn, setBuyIn] = useState('');
   const [cashOut, setCashOut] = useState('');
   const [label, setLabel] = useState('');
+  const [alertModal, setAlertModal] = useState(null);
+  const closeAlertModal = () => setAlertModal(null);
 
   const parsedBuyIn = parseFloat(buyIn);
   const parsedCashOut = parseFloat(cashOut);
@@ -59,10 +61,14 @@ export default function GeneralTrackerScreen({ navigation }) {
 
   const handleEndSessionPress = () => {
     if (!hasValidNumbers) {
-      Alert.alert(
-        'Enter Buy-In and Cash-Out',
-        'You need to enter both amounts before ending this session.'
-      );
+      setAlertModal({
+        variant: 'warning',
+        title: 'Enter Buy-In and Cash-Out',
+        message: 'You need to enter both amounts before ending this session.',
+        confirmText: 'Got It',
+        showCancel: false,
+        onConfirm: closeAlertModal,
+      });
       return;
     }
     endActiveSession(parsedBuyIn, parsedCashOut);
@@ -70,21 +76,20 @@ export default function GeneralTrackerScreen({ navigation }) {
   };
 
   const handleDiscardPress = () => {
-    Alert.alert(
-      'Discard this session?',
-      'Nothing has been saved yet. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Discard',
-          style: 'destructive',
-          onPress: () => {
-            discardActiveSession();
-            navigation.navigate('MainTabs', { screen: 'Home' });
-          },
-        },
-      ]
-    );
+    setAlertModal({
+      variant: 'danger',
+      icon: 'trash-outline',
+      title: 'Discard This Session?',
+      message: 'Nothing has been saved yet. This cannot be undone.',
+      confirmText: 'Discard',
+      cancelText: 'Cancel',
+      onConfirm: () => {
+        closeAlertModal();
+        discardActiveSession();
+        navigation.navigate('MainTabs', { screen: 'Home' });
+      },
+      onCancel: closeAlertModal,
+    });
   };
 
   return (
@@ -179,6 +184,8 @@ export default function GeneralTrackerScreen({ navigation }) {
           <Text style={styles.submitText}>End Session & Save to History</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <ConfirmModal visible={!!alertModal} {...alertModal} />
     </View>
   );
 }
