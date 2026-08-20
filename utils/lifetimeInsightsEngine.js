@@ -170,6 +170,24 @@ export function calcVolatility(sessions) {
   return { netResultStdDev: netStdDev, avgSessionMagnitude: avgMagnitude, volatilityRatio, riskLabel };
 }
 
+// --- Total time actually spent playing, across every session. Nowhere
+// else in the app totals time — Analytics and Profile only ever total
+// money — even though time is a resource too. Sessions missing a valid
+// start/end pair (shouldn't happen in practice, but defensively) are
+// excluded rather than treated as zero-length. ---
+export function calcTimePlayed(sessions) {
+  const withDuration = sessions.filter(
+    (s) => s.startTime != null && s.endTime != null && s.endTime > s.startTime
+  );
+  if (withDuration.length === 0) return null;
+  const totalMinutes = withDuration.reduce((sum, s) => sum + (s.endTime - s.startTime), 0) / 60000;
+  return {
+    totalMinutes,
+    avgMinutesPerSession: totalMinutes / withDuration.length,
+    sample: withDuration.length,
+  };
+}
+
 // --- Leak detector, same shape as the per-game engines: scans the stats
 // already computed for known -EV signatures and ranks whichever clear
 // their evidence threshold. `score` is a heuristic 0-100 used only to
@@ -256,6 +274,7 @@ export function computeLifetimeInsights(sessionHistory) {
   const dayOfWeekPerformance = calcDayOfWeekPerformance(sessions);
   const sessionLengthPerformance = calcSessionLengthPerformance(sessions);
   const volatility = calcVolatility(sessions);
+  const timePlayed = calcTimePlayed(sessions);
 
   const leaks = buildLeakReport({ gameBreakdown, dayOfWeekPerformance, sessionLengthPerformance, volatility });
 
@@ -268,6 +287,7 @@ export function computeLifetimeInsights(sessionHistory) {
     dayOfWeekPerformance,
     sessionLengthPerformance,
     volatility,
+    timePlayed,
     leaks,
     topLeak: leaks[0] || null,
   };

@@ -62,12 +62,20 @@ export default function LifetimeInsightsScreen({ navigation }) {
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
   const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
+  const fmtDuration = (minutes) => {
+    const total = Math.round(minutes);
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    if (h === 0) return `${m}m`;
+    return m === 0 ? `${h}h` : `${h}h ${m}m`;
+  };
 
   const games = stats.gameBreakdown;
   const streaks = stats.sessionStreaks;
   const dow = stats.dayOfWeekPerformance;
   const lenPerf = stats.sessionLengthPerformance;
   const vol = stats.volatility;
+  const timePlayed = stats.timePlayed;
   const topLeak = stats.topLeak;
 
   const streakColor =
@@ -95,6 +103,9 @@ export default function LifetimeInsightsScreen({ navigation }) {
     lines.push(`Sessions logged: ${stats.totalSessions}`);
     lines.push(`Lifetime net: ${fmtMoney(stats.netProfit)}`);
     lines.push(`Overall win rate: ${fmtPct(stats.winRate)}`);
+    if (timePlayed) {
+      lines.push(`Total time played: ${fmtDuration(timePlayed.totalMinutes)} (avg ${fmtDuration(timePlayed.avgMinutesPerSession)}/session)`);
+    }
     lines.push('');
 
     lines.push('PERFORMANCE BY GAME (avg net per session)');
@@ -212,6 +223,15 @@ export default function LifetimeInsightsScreen({ navigation }) {
                 <CompareStat label="Win Rate" value={fmtPct(stats.winRate)} locked={isLocked} />
                 <CompareStat label="Sessions" value={String(stats.totalSessions)} locked={isLocked} />
               </View>
+              {timePlayed && (
+                <>
+                  <View style={styles.overviewDivider} />
+                  <View style={styles.compareRow}>
+                    <CompareStat label="Time Played" value={fmtDuration(timePlayed.totalMinutes)} locked={isLocked} />
+                    <CompareStat label="Avg / Session" value={fmtDuration(timePlayed.avgMinutesPerSession)} locked={isLocked} />
+                  </View>
+                </>
+              )}
             </View>
 
             {/* Performance by Game */}
@@ -278,7 +298,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
             </View>
 
             {/* Day of Week */}
-            {dow && (
+            {dow ? (
               <View style={[styles.card, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
                 <Text style={styles.cardHint}>Across every game combined</Text>
@@ -295,10 +315,17 @@ export default function LifetimeInsightsScreen({ navigation }) {
                   locked={isLocked}
                 />
               </View>
+            ) : (
+              <View style={[styles.card, SHADOWS.card, styles.unlockCard]}>
+                <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
+                <Text style={styles.unlockText}>
+                  All your sessions so far landed on the same day of the week — log sessions on at least one more day to unlock a best-vs-worst comparison.
+                </Text>
+              </View>
             )}
 
             {/* Session Length Performance */}
-            {lenPerf && (
+            {lenPerf ? (
               <View style={[styles.card, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
                 <Text style={styles.cardHint}>Across every game combined</Text>
@@ -318,6 +345,11 @@ export default function LifetimeInsightsScreen({ navigation }) {
                   locked={isLocked}
                 />
                 <Text style={styles.cardFootnote}>If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.</Text>
+              </View>
+            ) : (
+              <View style={[styles.card, SHADOWS.card, styles.unlockCard]}>
+                <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
+                <Text style={styles.unlockText}>Log at least 3 sessions total to unlock this breakdown.</Text>
               </View>
             )}
 
@@ -416,6 +448,8 @@ const styles = StyleSheet.create({
   noLeakCard: { alignItems: 'center', paddingVertical: 22 },
   noLeakTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 },
   noLeakText: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', marginTop: 6, lineHeight: 16 },
+  unlockCard: { opacity: 0.85 },
+  unlockText: { fontSize: 12, color: COLORS.textMuted, lineHeight: 17, marginTop: 4 },
   cardLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, letterSpacing: 1, marginBottom: 4 },
   cardHint: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
   cardFootnote: { fontSize: 11, color: COLORS.textMuted, marginTop: 8, lineHeight: 15 },
@@ -433,6 +467,7 @@ const styles = StyleSheet.create({
   },
   halfValue: { fontSize: 24, fontWeight: '900', marginTop: 8 },
   compareRow: { flexDirection: 'row', gap: 10 },
+  overviewDivider: { height: 1, backgroundColor: COLORS.cardBorder, marginVertical: 12 },
   gameRow: {
     flexDirection: 'row',
     alignItems: 'center',
