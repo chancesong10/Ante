@@ -8,26 +8,15 @@ import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { computeLifetimeInsights } from '../utils/lifetimeInsightsEngine';
-
-function StatLine({ label, value, valueColor }) {
-  return (
-    <View style={styles.statRow}>
-      <Text style={styles.statRowLabel}>{label}</Text>
-      <Text
-        style={[styles.statRowValue, valueColor && { color: valueColor }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.7}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
+import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
+import StatLine from '../components/InsightStatLine';
+import CompareStat from '../components/InsightCompareStat';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers — same split
-// used across the other three insights screens.
+// used across the other three insights screens. Only ever called when
+// unlocked — locked users see LockedLeakTeaser instead, which never
+// touches real leak data (e.g. worst_game's title names the actual game).
 function getLeakCopy(leak, { fmtMoney, fmtPct }) {
   switch (leak.id) {
     case 'worst_game':
@@ -64,7 +53,8 @@ const GAME_ICONS = {
 
 export default function LifetimeInsightsScreen({ navigation }) {
   const { sessionHistory } = useSession();
-  const { currencySymbol = '$' } = usePreferences();
+  const { currencySymbol = '$', proUnlocked } = usePreferences();
+  const isLocked = !proUnlocked;
   const insets = useSafeAreaInsets();
 
   const stats = computeLifetimeInsights(sessionHistory);
@@ -145,6 +135,10 @@ export default function LifetimeInsightsScreen({ navigation }) {
   };
 
   const handleCopyReport = async () => {
+    if (isLocked) {
+      navigation.navigate('MainTabs', { screen: 'Profile' });
+      return;
+    }
     await Clipboard.setStringAsync(buildReportText());
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -164,11 +158,12 @@ export default function LifetimeInsightsScreen({ navigation }) {
         <View style={{ width: 22 }} />
       </View>
 
+      <View style={styles.contentArea}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + moderateScale(60) }]}
         showsVerticalScrollIndicator={false}
       >
-        {!hasEnoughData ? (
+        {!hasEnoughData && !isLocked ? (
           <View style={styles.emptyCard}>
             <Ionicons name="analytics-outline" size={28} color={COLORS.textMuted} />
             <Text style={styles.emptyTitle}>Not Enough Data Yet</Text>
@@ -179,7 +174,9 @@ export default function LifetimeInsightsScreen({ navigation }) {
         ) : (
           <>
             {/* Leak Spotlight */}
-            {topLeak ? (
+            {isLocked ? (
+              <LockedLeakTeaser />
+            ) : topLeak ? (
               <View style={[styles.leakCard, SHADOWS.card]}>
                 <View style={styles.leakEyebrowRow}>
                   <Ionicons name="warning" size={14} color={COLORS.warning} />
@@ -206,27 +203,14 @@ export default function LifetimeInsightsScreen({ navigation }) {
               <Text style={styles.cardLabel}>OVERVIEW</Text>
               <Text style={styles.cardHint}>Across every game you've ever logged</Text>
               <View style={styles.compareRow}>
-                <View style={styles.compareCol}>
-                  <Text style={styles.compareColLabel}>Lifetime Net</Text>
-                  <Text
-                    style={[
-                      styles.compareColValue,
-                      { color: stats.netProfit > 0 ? COLORS.success : stats.netProfit < 0 ? COLORS.danger : COLORS.textPrimary },
-                    ]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    {fmtMoney(stats.netProfit)}
-                  </Text>
-                </View>
-                <View style={styles.compareCol}>
-                  <Text style={styles.compareColLabel}>Win Rate</Text>
-                  <Text style={styles.compareColValue}>{fmtPct(stats.winRate)}</Text>
-                </View>
-                <View style={styles.compareCol}>
-                  <Text style={styles.compareColLabel}>Sessions</Text>
-                  <Text style={styles.compareColValue}>{stats.totalSessions}</Text>
-                </View>
+                <CompareStat
+                  label="Lifetime Net"
+                  value={fmtMoney(stats.netProfit)}
+                  valueColor={stats.netProfit > 0 ? COLORS.success : stats.netProfit < 0 ? COLORS.danger : COLORS.textPrimary}
+                  locked={isLocked}
+                />
+                <CompareStat label="Win Rate" value={fmtPct(stats.winRate)} locked={isLocked} />
+                <CompareStat label="Sessions" value={String(stats.totalSessions)} locked={isLocked} />
               </View>
             </View>
 
@@ -244,17 +228,21 @@ export default function LifetimeInsightsScreen({ navigation }) {
                         <Text style={styles.gameRowSub}>{g.sessions} session{g.sessions !== 1 ? 's' : ''}</Text>
                       </View>
                     </View>
-                    <Text
-                      style={[
-                        styles.gameRowValue,
-                        { color: g.avgNetPerSession > 0 ? COLORS.success : g.avgNetPerSession < 0 ? COLORS.danger : COLORS.textPrimary },
-                      ]}
-                    >
-                      {fmtMoney(g.avgNetPerSession)}/session
-                    </Text>
+                    {isLocked ? (
+                      <SkeletonBar width={70} height={13} />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.gameRowValue,
+                          { color: g.avgNetPerSession > 0 ? COLORS.success : g.avgNetPerSession < 0 ? COLORS.danger : COLORS.textPrimary },
+                        ]}
+                      >
+                        {fmtMoney(g.avgNetPerSession)}/session
+                      </Text>
+                    )}
                   </View>
                 ))}
-                {games.best && games.worst && games.best.gameType !== games.worst.gameType && (
+                {!isLocked && games.best && games.worst && games.best.gameType !== games.worst.gameType && (
                   <Text style={styles.cardFootnote}>
                     Best: {games.best.gameType} · Worst: {games.worst.gameType} (minimum 3 sessions to qualify)
                   </Text>
@@ -265,22 +253,26 @@ export default function LifetimeInsightsScreen({ navigation }) {
             {/* Session Streaks */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>CURRENT SESSION STREAK</Text>
-              <Text style={[styles.streakValue, { color: streakColor }]}>
-                {streaks.currentStreakType
-                  ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'win' ? 'Winning' : 'Losing'}`
-                  : 'None'}
-              </Text>
+              {isLocked ? (
+                <SkeletonBar width={120} height={26} style={{ marginTop: 4 }} />
+              ) : (
+                <Text style={[styles.streakValue, { color: streakColor }]}>
+                  {streaks.currentStreakType
+                    ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'win' ? 'Winning' : 'Losing'}`
+                    : 'None'}
+                </Text>
+              )}
             </View>
 
             <View style={styles.rowCards}>
               <View style={[styles.halfCard, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>LONGEST WINNING STREAK</Text>
-                <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>
+                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
                 <Text style={styles.cardFootnote}>sessions in a row</Text>
               </View>
               <View style={[styles.halfCard, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>LONGEST LOSING STREAK</Text>
-                <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>
+                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
                 <Text style={styles.cardFootnote}>sessions in a row</Text>
               </View>
             </View>
@@ -294,11 +286,13 @@ export default function LifetimeInsightsScreen({ navigation }) {
                   label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
                   value={fmtMoney(dow.best.avgNet)}
                   valueColor={COLORS.success}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
                   value={fmtMoney(dow.worst.avgNet)}
                   valueColor={COLORS.danger}
+                  locked={isLocked}
                 />
               </View>
             )}
@@ -311,14 +305,17 @@ export default function LifetimeInsightsScreen({ navigation }) {
                 <StatLine
                   label={`Short: ≤10 hands (n=${lenPerf.short.sample})`}
                   value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Medium: 11–25 hands (n=${lenPerf.medium.sample})`}
                   value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
                   value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <Text style={styles.cardFootnote}>If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.</Text>
               </View>
@@ -328,23 +325,29 @@ export default function LifetimeInsightsScreen({ navigation }) {
             <View style={[styles.card, SHADOWS.card]}>
               <View style={styles.riskHeaderRow}>
                 <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-                {vol.riskLabel && (
-                  <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                    <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel.toUpperCase()}</Text>
-                  </View>
+                {isLocked ? (
+                  <SkeletonBar width={56} height={18} />
+                ) : (
+                  vol.riskLabel && (
+                    <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
+                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel.toUpperCase()}</Text>
+                    </View>
+                  )
                 )}
               </View>
               <Text style={styles.cardHint}>
-                {vol.riskLabel
+                {isLocked
+                  ? 'See how consistent your bankroll really is, session to session.'
+                  : vol.riskLabel
                   ? `Your session results typically swing about ${vol.volatilityRatio.toFixed(1)}x their own typical size.`
                   : 'Not enough session variation yet to score this.'}
               </Text>
             </View>
 
             {/* Copy Report */}
-            <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card]} activeOpacity={0.85} onPress={handleCopyReport}>
-              <Ionicons name={copied ? 'checkmark-circle' : 'clipboard-outline'} size={18} color={COLORS.textDark} style={{ marginRight: 8 }} />
-              <Text style={styles.copyReportBtnText}>{copied ? 'Copied to Clipboard' : 'Copy Full Report'}</Text>
+            <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]} activeOpacity={0.85} onPress={handleCopyReport}>
+              <Ionicons name={isLocked ? 'lock-closed' : copied ? 'checkmark-circle' : 'clipboard-outline'} size={18} color={COLORS.textDark} style={{ marginRight: 8 }} />
+              <Text style={styles.copyReportBtnText}>{isLocked ? 'Unlock Pro to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}</Text>
             </TouchableOpacity>
             <Text style={styles.copyReportHint}>
               Paste this into a doc or an AI chat to dig into your numbers further. It's a plain-text summary of everything on this page — not gambling advice.
@@ -352,6 +355,13 @@ export default function LifetimeInsightsScreen({ navigation }) {
           </>
         )}
       </ScrollView>
+      {isLocked && (
+        <InsightsUnlockCta
+          subtitle="Cross-game patterns, session streaks, and leak detection — unlocked with Ante Pro."
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' })}
+        />
+      )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -369,6 +379,7 @@ const styles = StyleSheet.create({
   },
   backIcon: { padding: 4 },
   navTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  contentArea: { flex: 1 },
   scroll: { padding: 16 },
   emptyCard: {
     backgroundColor: COLORS.card,
@@ -421,19 +432,7 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   halfValue: { fontSize: 24, fontWeight: '900', marginTop: 8 },
-  statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  statRowLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', flex: 1, marginRight: 8 },
-  statRowValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '800' },
   compareRow: { flexDirection: 'row', gap: 10 },
-  compareCol: {
-    flex: 1,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-  },
-  compareColLabel: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', marginBottom: 4 },
-  compareColValue: { fontSize: 18, fontWeight: '900', color: COLORS.textPrimary },
   gameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -458,6 +457,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginTop: 8,
   },
+  copyReportBtnLocked: { backgroundColor: COLORS.textMuted },
   copyReportBtnText: { color: COLORS.textDark, fontWeight: '800', fontSize: 15 },
   copyReportHint: {
     fontSize: 11,
