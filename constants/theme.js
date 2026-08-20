@@ -1,63 +1,63 @@
 export const COLORS = {
-  // Deep Midnight Sportsbook Backgrounds
-  background: '#0B0F19',
-  backgroundSecondary: '#111827',
-  card: '#161F30',
-  cardElevated: '#1E293B',
-  cardBorder: '#233047',
-  cardBorderHighlight: 'rgba(59, 130, 246, 0.35)',
+  // Clean Minimalist Dark Backgrounds
+  background: '#09090B', // Zinc 950 (Almost black)
+  backgroundSecondary: '#18181B', // Zinc 900
+  card: '#18181B', // Zinc 900
+  cardElevated: '#27272A', // Zinc 800
+  cardBorder: '#27272A', // Subtle border
+  cardBorderHighlight: '#3F3F46',
   
-  // Electric Royal Blue / Cyan Accents (Primary Brand & Navigation)
-  primary: '#3B82F6',
-  primaryGlow: 'rgba(59, 130, 246, 0.25)',
-  primaryMuted: 'rgba(59, 130, 246, 0.12)',
-  primaryDark: '#2563EB',
-  accentCyan: '#06B6D4',
-  accentCyanMuted: 'rgba(6, 182, 212, 0.12)',
+  // Sharp Accent (Clean white as primary for a high-end feel)
+  primary: '#FAFAFA',
+  primaryGlow: 'transparent',
+  primaryMuted: '#27272A',
+  primaryDark: '#09090B', // Used for text on primary button
+  accentCyan: '#38BDF8',
+  accentCyanMuted: 'rgba(56, 189, 248, 0.1)',
   
-  // Text Colors
-  textPrimary: '#F8FAFC',
-  textSecondary: '#94A3B8',
-  textMuted: '#64748B',
-  textDark: '#FFFFFF',
+  // High contrast text
+  textPrimary: '#FAFAFA', // Zinc 50
+  textSecondary: '#A1A1AA', // Zinc 400
+  textMuted: '#71717A', // Zinc 500
+  textDark: '#09090B', // Used when text is ON a white primary background
   
-  // Status & Utility Colors (Green STRICTLY for Wins & Positive Profit)
-  success: '#10B981',
-  successGlow: 'rgba(16, 185, 129, 0.25)',
-  successMuted: 'rgba(16, 185, 129, 0.12)',
-  danger: '#F43F5E',
-  dangerGlow: 'rgba(244, 63, 94, 0.25)',
-  dangerMuted: 'rgba(244, 63, 94, 0.12)',
-  dangerBorder: 'rgba(244, 63, 94, 0.4)',
-  warning: '#F59E0B',
-  warningGlow: 'rgba(245, 158, 11, 0.25)',
-  warningMuted: 'rgba(245, 158, 11, 0.12)',
-  warningBorder: 'rgba(245, 158, 11, 0.4)',
-  info: '#38BDF8',
-  neutral: '#334155',
-  neutralBorder: '#475569',
+  // Status & Utility Colors (Soft Mid-tone Pastels)
+  success: '#4ADE80', // Soft Pastel Green
+  successGlow: 'transparent',
+  successMuted: 'rgba(74, 222, 128, 0.15)',
+  danger: '#F87171', // Soft Pastel Red
+  dangerGlow: 'transparent',
+  dangerMuted: 'rgba(248, 113, 113, 0.15)',
+  dangerBorder: 'rgba(248, 113, 113, 0.3)',
+  warning: '#FBBF24', // Soft Pastel Amber
+  warningGlow: 'transparent',
+  warningMuted: 'rgba(251, 191, 36, 0.15)',
+  warningBorder: 'rgba(251, 191, 36, 0.3)',
+  info: '#7DD3FC', // Soft Pastel Sky
+  neutral: '#27272A',
+  neutralBorder: '#3F3F46',
   
   // UI Elements
-  tabBar: '#0E1422',
-  tabBarBorder: '#1E293B',
-  tabBarInactive: '#64748B',
-  divider: '#1F293D',
-  overlay: 'rgba(5, 8, 15, 0.82)',
+  tabBar: '#09090B',
+  tabBarBorder: '#27272A',
+  tabBarInactive: '#71717A',
+  divider: '#27272A',
+  overlay: 'rgba(0, 0, 0, 0.7)',
 };
 
 export const SHADOWS = {
   card: {
-    shadowColor: '#000000',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.2, // Shadows are mostly invisible in pure dark mode
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
   neon: {
-    shadowColor: '#3B82F6',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
 };

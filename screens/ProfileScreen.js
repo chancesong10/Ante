@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fluidFont(24),
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: 1,
   },
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
   verifiedTagText: {
     color: COLORS.accentCyan,
     fontSize: fluidFont(10),
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
 
@@ -898,7 +898,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: fluidFont(18),
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: 0.3,
   },
@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
   tierBadgeText: {
     color: COLORS.primary,
     fontSize: fluidFont(10),
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
 
@@ -940,7 +940,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fluidFont(13),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textSecondary,
     letterSpacing: 1,
     marginBottom: SPACING.xs,
@@ -980,13 +980,13 @@ const styles = StyleSheet.create({
   },
   gridCardLabel: {
     fontSize: fluidFont(10),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textSecondary,
     letterSpacing: 0.8,
   },
   gridCardValue: {
     fontSize: fluidFont(20),
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: -0.3,
   },
   gridCardFoot: {
@@ -1037,7 +1037,7 @@ const styles = StyleSheet.create({
   },
   portfolioNet: {
     fontSize: fluidFont(14),
-    fontWeight: '800',
+    fontWeight: '700',
   },
   portfolioDivider: {
     height: 1,
@@ -1064,7 +1064,7 @@ const styles = StyleSheet.create({
   },
   devBadgeText: {
     fontSize: fluidFont(9),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.warning,
     letterSpacing: 0.5,
   },
@@ -1192,7 +1192,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: fluidFont(18),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   currencyOption: {
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
   },
   currencySymbolLarge: {
     fontSize: fluidFont(16),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.primary,
   },
   currencyItemName: {
@@ -1264,7 +1264,7 @@ const styles = StyleSheet.create({
   },
   inputPrefix: {
     fontSize: fluidFont(16),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.primary,
     marginRight: 6,
   },
@@ -1292,7 +1292,7 @@ const styles = StyleSheet.create({
   saveModalBtnText: {
     color: COLORS.textDark,
     fontSize: fluidFont(14),
-    fontWeight: '800',
+    fontWeight: '700',
   },
   helpText: {
     fontSize: fluidFont(13),
@@ -1320,7 +1320,7 @@ const styles = StyleSheet.create({
   },
   helpPhone: {
     fontSize: fluidFont(16),
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLORS.accentCyan,
     marginTop: 6,
     letterSpacing: 0.5,

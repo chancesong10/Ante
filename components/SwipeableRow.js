@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },

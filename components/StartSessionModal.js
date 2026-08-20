@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     fontSize: fluidFont(20),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   sheetSubtitle: {
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: COLORS.textDark,
     fontSize: fluidFont(15),
-    fontWeight: '800',
+    fontWeight: '700',
   },
   endSessionBtn: {
     flexDirection: 'row',

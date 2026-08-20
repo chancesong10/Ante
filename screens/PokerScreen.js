@@ -1560,7 +1560,7 @@ const styles = StyleSheet.create({
   },
   sectionHeaderTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     marginBottom: 4,
   },
@@ -1603,7 +1603,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: COLORS.textDark,
-    fontWeight: '800',
+    fontWeight: '700',
     fontSize: 15,
   },
   presetRow: {
@@ -1695,7 +1695,7 @@ const styles = StyleSheet.create({
   },
   chipConfigInput: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     textAlign: 'center',
     minWidth: 36,
@@ -1728,7 +1728,7 @@ const styles = StyleSheet.create({
   },
   stepTabTextActive: {
     color: COLORS.primary,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   stepTabTextCompleted: {
     color: COLORS.textSecondary,
@@ -1753,7 +1753,7 @@ const styles = StyleSheet.create({
   },
   blindsHeaderText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.primary,
     letterSpacing: 0.5,
   },
@@ -1767,7 +1767,7 @@ const styles = StyleSheet.create({
   },
   netAmount: {
     fontSize: 32,
-    fontWeight: '900',
+    fontWeight: '700',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -1803,14 +1803,14 @@ const styles = StyleSheet.create({
   },
   heroBetSymbol: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.primary,
     marginRight: 4,
   },
   heroBetInput: {
     flex: 1,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   heroBetPhaseTag: {
@@ -1864,7 +1864,7 @@ const styles = StyleSheet.create({
   },
   blindCallBtnBlindText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.primary,
   },
   blindCallBtnCall: {
@@ -1873,7 +1873,7 @@ const styles = StyleSheet.create({
   },
   blindCallBtnCallText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.success,
   },
   blindCallBtnCallDisabled: {
@@ -1883,7 +1883,7 @@ const styles = StyleSheet.create({
   },
   blindCallBtnCallTextDisabled: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textMuted,
   },
   chipInnerCircle: {
@@ -1891,7 +1891,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.primary,
   },
   playerCardFolded: {
@@ -1907,7 +1907,7 @@ const styles = StyleSheet.create({
   },
   foldedBadgeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.danger,
     letterSpacing: 0.5,
   },
@@ -1941,7 +1941,7 @@ const styles = StyleSheet.create({
   },
   mismatchAmount: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   foldToggleBtn: {
@@ -1994,7 +1994,7 @@ const styles = StyleSheet.create({
   },
   showdownOptionTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     marginTop: 6,
   },
@@ -2055,7 +2055,7 @@ const styles = StyleSheet.create({
   },
   showdownNetNumber: {
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: '700',
     marginVertical: 4,
   },
   showdownSummarySub: {
@@ -2107,7 +2107,7 @@ const styles = StyleSheet.create({
   },
   handPrimaryBtnText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textDark,
   },
   modalOverlay: {
@@ -2142,7 +2142,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     textAlign: 'center',
   },
@@ -2172,7 +2172,7 @@ const styles = StyleSheet.create({
   },
   foldTagBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textSecondary,
   },
   foldOptionLabel: {
@@ -2247,7 +2247,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   swipeHint: {
@@ -2280,7 +2280,7 @@ const styles = StyleSheet.create({
   },
   historyHandNumber: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   historyPosBadge: {
@@ -2305,7 +2305,7 @@ const styles = StyleSheet.create({
   },
   historyNet: {
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   historyOutcomeLabel: {
     fontSize: 10,

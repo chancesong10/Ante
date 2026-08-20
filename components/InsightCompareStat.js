@@ -42,6 +42,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   compareColLabel: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', marginBottom: 4 },
-  compareColValue: { fontSize: 18, fontWeight: '900', color: COLORS.textPrimary },
+  compareColValue: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
   compareColSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
 });

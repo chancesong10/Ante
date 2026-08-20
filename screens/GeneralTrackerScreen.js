@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginBottom: 4,
   },
-  netAmount: { fontSize: 34, fontWeight: '900', marginBottom: 8 },
+  netAmount: { fontSize: 34, fontWeight: '700', marginBottom: 8 },
   statsHint: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center' },
   card: {
     backgroundColor: COLORS.card,
@@ -279,5 +279,5 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   submitDisabled: { backgroundColor: COLORS.cardBorder, opacity: 0.5 },
-  submitText: { color: COLORS.textDark, fontWeight: '800', fontSize: 15 },
+  submitText: { color: COLORS.textDark, fontWeight: '700', fontSize: 15 },
 });
