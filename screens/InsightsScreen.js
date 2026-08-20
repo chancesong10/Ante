@@ -25,6 +25,46 @@ function StatLine({ label, value, valueColor }) {
   );
 }
 
+// Turns a scored leak object from buildLeakReport into copy. Kept in the
+// screen (not the engine) so the engine stays pure numbers — same split
+// used for the poker and sports-betting insights screens.
+function getLeakCopy(leak, { fmtDollar, fmtPct }) {
+  switch (leak.id) {
+    case 'loss_chasing':
+      return {
+        title: 'You Bet Bigger After Losing',
+        detail: `You bet ${fmtDollar(leak.avgBetAfterLoss)} on average right after a loss, vs. ${fmtDollar(leak.avgBetAfterWin)} after a win — ${leak.pctIncrease.toFixed(0)}% more. That's a classic loss-chasing pattern.`,
+      };
+    case 'double_down_underuse':
+      return {
+        title: "You're Leaving Profitable Doubles on the Table",
+        detail: `You double down on ${fmtPct(leak.rate)} of hands (n=${leak.sample}), well under the ~${leak.benchmarkRate}% basic strategy suggests. Underdoubling gives up known long-run value on strong hands.`,
+      };
+    case 'double_down_overuse':
+      return {
+        title: "You're Doubling More Than Basic Strategy Suggests",
+        detail: `You double down on ${fmtPct(leak.rate)} of hands (n=${leak.sample}), well above the ~${leak.benchmarkRate}% basic strategy suggests. Worth checking you're only doubling hard 9–11 and strong soft hands.`,
+      };
+    case 'doubling_underperformance':
+      return {
+        title: "Your Doubles Aren't Paying Off",
+        detail: `Doubled hands are running at ${leak.doubledRoi.toFixed(1)}% ROI (n=${leak.sample})${leak.notDoubledRoi !== null ? `, well behind your ${leak.notDoubledRoi.toFixed(1)}% ROI on hands you didn't double` : ''}. Small samples of doubles swing hard, but this is worth tracking.`,
+      };
+    case 'bet_tier_dropoff':
+      return {
+        title: 'Your Win Rate Drops on Your Biggest Bets',
+        detail: `Your win rate is ${fmtPct(leak.smallWinRate)} on your smallest bets (n=${leak.sampleSmall}) but only ${fmtPct(leak.largeWinRate)} on your largest (n=${leak.sampleLarge}). That can be variance, but it can also mean bigger bets are going in on worse decisions.`,
+      };
+    case 'volatility':
+      return {
+        title: 'Your Results Are Highly Volatile',
+        detail: `Your net result per hand swings about ${leak.volatilityRatio.toFixed(1)}x your average bet, hand to hand. Big swings add variance risk on top of whatever edge basic strategy gives you.`,
+      };
+    default:
+      return { title: 'Leak Detected', detail: '' };
+  }
+}
+
 function CompareStat({ label, value, valueColor, sub }) {
   return (
     <View style={styles.compareCol}>
@@ -86,6 +126,9 @@ export default function InsightsScreen({ route, navigation }) {
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
   const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
+  const fmtDollar = (v) => `${currencySymbol}${v.toFixed(2)}`;
+
+  const topLeak = stats.topLeak;
 
   const [copied, setCopied] = useState(false);
 
@@ -94,6 +137,14 @@ export default function InsightsScreen({ route, navigation }) {
     lines.push(`ANTE — ${gameType.toUpperCase()} INSIGHTS REPORT`);
     lines.push(`Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
     lines.push('');
+
+    if (topLeak) {
+      const copy = getLeakCopy(topLeak, { fmtDollar, fmtPct });
+      lines.push('BIGGEST LEAK DETECTED');
+      lines.push(copy.title);
+      lines.push(copy.detail);
+      lines.push('');
+    }
 
     lines.push('PERFORMANCE OVERVIEW');
     lines.push(`Hands logged: ${outcomes.sample}`);
@@ -210,6 +261,29 @@ export default function InsightsScreen({ route, navigation }) {
           </View>
         ) : (
           <>
+            {/* Leak Spotlight */}
+            {topLeak ? (
+              <View style={[styles.leakCard, SHADOWS.card]}>
+                <View style={styles.leakEyebrowRow}>
+                  <Ionicons name="warning" size={14} color={COLORS.warning} />
+                  <Text style={styles.leakEyebrow}>BIGGEST LEAK DETECTED</Text>
+                </View>
+                <Text style={styles.leakTitle}>{getLeakCopy(topLeak, { fmtDollar, fmtPct }).title}</Text>
+                <Text style={styles.leakDetail}>{getLeakCopy(topLeak, { fmtDollar, fmtPct }).detail}</Text>
+                {stats.leaks.length > 1 && (
+                  <Text style={styles.leakMoreText}>+{stats.leaks.length - 1} more pattern{stats.leaks.length - 1 !== 1 ? 's' : ''} flagged below</Text>
+                )}
+              </View>
+            ) : (
+              <View style={[styles.card, SHADOWS.card, styles.noLeakCard]}>
+                <Ionicons name="shield-checkmark" size={20} color={COLORS.success} />
+                <Text style={styles.noLeakTitle}>No Major Leaks Detected</Text>
+                <Text style={styles.noLeakText}>
+                  Your bet sizing, doubling decisions, and volatility all look within a healthy range across {outcomes.sample} hands.
+                </Text>
+              </View>
+            )}
+
             {/* Performance Overview — the baseline everything below is relative to */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>PERFORMANCE OVERVIEW</Text>
@@ -547,6 +621,22 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
     marginBottom: 14,
   },
+  leakCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: COLORS.warningBorder,
+    marginBottom: 14,
+  },
+  leakEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  leakEyebrow: { fontSize: 11, fontWeight: '800', color: COLORS.warning, letterSpacing: 1 },
+  leakTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 6 },
+  leakDetail: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
+  leakMoreText: { fontSize: 11, color: COLORS.textMuted, marginTop: 10, fontWeight: '600' },
+  noLeakCard: { alignItems: 'center', paddingVertical: 22 },
+  noLeakTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 },
+  noLeakText: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', marginTop: 6, lineHeight: 16 },
   cardLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, letterSpacing: 1, marginBottom: 4 },
   cardHint: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
   cardFootnote: { fontSize: 11, color: COLORS.textMuted, marginTop: 8, lineHeight: 15 },
