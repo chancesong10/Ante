@@ -18,6 +18,7 @@ import BlackjackScreen from './screens/BlackjackScreen';
 import SportsBettingScreen from './screens/SportsBettingScreen';
 import GeneralTrackerScreen from './screens/GeneralTrackerScreen';
 import InsightsScreen from './screens/InsightsScreen';
+import LegalScreen from './screens/LegalScreen';
 
 import StartSessionModal from './components/StartSessionModal';
 import ResponsibleGamingAlertModal from './components/ResponsibleGamingAlertModal';
@@ -289,6 +290,7 @@ function AppContent() {
           <Stack.Screen name="SportsBetting" component={SportsBettingScreen} />
           <Stack.Screen name="GeneralTracker" component={GeneralTrackerScreen} />
           <Stack.Screen name="Insights" component={InsightsScreen} />
+          <Stack.Screen name="Legal" component={LegalScreen} />
         </Stack.Navigator>
       </NavigationContainer>
 
