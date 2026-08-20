@@ -207,23 +207,37 @@ describe('7. Bet-Size Tiering', () => {
     const hands = [...small, ...medium, ...large];
 
     const tiers = calcBetTierWinRates(hands);
-    const sortedBets = hands.map((h) => h.bet).sort((a, b) => a - b);
-    const tercile1 = sortedBets[Math.floor(sortedBets.length / 3)];
-    const tercile2 = sortedBets[Math.floor((sortedBets.length * 2) / 3)];
+    const uniqueBets = [...new Set(hands.map((h) => h.bet))].sort((a, b) => a - b);
+    const tercile1 = uniqueBets[Math.floor(uniqueBets.length / 3)];
+    const tercile2 = uniqueBets[Math.floor((uniqueBets.length * 2) / 3)];
 
     expect(tercile1).toBe(50);
     expect(tercile2).toBe(200);
 
-    // Known behavior, not a bug: the <= tercile boundary merges tied bet
-    // values into the lower bucket. With $10 and $50 both <= tercile1,
-    // "small" absorbs both groups (n=16) instead of staying at n=8.
-    // See reports/blackjack-insights-audit.pdf, Finding #1, for the
-    // full writeup and suggested remediation.
-    expect(tiers.small.sample).toBe(16);
-    expect(tiers.small.winRate).toBeCloseTo(37.5, 2);
+    // Fixed: terciles come from distinct bet values, and the boundary is
+    // strict (`<`) with "large" catching the remainder (`>=`), so each of
+    // the three clean bet levels stays in its own bucket instead of $10
+    // and $50 merging together. See reports/blackjack-insights-audit.pdf,
+    // Finding #1, for the bug this replaced.
+    expect(tiers.small.sample).toBe(8);
+    expect(tiers.small.winRate).toBeCloseTo(25, 2);
     expect(tiers.medium.sample).toBe(8);
-    expect(tiers.medium.winRate).toBeCloseTo(75, 2);
-    expect(tiers.large.sample).toBe(0);
+    expect(tiers.medium.winRate).toBeCloseTo(50, 2);
+    expect(tiers.large.sample).toBe(8);
+    expect(tiers.large.winRate).toBeCloseTo(75, 2);
+  });
+
+  test('a concentration of tied bets at a low value no longer gets swallowed into "large"', () => {
+    // 20 hands at $25 (the common case), 4 hands at $500 — a tie-heavy
+    // distribution that previously could collapse small AND medium into
+    // empty buckets and dump everyone into "large."
+    const common = Array.from({ length: 20 }, (_, i) => hand({ bet: 25, outcome: i % 2 === 0 ? 'win' : 'loss' }));
+    const outliers = Array.from({ length: 4 }, () => hand({ bet: 500, outcome: 'win' }));
+    const tiers = calcBetTierWinRates([...common, ...outliers]);
+
+    expect(tiers.small.sample).toBe(0); // nobody bet below the $25 floor — legitimately empty
+    expect(tiers.medium.sample).toBe(20);
+    expect(tiers.large.sample).toBe(4);
   });
 
   test('control: non-tied bet sizes split into 3 non-degenerate buckets', () => {

@@ -14,6 +14,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
+import BankrollLineChart from '../components/BankrollLineChart';
 
 export default function AnalyticsScreen({ navigation }) {
   const { sessionHistory } = useSession();
@@ -50,8 +51,9 @@ export default function AnalyticsScreen({ navigation }) {
   const avgSessionNet =
     totalSessions > 0 ? totalNetProfit / totalSessions : 0;
 
-  // Real session-by-session data for chart (reversed to chronological order)
-  const chronologicalSessions = [...sessionHistory].reverse().slice(-7);
+  // Real session-by-session data for charts (reversed to chronological order)
+  const allChronologicalSessions = [...sessionHistory].reverse();
+  const chronologicalSessions = allChronologicalSessions.slice(-7);
   const maxAbsNet = Math.max(
     ...chronologicalSessions.map((s) => Math.abs(s.netProfit)),
     50
@@ -139,6 +141,20 @@ export default function AnalyticsScreen({ navigation }) {
               All metrics on this screen are calculated live from your recorded session history. Start tracking a session to populate analytics.
             </Text>
           </View>
+        )}
+
+        {/* Bankroll Over Time */}
+        {totalSessions >= 2 && (
+          <>
+            <Text style={styles.sectionTitle}>Bankroll Over Time</Text>
+            <View style={[styles.card, SHADOWS.card]}>
+              <BankrollLineChart
+                sessions={allChronologicalSessions}
+                currencySymbol={currencySymbol}
+                privacyMode={privacyMode}
+              />
+            </View>
+          </>
         )}
 
         {/* Dynamic Session Performance Bars */}
@@ -298,6 +314,18 @@ export default function AnalyticsScreen({ navigation }) {
         </View>
 
         <Text style={styles.sectionTitle}>Behavioral Insights</Text>
+          <TouchableOpacity
+            style={[styles.card, SHADOWS.card, styles.insightLinkCard]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('LifetimeInsights')}
+          >
+            <View>
+              <Text style={styles.insightLinkTitle}>Lifetime Insights</Text>
+              <Text style={styles.insightLinkSubtitle}>Cross-game patterns, streaks, and leak detection</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.card, SHADOWS.card, styles.insightLinkCard]}
             activeOpacity={0.8}

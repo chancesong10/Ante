@@ -20,6 +20,7 @@ import GeneralTrackerScreen from './screens/GeneralTrackerScreen';
 import InsightsScreen from './screens/InsightsScreen';
 import PokerInsightsScreen from './screens/PokerInsightsScreen';
 import SportsBettingInsightsScreen from './screens/SportsBettingInsightsScreen';
+import LifetimeInsightsScreen from './screens/LifetimeInsightsScreen';
 import LegalScreen from './screens/LegalScreen';
 
 import StartSessionModal from './components/StartSessionModal';
@@ -294,6 +295,7 @@ function AppContent() {
           <Stack.Screen name="Insights" component={InsightsScreen} />
           <Stack.Screen name="PokerInsights" component={PokerInsightsScreen} />
           <Stack.Screen name="SportsBettingInsights" component={SportsBettingInsightsScreen} />
+          <Stack.Screen name="LifetimeInsights" component={LifetimeInsightsScreen} />
           <Stack.Screen name="Legal" component={LegalScreen} />
         </Stack.Navigator>
       </NavigationContainer>

@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  Alert,
   StatusBar,
   Modal,
   TextInput,
@@ -20,7 +19,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
-import { getOrCreateDeviceId, clearAllAppData } from '../services/storageService';
+import { getOrCreateDeviceId } from '../services/storageService';
 
 const CURRENCY_OPTIONS = [
   { id: 'USD', name: 'US Dollar', symbol: '$' },
@@ -30,7 +29,7 @@ const CURRENCY_OPTIONS = [
 ];
 
 export default function ProfileScreen({ navigation }) {
-  const { sessionHistory, clearAllSessions } = useSession();
+  const { sessionHistory } = useSession();
   const insets = useSafeAreaInsets();
   const {
     quickChipsEnabled = true,
@@ -41,7 +40,6 @@ export default function ProfileScreen({ navigation }) {
     stopLossAlert = false,
     stopLossAmount = 250,
     updatePreferences,
-    resetPreferences,
   } = usePreferences();
 
   const [deviceId, setDeviceId] = useState('ante_vault_seed');
@@ -129,36 +127,6 @@ export default function ProfileScreen({ navigation }) {
   const handleCopySeed = () => {
     setCopiedSeed(true);
     setTimeout(() => setCopiedSeed(false), 2500);
-  };
-
-  const handleExportData = () => {
-    Alert.alert(
-      'Vault Ledger Exported',
-      `Summary generated for ${stats.totalSessions} session(s) with ${currencySymbol}${stats.totalNet.toFixed(
-        2
-      )} lifetime outcome.\n\nJSON export package is ready on device.`,
-      [{ text: 'OK', style: 'default' }]
-    );
-  };
-
-  const handleResetData = () => {
-    Alert.alert(
-      'Reset Vault & Clear Data?',
-      'This will permanently erase all session logs, hand histories, and bankroll statistics from your device. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Erase Everything',
-          style: 'destructive',
-          onPress: async () => {
-            await clearAllAppData();
-            if (clearAllSessions) clearAllSessions();
-            if (resetPreferences) resetPreferences();
-            Alert.alert('Vault Purged', 'All local data and history have been cleared.');
-          },
-        },
-      ]
-    );
   };
 
   const handleOpenLimitsModal = () => {
@@ -575,42 +543,6 @@ export default function ProfileScreen({ navigation }) {
                 {copiedSeed ? 'Copied' : 'Copy'}
               </Text>
             </View>
-          </TouchableOpacity>
-
-          <View style={styles.menuDivider} />
-
-          {/* Export Data */}
-          <TouchableOpacity
-            style={styles.menuRow}
-            activeOpacity={0.7}
-            onPress={handleExportData}
-          >
-            <View style={styles.menuIconCircle}>
-              <Ionicons name="download-outline" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
-            <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Export Session Vault</Text>
-              <Text style={styles.menuSubtitle}>Download JSON & bankroll ledger</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-
-          <View style={styles.menuDivider} />
-
-          {/* Reset All Data */}
-          <TouchableOpacity
-            style={styles.menuRow}
-            activeOpacity={0.7}
-            onPress={handleResetData}
-          >
-            <View style={styles.menuIconCircleDanger}>
-              <Ionicons name="trash-outline" size={moderateScale(18)} color={COLORS.danger} />
-            </View>
-            <View style={styles.menuTextGroup}>
-              <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Clear Vault History</Text>
-              <Text style={styles.menuSubtitle}>Erase all sessions & reset metrics</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.danger} />
           </TouchableOpacity>
         </View>
 
@@ -1107,17 +1039,6 @@ const styles = StyleSheet.create({
     marginRight: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-  },
-  menuIconCircleDanger: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: RADIUS.xs,
-    backgroundColor: COLORS.dangerMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(244, 63, 94, 0.3)',
   },
   menuTextGroup: {
     flex: 1,
