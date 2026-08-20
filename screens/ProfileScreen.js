@@ -29,7 +29,7 @@ const CURRENCY_OPTIONS = [
   { id: 'CAD', name: 'Canadian Dollar', symbol: '$' },
 ];
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { sessionHistory, clearAllSessions } = useSession();
   const insets = useSafeAreaInsets();
   const {
@@ -611,6 +611,42 @@ export default function ProfileScreen() {
               <Text style={styles.menuSubtitle}>Erase all sessions & reset metrics</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.danger} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Section 4: Legal */}
+        <Text style={styles.sectionTitle}>LEGAL</Text>
+        <View style={[styles.menuCard, SHADOWS.card]}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}
+          >
+            <View style={styles.menuIconCircle}>
+              <Ionicons name="lock-closed-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Privacy Policy</Text>
+              <Text style={styles.menuSubtitle}>What Ante stores and how it's controlled</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuRow}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Legal', { doc: 'terms' })}
+          >
+            <View style={styles.menuIconCircle}>
+              <Ionicons name="document-text-outline" size={moderateScale(18)} color={COLORS.primary} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Terms of Service</Text>
+              <Text style={styles.menuSubtitle}>Rules for using the app</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
         </View>
 
