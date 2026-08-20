@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fluidFont(26),
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: 0.5,
   },
@@ -411,8 +411,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   heroAmount: {
-    fontSize: fluidFont(34),
-    fontWeight: '900',
+    fontSize: fluidFont(38),
+    fontWeight: '700',
     textAlign: 'center',
     marginBottom: SPACING.md,
   },
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   subStatValue: {
     fontSize: fluidFont(15),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   emptyNoticeCard: {
@@ -561,8 +561,10 @@ const styles = StyleSheet.create({
   },
   gridValue: {
     fontSize: fluidFont(17),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
+    
+    
   },
   insightLinkCard: {
   flexDirection: 'row',

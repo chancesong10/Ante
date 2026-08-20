@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   },
   netAmount: {
     fontSize: 34,
-    fontWeight: '900',
+    fontWeight: '700',
     marginBottom: 14,
   },
   statsRow: {
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: COLORS.textDark,
-    fontWeight: '800',
+    fontWeight: '700',
     fontSize: 15,
   },
   splitHandBox: {

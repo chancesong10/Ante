@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.primary,
     marginBottom: 8,
   },

@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: 0.5,
   },
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   },
   netProfitText: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   durationRow: {
     flexDirection: 'row',
@@ -679,11 +679,11 @@ const styles = StyleSheet.create({
   buyInTotalLabel: {
     fontSize: 14,
     color: COLORS.textPrimary,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   buyInTotalValue: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   emptyContainer: {
     flex: 1,
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   emptySubtitle: {
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   gameOptionRow: {

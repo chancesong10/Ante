@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fluidFont(16),
-    fontWeight: '900',
+    fontWeight: '700',
     textAlign: 'center',
     letterSpacing: 0.3,
     marginBottom: 6,
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     color: COLORS.textDark,
     fontSize: fluidFont(14),
-    fontWeight: '800',
+    fontWeight: '700',
   },
   secondaryBtn: {
     alignItems: 'center',

@@ -98,8 +98,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   leakEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  leakEyebrow: { fontSize: 11, fontWeight: '800', color: COLORS.warning, letterSpacing: 1 },
-  leakTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 6 },
+  leakEyebrow: { fontSize: 11, fontWeight: '700', color: COLORS.warning, letterSpacing: 1 },
+  leakTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 },
   leakDetail: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
   leakSkeletonLines: { marginTop: 12, gap: 8 },
   ctaFloatWrap: {
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   },
   ctaTitle: {
     fontSize: fluidFont(17),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
     textAlign: 'center',
     marginBottom: 6,
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   },
   ctaButtonText: {
     color: COLORS.textDark,
-    fontWeight: '800',
+    fontWeight: '700',
     fontSize: fluidFont(14),
   },
 });

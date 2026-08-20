@@ -122,7 +122,7 @@ export default function BankrollLineChart({ sessions, currencySymbol = '$', priv
           {privacyMode ? '••' : `${currencySymbol}0`}
         </SvgText>
 
-        <Path d={linePath} fill="none" stroke={COLORS.primary} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d={linePath} fill="none" stroke={trendColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
 
         {showPeak && (
           <>
@@ -155,8 +155,6 @@ export default function BankrollLineChart({ sessions, currencySymbol = '$', priv
             </SvgText>
           </>
         )}
-
-        <Circle cx={lastX} cy={lastY} r={4.5} fill={COLORS.primary} stroke={COLORS.background} strokeWidth={2} />
       </Svg>
 
       <View style={styles.labelRow}>
@@ -191,7 +189,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: fluidFont(15),
-    fontWeight: '800',
+    fontWeight: '700',
     marginTop: 2,
   },
   labelRow: {

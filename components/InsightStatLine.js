@@ -29,5 +29,5 @@ export default function InsightStatLine({ label, value, valueColor, locked }) {
 const styles = StyleSheet.create({
   statRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
   statRowLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', flex: 1, marginRight: 8 },
-  statRowValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '800' },
+  statRowValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '700' },
 });

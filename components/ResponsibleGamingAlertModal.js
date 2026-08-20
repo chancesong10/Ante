@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fluidFont(17),
-    fontWeight: '900',
+    fontWeight: '700',
     textAlign: 'center',
     letterSpacing: 0.5,
     marginBottom: 6,
@@ -203,14 +203,14 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: fluidFont(10),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textSecondary,
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   metricVal: {
     fontSize: fluidFont(15),
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   supportBox: {
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   primaryEndBtnText: {
     color: COLORS.textDark,
     fontSize: fluidFont(14),
-    fontWeight: '800',
+    fontWeight: '700',
   },
   secondaryBtn: {
     alignItems: 'center',

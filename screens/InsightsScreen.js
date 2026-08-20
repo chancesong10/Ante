@@ -666,8 +666,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   leakEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  leakEyebrow: { fontSize: 11, fontWeight: '800', color: COLORS.warning, letterSpacing: 1 },
-  leakTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 6 },
+  leakEyebrow: { fontSize: 11, fontWeight: '700', color: COLORS.warning, letterSpacing: 1 },
+  leakTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 },
   leakDetail: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
   leakMoreText: { fontSize: 11, color: COLORS.textMuted, marginTop: 10, fontWeight: '600' },
   noLeakCard: { alignItems: 'center', paddingVertical: 22 },
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   cardLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, letterSpacing: 1, marginBottom: 4 },
   cardHint: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
   cardFootnote: { fontSize: 11, color: COLORS.textMuted, marginTop: 8, lineHeight: 15 },
-  streakValue: { fontSize: 28, fontWeight: '900' },
+  streakValue: { fontSize: 28, fontWeight: '700' },
   rowCards: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   halfCard: {
     flex: 1,
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
     minHeight: 34,
     justifyContent: 'flex-start',
   },
-  halfValue: { fontSize: 24, fontWeight: '900' },
+  halfValue: { fontSize: 24, fontWeight: '700' },
   compareRow: { flexDirection: 'row', gap: 10 },
   insightNote: {
     flexDirection: 'row',
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
-  riskBadgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  riskBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   copyReportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
   },
   copyReportBtnText: {
     color: COLORS.textDark,
-    fontWeight: '800',
+    fontWeight: '700',
     fontSize: 15,
   },
   copyReportHint: {

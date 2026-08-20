@@ -342,9 +342,8 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     fontSize: fluidFont(24),
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLORS.textPrimary,
-    letterSpacing: 2,
   },
   headerSubtitle: {
     fontSize: fluidFont(12),
@@ -357,8 +356,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius: RADIUS.lg,
     padding: SPACING.cardPadding,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
     marginBottom: SPACING.md,
   },
   activeHeader: {
@@ -385,12 +384,12 @@ const styles = StyleSheet.create({
   liveBadgeText: {
     color: COLORS.primary,
     fontSize: fluidFont(11),
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
   activeGameName: {
     fontSize: fluidFont(14),
-    fontWeight: '700',
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   activeBalanceRow: {
@@ -402,21 +401,25 @@ const styles = StyleSheet.create({
   activeLabel: {
     fontSize: fluidFont(11),
     color: COLORS.textSecondary,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '600',
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   activeNetAmount: {
     fontSize: fluidFont(30),
-    fontWeight: '900',
+    fontWeight: '700',
+    
+    
   },
   activeHandsBadge: {
     alignItems: 'flex-end',
   },
   activeHandsNum: {
     fontSize: fluidFont(18),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
+    
+    
   },
   activeHandsLabel: {
     fontSize: fluidFont(11),
@@ -439,7 +442,7 @@ const styles = StyleSheet.create({
   resumeButtonText: {
     color: COLORS.textDark,
     fontSize: fluidFont(14),
-    fontWeight: '800',
+    fontWeight: '600',
   },
   endButton: {
     flex: 1,
@@ -456,7 +459,7 @@ const styles = StyleSheet.create({
   endButtonText: {
     color: COLORS.danger,
     fontSize: fluidFont(13),
-    fontWeight: '700',
+    fontWeight: '600',
   },
 
   // Base Summary Card
@@ -470,17 +473,18 @@ const styles = StyleSheet.create({
   },
   cardHeaderLabel: {
     fontSize: fluidFont(11),
-    fontWeight: '700',
+    fontWeight: '600',
     color: COLORS.textSecondary,
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
     marginBottom: 4,
     textAlign: 'center',
   },
   balanceAmount: {
     fontSize: fluidFont(38),
-    fontWeight: '900',
+    fontWeight: '700',
     textAlign: 'center',
-    letterSpacing: -0.5,
+    
+    
     marginVertical: 4,
   },
   metricsRow: {
@@ -509,8 +513,10 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: fluidFont(16),
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.textPrimary,
+    
+    
   },
   startSessionCta: {
     flexDirection: 'row',
@@ -525,7 +531,7 @@ const styles = StyleSheet.create({
   startSessionCtaText: {
     color: COLORS.textDark,
     fontSize: fluidFont(14),
-    fontWeight: '800',
+    fontWeight: '700',
   },
 
   // Section Headers
@@ -537,7 +543,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fluidFont(16),
-    fontWeight: '700',
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   viewAllText: {
@@ -558,7 +564,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: fluidFont(15),
-    fontWeight: '700',
+    fontWeight: '600',
     color: COLORS.textPrimary,
     marginTop: SPACING.xs,
   },
@@ -610,7 +616,9 @@ const styles = StyleSheet.create({
   },
   sessionNet: {
     fontSize: fluidFont(15),
-    fontWeight: '800',
+    fontWeight: '700',
+    
+    
   },
   sessionDuration: {
     fontSize: fluidFont(11),
