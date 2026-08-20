@@ -5,6 +5,7 @@ import {
   calcDayOfWeekPerformance,
   calcSessionLengthPerformance,
   calcVolatility,
+  calcTimePlayed,
   buildLeakReport,
   computeLifetimeInsights,
 } from '../lifetimeInsightsEngine';
@@ -173,6 +174,34 @@ describe('calcVolatility', () => {
     const sessions = Array.from({ length: 10 }, (_, i) => handsSession({ gameType: 'Blackjack', netProfit: i % 2 === 0 ? 25 : -25 }));
     const vol = calcVolatility(sessions);
     expect(vol.riskLabel).toBe('Low');
+  });
+});
+
+describe('calcTimePlayed', () => {
+  test('sums duration in minutes across sessions with a known start/end pair', () => {
+    const sessions = [
+      { startTime: 0, endTime: 30 * 60000 }, // 30 min
+      { startTime: 0, endTime: 90 * 60000 }, // 90 min
+    ];
+    const time = calcTimePlayed(sessions);
+    expect(time.totalMinutes).toBeCloseTo(120, 2);
+    expect(time.avgMinutesPerSession).toBeCloseTo(60, 2);
+    expect(time.sample).toBe(2);
+  });
+
+  test('excludes sessions missing a valid start/end pair rather than treating them as zero', () => {
+    const sessions = [
+      { startTime: 0, endTime: 60 * 60000 }, // 60 min, valid
+      { startTime: 0, endTime: 0 }, // invalid: endTime not after startTime
+      { startTime: 0 }, // invalid: no endTime at all
+    ];
+    const time = calcTimePlayed(sessions);
+    expect(time.sample).toBe(1);
+    expect(time.totalMinutes).toBeCloseTo(60, 2);
+  });
+
+  test('returns null when no session has a valid duration', () => {
+    expect(calcTimePlayed([{ startTime: 0 }])).toBeNull();
   });
 });
 
