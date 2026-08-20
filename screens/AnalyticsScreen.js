@@ -325,11 +325,11 @@ export default function AnalyticsScreen({ navigation }) {
           <TouchableOpacity
             style={[styles.card, SHADOWS.card, styles.insightLinkCard]}
             activeOpacity={0.8}
-            onPress={() => navigation.navigate('Insights', { gameType: 'Sports Betting' })}
+            onPress={() => navigation.navigate('SportsBettingInsights')}
           >
             <View>
               <Text style={styles.insightLinkTitle}>Sports Betting Insights</Text>
-              <Text style={styles.insightLinkSubtitle}>Streaks, bet sizing, and patterns</Text>
+              <Text style={styles.insightLinkSubtitle}>Odds edge, favorites vs. dogs, and leak detection</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
           </TouchableOpacity>

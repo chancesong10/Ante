@@ -16,7 +16,9 @@ import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
-const BET_TYPES = ['Moneyline', 'Spread', 'Total'];
+const BET_TYPES = ['Moneyline', 'Spread', 'Total', 'Parlay', 'Prop'];
+const SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'Soccer', 'MMA', 'Tennis', 'Other'];
+const STAKE_CHIPS = ['10', '25', '50', '100', '250'];
 
 const calcPayout = (stake, americanOdds) => {
   const odds = parseFloat(americanOdds);
@@ -29,7 +31,7 @@ const calcPayout = (stake, americanOdds) => {
 
 export default function SportsBettingScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { currencySymbol = '$' } = usePreferences();
+  const { currencySymbol = '$', quickChipsEnabled } = usePreferences();
   const {
     activeSession,
     startSession,
@@ -47,23 +49,36 @@ export default function SportsBettingScreen({ navigation }) {
   }, []);
 
   const [matchup, setMatchup] = useState('');
+  const [sport, setSport] = useState(null);
   const [betType, setBetType] = useState('Moneyline');
+  const [line, setLine] = useState('');
+  const [live, setLive] = useState(false);
   const [stake, setStake] = useState('');
   const [odds, setOdds] = useState('');
   const [outcome, setOutcome] = useState(null);
+  const [expandedBetId, setExpandedBetId] = useState(null);
 
   const resetForm = () => {
     setMatchup('');
+    setSport(null);
     setBetType('Moneyline');
+    setLine('');
+    setLive(false);
     setStake('');
     setOdds('');
     setOutcome(null);
+  };
+
+  const handleStakeChipPress = (chipValue) => {
+    const current = parseFloat(stake) || 0;
+    setStake(String(current + parseFloat(chipValue)));
   };
 
   const parsedStake = parseFloat(stake);
   const parsedOdds = parseFloat(odds);
   const hasValidStake = stake !== '' && !isNaN(parsedStake) && parsedStake > 0;
   const hasValidOdds = odds !== '' && !isNaN(parsedOdds) && parsedOdds !== 0;
+  const showLineField = betType === 'Spread' || betType === 'Total';
 
   const projectedPayout = hasValidStake && hasValidOdds ? calcPayout(parsedStake, odds) : 0;
 
@@ -83,7 +98,10 @@ export default function SportsBettingScreen({ navigation }) {
       id: Date.now(),
       type: 'single',
       matchup: matchup.trim() || 'Untitled Bet',
+      sport: sport || undefined,
       betType,
+      line: showLineField && line.trim() ? line.trim() : undefined,
+      live,
       bet: parsedStake,
       odds: parsedOdds,
       outcome,
@@ -192,8 +210,23 @@ export default function SportsBettingScreen({ navigation }) {
             onChangeText={setMatchup}
           />
 
+          <Text style={styles.label}>Sport (optional)</Text>
+          <View style={styles.chipWrapRow}>
+            {SPORTS.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[styles.sportChip, sport === s && styles.sportChipActive]}
+                onPress={() => setSport(sport === s ? null : s)}
+              >
+                <Text style={[styles.sportChipText, sport === s && styles.sportChipTextActive]}>
+                  {s}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <Text style={styles.label}>Bet Type</Text>
-          <View style={styles.betTypeRow}>
+          <View style={styles.chipWrapRow}>
             {BET_TYPES.map((type) => (
               <TouchableOpacity
                 key={type}
@@ -212,6 +245,43 @@ export default function SportsBettingScreen({ navigation }) {
             ))}
           </View>
 
+          {showLineField && (
+            <>
+              <Text style={styles.label}>{betType === 'Spread' ? 'Spread Line' : 'Total Line'}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={betType === 'Spread' ? 'e.g. -3.5' : 'e.g. O 220.5'}
+                placeholderTextColor={COLORS.textMuted}
+                value={line}
+                onChangeText={setLine}
+              />
+            </>
+          )}
+
+          <Text style={styles.label}>Pregame or Live</Text>
+          <View style={styles.liveToggleRow}>
+            <TouchableOpacity
+              style={[styles.liveToggleBtn, !live && styles.liveToggleBtnActive]}
+              onPress={() => setLive(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.liveToggleText, !live && styles.liveToggleTextActive]}>Pregame</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.liveToggleBtn, live && styles.liveToggleBtnLiveActive]}
+              onPress={() => setLive(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="radio-outline"
+                size={13}
+                color={live ? COLORS.textDark : COLORS.textSecondary}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={[styles.liveToggleText, live && styles.liveToggleTextActive]}>Live / In-Play</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.label}>Stake ({currencySymbol})</Text>
           <TextInput
             style={styles.input}
@@ -222,8 +292,22 @@ export default function SportsBettingScreen({ navigation }) {
             onChangeText={setStake}
           />
 
+          {quickChipsEnabled && (
+            <View style={styles.chipWrapRow}>
+              {STAKE_CHIPS.map((chip) => (
+                <TouchableOpacity
+                  key={chip}
+                  style={styles.stakeChip}
+                  onPress={() => handleStakeChipPress(chip)}
+                >
+                  <Text style={styles.stakeChipText}>+{currencySymbol}{chip}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           <Text style={styles.label}>Odds (American)</Text>
-          <View style={styles.oddsRow}>
+          <View style={styles.chipWrapRow}>
             {COMMON_ODDS.map((o) => (
               <TouchableOpacity
                 key={o}
@@ -249,7 +333,24 @@ export default function SportsBettingScreen({ navigation }) {
 
           {hasValidStake && hasValidOdds && (
             <View style={styles.payoutPreview}>
-              <Text style={styles.payoutPreviewLabel}>PROJECTED PROFIT IF WIN</Text>
+              <View style={styles.payoutPreviewRow}>
+                <Text style={styles.payoutPreviewLabel}>PROJECTED PROFIT IF WIN</Text>
+                <View
+                  style={[
+                    styles.favDogBadge,
+                    { backgroundColor: parsedOdds < 0 ? COLORS.primaryMuted : COLORS.accentCyanMuted },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.favDogBadgeText,
+                      { color: parsedOdds < 0 ? COLORS.primary : COLORS.accentCyan },
+                    ]}
+                  >
+                    {parsedOdds < 0 ? 'FAVORITE' : 'UNDERDOG'}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.payoutPreviewValue}>
                 +{currencySymbol}{projectedPayout.toFixed(2)}
               </Text>
@@ -300,42 +401,91 @@ export default function SportsBettingScreen({ navigation }) {
         {sessionBets.length > 0 && (
           <View style={styles.historySection}>
             <Text style={styles.sectionTitle}>Bets in Current Session</Text>
-            <Text style={styles.swipeHint}>Swipe a bet to delete</Text>
+            <Text style={styles.swipeHint}>Swipe a bet to delete • Tap to expand details</Text>
 
-            {sessionBets.map((b) => (
-              <SwipeableRow
-                key={b.id}
-                onDelete={() => removeHandFromActiveSession(b.id)}
-                confirmTitle="Delete this bet?"
-                confirmMessage="This cannot be undone."
-              >
-                <View style={styles.historyRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.historyText}>
-                      {b.matchup} — {b.betType}
-                    </Text>
-                    <Text style={styles.historySubtext}>
-                      {currencySymbol}{b.bet} @ {b.odds > 0 ? '+' : ''}{b.odds} — {b.outcome.toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.historyNet,
-                      {
-                        color:
-                          b.netChange > 0
-                            ? COLORS.success
-                            : b.netChange < 0
-                            ? COLORS.danger
-                            : COLORS.textPrimary,
-                      },
-                    ]}
+            {sessionBets.map((b) => {
+              const isExpanded = expandedBetId === b.id;
+              const isFav = b.odds < 0;
+              return (
+                <SwipeableRow
+                  key={b.id}
+                  onDelete={() => removeHandFromActiveSession(b.id)}
+                  confirmTitle="Delete this bet?"
+                  confirmMessage="This cannot be undone."
+                >
+                  <TouchableOpacity
+                    style={styles.historyRow}
+                    activeOpacity={0.8}
+                    onPress={() => setExpandedBetId((prev) => (prev === b.id ? null : b.id))}
                   >
-                    {b.netChange > 0 ? '+' : b.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(b.netChange).toFixed(2)}
-                  </Text>
-                </View>
-              </SwipeableRow>
-            ))}
+                    <View style={styles.historyRowTop}>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.historyBadgeRow}>
+                          <Text style={styles.historyText}>
+                            {b.matchup} — {b.betType}
+                          </Text>
+                          {b.live && (
+                            <View style={styles.liveBadge}>
+                              <Text style={styles.liveBadgeText}>LIVE</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.historySubtext}>
+                          {currencySymbol}{b.bet} @ {b.odds > 0 ? '+' : ''}{b.odds} — {b.outcome.toUpperCase()}
+                          {b.sport ? ` • ${b.sport}` : ''}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.historyNet,
+                          {
+                            color:
+                              b.netChange > 0
+                                ? COLORS.success
+                                : b.netChange < 0
+                                ? COLORS.danger
+                                : COLORS.textPrimary,
+                          },
+                        ]}
+                      >
+                        {b.netChange > 0 ? '+' : b.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(b.netChange).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    {isExpanded && (
+                      <View style={styles.expandedBreakdown}>
+                        <View style={styles.expandedDivider} />
+                        <View style={styles.metaChipRow}>
+                          <View
+                            style={[
+                              styles.favDogBadge,
+                              { backgroundColor: isFav ? COLORS.primaryMuted : COLORS.accentCyanMuted },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.favDogBadgeText,
+                                { color: isFav ? COLORS.primary : COLORS.accentCyan },
+                              ]}
+                            >
+                              {isFav ? 'FAVORITE' : 'UNDERDOG'}
+                            </Text>
+                          </View>
+                          <View style={styles.metaChip}>
+                            <Text style={styles.metaChipText}>{b.live ? 'Live / In-Play' : 'Pregame'}</Text>
+                          </View>
+                          {b.line && (
+                            <View style={styles.metaChip}>
+                              <Text style={styles.metaChipText}>Line: {b.line}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </SwipeableRow>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -441,7 +591,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  betTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipWrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  sportChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: COLORS.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+  },
+  sportChipActive: { backgroundColor: COLORS.primaryMuted, borderColor: COLORS.primary },
+  sportChipText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
+  sportChipTextActive: { color: COLORS.primary, fontWeight: '700' },
   betTypeChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -453,7 +614,31 @@ const styles = StyleSheet.create({
   betTypeChipActive: { backgroundColor: COLORS.primaryMuted, borderColor: COLORS.primary },
   betTypeChipText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
   betTypeChipTextActive: { color: COLORS.primary, fontWeight: '700' },
-  oddsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  liveToggleRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  liveToggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.backgroundSecondary,
+    borderRadius: 12,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+  },
+  liveToggleBtnActive: { backgroundColor: COLORS.primaryMuted, borderColor: COLORS.primary },
+  liveToggleBtnLiveActive: { backgroundColor: COLORS.warningMuted, borderColor: COLORS.warning },
+  liveToggleText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600' },
+  liveToggleTextActive: { color: COLORS.textPrimary, fontWeight: '700' },
+  stakeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: COLORS.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+  },
+  stakeChipText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700' },
   oddsChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -475,6 +660,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  payoutPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   payoutPreviewLabel: {
     fontSize: 10,
     color: COLORS.textMuted,
@@ -482,6 +673,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   payoutPreviewValue: { fontSize: 20, fontWeight: '900', color: COLORS.success, marginTop: 2 },
+  favDogBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  favDogBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
   outcomeRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
   outcomeButton: {
     flex: 1,
@@ -510,9 +707,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
   swipeHint: { fontSize: 11, color: COLORS.textMuted, marginBottom: 12 },
   historyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 12,
@@ -520,7 +714,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  historyRowTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  historyBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   historyText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '600' },
   historySubtext: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
   historyNet: { fontWeight: '700', fontSize: 14 },
+  liveBadge: {
+    backgroundColor: COLORS.warningMuted,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: COLORS.warningBorder,
+  },
+  liveBadgeText: { fontSize: 9, fontWeight: '800', color: COLORS.warning, letterSpacing: 0.4 },
+  expandedBreakdown: { marginTop: 10 },
+  expandedDivider: { height: 1, backgroundColor: COLORS.cardBorder, marginBottom: 10 },
+  metaChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  metaChip: {
+    backgroundColor: COLORS.backgroundSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+  },
+  metaChipText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
 });
