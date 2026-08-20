@@ -133,6 +133,8 @@ const handleStartGeneral = () => {
                         if (onNavigateToPoker) onNavigateToPoker();
                       } else if (activeSession?.gameType === 'Sports Betting') {
                         if (onNavigateToSportsBetting) onNavigateToSportsBetting();
+                      } else if (activeSession?.gameType === 'General') {
+                        if (onNavigateToGeneral) onNavigateToGeneral();
                       } else {
                         if (onNavigateToBlackjack) onNavigateToBlackjack();
                       }

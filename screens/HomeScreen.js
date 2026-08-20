@@ -29,7 +29,7 @@ const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
 };
 
 export default function HomeScreen({ navigation, onOpenAddModal }) {
-  const { activeSession, sessionHistory, endActiveSession, startSession } = useSession();
+  const { activeSession, sessionHistory, endActiveSession } = useSession();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
 
@@ -50,14 +50,26 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
   const activeNet = activeHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
 
   const handleStartNewSession = () => {
-    if (!activeSession) {
-      startSession('Blackjack');
+    if (onOpenAddModal) {
+      onOpenAddModal();
     }
-    navigation.navigate('Blackjack');
   };
 
   const handleEndSession = () => {
     endActiveSession();
+  };
+
+  const handleResumeSession = () => {
+    if (!activeSession) return;
+    if (activeSession.gameType === 'Poker') {
+      navigation.navigate('Poker');
+    } else if (activeSession.gameType === 'Sports Betting') {
+      navigation.navigate('SportsBetting');
+    } else if (activeSession.gameType === 'General') {
+      navigation.navigate('GeneralTracker');
+    } else {
+      navigation.navigate('Blackjack');
+    }
   };
 
   return (
@@ -131,7 +143,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
               <TouchableOpacity
                 style={[styles.resumeButton, SHADOWS.card]}
                 activeOpacity={0.85}
-                onPress={() => navigation.navigate('Blackjack')}
+                onPress={handleResumeSession}
                 accessibilityRole="button"
                 accessibilityLabel="Resume Session"
               >
