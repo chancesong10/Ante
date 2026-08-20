@@ -23,6 +23,56 @@ export function getChronologicalHands(sessionHistory, gameType) {
   return allHands;
 }
 
+// --- Overall outcome breakdown (the baseline everything else is relative to) ---
+export function calcOutcomeBreakdown(hands) {
+  const sample = hands.length;
+  if (sample === 0) {
+    return { wins: 0, losses: 0, pushes: 0, sample: 0, winRate: null, lossRate: null, pushRate: null };
+  }
+  const wins = hands.filter((h) => h.outcome === 'win').length;
+  const losses = hands.filter((h) => h.outcome === 'loss').length;
+  const pushes = hands.filter((h) => h.outcome === 'push').length;
+  return {
+    wins,
+    losses,
+    pushes,
+    sample,
+    winRate: (wins / sample) * 100,
+    lossRate: (losses / sample) * 100,
+    pushRate: (pushes / sample) * 100,
+  };
+}
+
+// --- Actual money return: accounts for bet size and blackjack's 3:2 payout,
+// which a plain win-rate percentage can't capture ---
+export function calcReturnStats(hands) {
+  const sample = hands.length;
+  const totalWagered = hands.reduce(
+    (sum, h) => sum + (h.doubled ? (h.bet || 0) * 2 : h.bet || 0),
+    0
+  );
+  const netProfit = hands.reduce((sum, h) => sum + (h.netChange || 0), 0);
+  return {
+    sample,
+    totalWagered,
+    netProfit,
+    roi: totalWagered > 0 ? (netProfit / totalWagered) * 100 : null,
+    avgResultPerHand: sample > 0 ? netProfit / sample : null,
+  };
+}
+
+// --- How often you double, vs. roughly how often basic strategy calls for it ---
+export function calcDoubleDownRate(hands) {
+  if (hands.length === 0) return null;
+  const doubledCount = hands.filter((h) => h.doubled).length;
+  return {
+    rate: (doubledCount / hands.length) * 100,
+    count: doubledCount,
+    sample: hands.length,
+    benchmarkRate: 10, // approx. share of hands where basic strategy calls for doubling, 6-deck S17
+  };
+}
+
 export function calcAverageBet(hands) {
   if (hands.length === 0) return 0;
   return hands.reduce((sum, h) => sum + (h.bet || 0), 0) / hands.length;
@@ -202,11 +252,21 @@ export function calcVolatility(hands) {
 
   const netStdDev = stdDev(netChanges);
   const betStdDev = stdDev(betSizes);
+  const volatilityRatio = avgBet > 0 ? netStdDev / avgBet : null;
+
+  let riskLabel = null;
+  if (volatilityRatio !== null) {
+    if (volatilityRatio < 1.2) riskLabel = 'Low';
+    else if (volatilityRatio < 2.2) riskLabel = 'Moderate';
+    else riskLabel = 'High';
+  }
 
   return {
     netResultStdDev: netStdDev,
     betSizeStdDev: betStdDev,
     betSizeConsistency: avgBet > 0 ? Math.max(0, 100 - (betStdDev / avgBet) * 100) : null,
+    volatilityRatio,
+    riskLabel,
   };
 }
 
@@ -228,7 +288,9 @@ export function calcDayOfWeekPerformance(sessionHistory, gameType) {
     .filter(([, v]) => v.sessions > 0)
     .map(([day, v]) => ({ day, avgNet: v.netProfit / v.sessions, sessions: v.sessions }));
 
-  if (withData.length === 0) return null;
+  // Need at least 2 distinct days with data — otherwise "best" and "worst"
+  // would just be the same single day, which is confusing, not insightful.
+  if (withData.length < 2) return null;
 
   const best = withData.reduce((a, b) => (b.avgNet > a.avgNet ? b : a));
   const worst = withData.reduce((a, b) => (b.avgNet < a.avgNet ? b : a));
@@ -268,12 +330,15 @@ export function computeInsights(sessionHistory, gameType) {
 
   return {
     totalHands: hands.length,
+    outcomeBreakdown: calcOutcomeBreakdown(hands),
+    returnStats: calcReturnStats(hands),
     averageBet: calcAverageBet(hands),
     medianBet: calcMedianBet(hands),
     ...calcBetSizeAfterOutcome(hands),
     ...calcStreaks(hands),
     conditionalWinRates: calcConditionalWinRates(hands),
     doublingStats: calcDoublingStats(hands),
+    doubleDownRate: calcDoubleDownRate(hands),
     blackjackFrequency: calcBlackjackFrequency(hands),
     betTierWinRates: calcBetTierWinRates(hands),
     volatility: calcVolatility(hands),
