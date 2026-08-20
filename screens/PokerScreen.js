@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Modal,
   Dimensions,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
+import ConfirmModal from '../components/ConfirmModal';
 
 const STREETS = [
   { key: 'preflop', label: 'Pre-Flop', short: 'Pre' },
@@ -26,12 +26,10 @@ const STREETS = [
   { key: 'showdown', label: 'Showdown', short: 'Result' },
 ];
 
-const BLIND_PRESETS = [
-  { label: '$1 / $2', sb: 1, bb: 2 },
-  { label: '$1 / $3', sb: 1, bb: 3 },
-  { label: '$2 / $5', sb: 2, bb: 5 },
-  { label: '$5 / $10', sb: 5, bb: 10 },
-  { label: 'No Blinds', sb: 0, bb: 0 },
+const BLIND_MODES = [
+  { key: 'none', label: 'No Blinds' },
+  { key: 'big', label: 'Big Blind Only' },
+  { key: 'both', label: 'Small + Big Blind' },
 ];
 
 export default function PokerScreen({ navigation }) {
@@ -51,10 +49,15 @@ export default function PokerScreen({ navigation }) {
   const [viewMode, setViewMode] = useState('setup');
 
   // --- Session Configuration State ---
+  const [setupStep, setSetupStep] = useState('players'); // 'players' | 'blinds'
+  const [playerCount, setPlayerCount] = useState('');
   const [smallBlind, setSmallBlind] = useState('1');
   const [bigBlind, setBigBlind] = useState('2');
-  const [hasBlinds, setHasBlinds] = useState(true);
+  const [blindMode, setBlindMode] = useState('both'); // 'none' | 'big' | 'both'
   const [chipDenominations, setChipDenominations] = useState(['1', '5', '25', '50', '100', '500']);
+  const [playerNames, setPlayerNames] = useState({}); // { '1': 'Alice', '2': 'Bob', ... }
+
+  const hasBlinds = blindMode !== 'none';
 
   // Ensure active session is initialized
   useEffect(() => {
@@ -63,9 +66,19 @@ export default function PokerScreen({ navigation }) {
     } else if (activeSession.gameType === 'Poker' && activeSession.chipDenominations) {
       setSmallBlind(String(activeSession.smallBlind !== undefined && activeSession.smallBlind !== null ? activeSession.smallBlind : '1'));
       setBigBlind(String(activeSession.bigBlind !== undefined && activeSession.bigBlind !== null ? activeSession.bigBlind : '2'));
-      setHasBlinds(Boolean(activeSession.smallBlind || activeSession.bigBlind));
+      if (activeSession.blindMode) {
+        setBlindMode(activeSession.blindMode);
+      } else {
+        setBlindMode(activeSession.smallBlind ? 'both' : activeSession.bigBlind ? 'big' : 'none');
+      }
+      if (activeSession.playerCount) {
+        setPlayerCount(String(activeSession.playerCount));
+      }
       if (Array.isArray(activeSession.chipDenominations) && activeSession.chipDenominations.length > 0) {
         setChipDenominations(activeSession.chipDenominations.map(String));
+      }
+      if (activeSession.playerNames && typeof activeSession.playerNames === 'object') {
+        setPlayerNames(activeSession.playerNames);
       }
       setViewMode('dashboard');
     }
@@ -74,10 +87,8 @@ export default function PokerScreen({ navigation }) {
 
   // --- Active Hand Tracking State ---
   const [currentStreetIdx, setCurrentStreetIdx] = useState(0);
-  const [heroPosition, setHeroPosition] = useState('None'); // 'None' | 'SB' | 'BB' | 'IP' | 'OOP'
-  const [activePlayers, setActivePlayers] = useState(6);
 
-  // Street by street contributions
+  // Street by street contributions (hero)
   const [streetBets, setStreetBets] = useState({
     preflop: 0,
     flop: 0,
@@ -85,26 +96,15 @@ export default function PokerScreen({ navigation }) {
     river: 0,
   });
 
-  // Table pot tracking
-  const [potPreFlop, setPotPreFlop] = useState(0);
-  const [potFlop, setPotFlop] = useState(0);
-  const [potTurn, setPotTurn] = useState(0);
-  const [potRiver, setPotRiver] = useState(0);
-  const [deadMoney, setDeadMoney] = useState(0);
-  const [manualPotOverride, setManualPotOverride] = useState('');
-  const [isEditingPotDirectly, setIsEditingPotDirectly] = useState(false);
-
-  // Raise / Re-raise table action modal
-  const [raiseModalVisible, setRaiseModalVisible] = useState(false);
-  const [raiseAmount, setRaiseAmount] = useState('');
-  const [callersCount, setCallersCount] = useState(1);
-
-  // Dead money / Player folded modal
-  const [deadMoneyModalVisible, setDeadMoneyModalVisible] = useState(false);
-  const [deadMoneyAmount, setDeadMoneyAmount] = useState('');
+  // Other players at the table: n-1 seats, each tracked street-by-street
+  const [opponents, setOpponents] = useState([]);
 
   // Early Fold Modal & Assessment
   const [foldModalVisible, setFoldModalVisible] = useState(false);
+
+  // Custom Alert / Confirm Modal (replaces native Alert.alert popups)
+  const [alertModal, setAlertModal] = useState(null);
+  const closeAlertModal = () => setAlertModal(null);
 
   // Showdown State
   const [showdownResult, setShowdownResult] = useState('win'); // 'win' | 'split' | 'loss'
@@ -116,56 +116,85 @@ export default function PokerScreen({ navigation }) {
   // Swipe detection ref
   const touchStartX = useRef(0);
 
+  // Blind values, used as quick-chip shortcuts on every player's bet card
+  const sbVal = activeSession && activeSession.smallBlind !== undefined ? activeSession.smallBlind : (hasBlinds ? parseFloat(smallBlind) || 0 : 0);
+  const bbVal = activeSession && activeSession.bigBlind !== undefined ? activeSession.bigBlind : (hasBlinds ? parseFloat(bigBlind) || 0 : 0);
+
+  // Player count / naming
+  const seededPlayerCount = activeSession && activeSession.playerCount ? activeSession.playerCount : (parseInt(playerCount, 10) || 6);
+  const numOpponents = Math.max(0, seededPlayerCount - 1);
+  const getPlayerLabel = (id) => {
+    const name = playerNames[id];
+    return name && name.trim() ? name.trim() : `Player ${id}`;
+  };
+
   // Calculated totals
   const currentStreetKey = STREETS[currentStreetIdx]?.key || 'preflop';
+  const currentHeroBet = streetBets[currentStreetKey] || 0;
   const heroTotalInvestment =
     (streetBets.preflop || 0) +
     (streetBets.flop || 0) +
     (streetBets.turn || 0) +
     (streetBets.river || 0);
 
-  const calculatedTotalPot =
-    (potPreFlop || 0) +
-    (potFlop || 0) +
-    (potTurn || 0) +
-    (potRiver || 0) +
-    (deadMoney || 0) +
-    heroTotalInvestment;
+  const opponentsTotalInvestment = opponents.reduce(
+    (sum, o) =>
+      sum +
+      (o.streetBets.preflop || 0) +
+      (o.streetBets.flop || 0) +
+      (o.streetBets.turn || 0) +
+      (o.streetBets.river || 0),
+    0
+  );
 
-  const effectiveTotalPot =
-    manualPotOverride !== '' && !isNaN(parseFloat(manualPotOverride))
-      ? parseFloat(manualPotOverride)
-      : Math.max(calculatedTotalPot, heroTotalInvestment);
+  const effectiveTotalPot = heroTotalInvestment + opponentsTotalInvestment;
+
+  const currentStreetMaxBet = Math.max(
+    currentHeroBet,
+    0,
+    ...opponents.filter((o) => !o.folded).map((o) => o.streetBets[currentStreetKey] || 0)
+  );
 
   // --- Handlers: Session Setup ---
-  const handlePresetSelect = (preset) => {
-    if (preset.sb === 0 && preset.bb === 0) {
-      setHasBlinds(false);
+  const handleBlindModeSelect = (mode) => {
+    setBlindMode(mode);
+    if (mode === 'none') {
       setSmallBlind('0');
       setBigBlind('0');
-    } else {
-      setHasBlinds(true);
-      setSmallBlind(String(preset.sb));
-      setBigBlind(String(preset.bb));
-      // Auto-scale chip recommendations
-      if (preset.bb >= 5) {
-        setChipDenominations(['2', '5', '25', '100', '500', '1000']);
-      } else {
-        setChipDenominations(['1', '5', '25', '50', '100', '500']);
-      }
+    } else if (mode === 'big') {
+      setSmallBlind('0');
     }
   };
 
+  const handleConfirmPlayerCount = () => {
+    const count = parseInt(playerCount, 10);
+    if (isNaN(count) || count < 2 || count > 10) {
+      setAlertModal({
+        variant: 'warning',
+        title: 'Invalid Player Count',
+        message: 'Enter a number of players between 2 and 10.',
+        confirmText: 'Got It',
+        showCancel: false,
+        onConfirm: closeAlertModal,
+      });
+      return;
+    }
+    setSetupStep('blinds');
+  };
+
   const handleFinishSetup = () => {
-    const sb = hasBlinds ? parseFloat(smallBlind) || 0 : 0;
-    const bb = hasBlinds ? parseFloat(bigBlind) || 0 : 0;
+    const sb = blindMode === 'both' ? parseFloat(smallBlind) || 0 : 0;
+    const bb = blindMode !== 'none' ? parseFloat(bigBlind) || 0 : 0;
     const validChips = chipDenominations.map((c) => parseFloat(c)).filter((n) => !isNaN(n) && n > 0);
 
     const chips = validChips.length > 0 ? validChips : [1, 5, 25, 50, 100, 500];
+    const count = parseInt(playerCount, 10) || 6;
 
     updateActiveSessionMetadata({
+      playerCount: count,
       smallBlind: sb,
       bigBlind: bb,
+      blindMode,
       chipDenominations: chips,
     });
 
@@ -174,23 +203,16 @@ export default function PokerScreen({ navigation }) {
 
   // --- Handlers: Start New Hand ---
   const handleStartNewHand = () => {
-    const sbVal = activeSession && activeSession.smallBlind !== undefined ? activeSession.smallBlind : (hasBlinds ? parseFloat(smallBlind) || 1 : 0);
-    const bbVal = activeSession && activeSession.bigBlind !== undefined ? activeSession.bigBlind : (hasBlinds ? parseFloat(bigBlind) || 2 : 0);
-
-    // Initial estimated table pot from blinds if enabled (e.g. SB + BB from blinds players)
-    const initialTablePot = sbVal > 0 || bbVal > 0 ? sbVal + bbVal : 0;
-
     setCurrentStreetIdx(0);
-    setHeroPosition('None');
-    setActivePlayers(6);
     setStreetBets({ preflop: 0, flop: 0, turn: 0, river: 0 });
-    setPotPreFlop(initialTablePot);
-    setPotFlop(0);
-    setPotTurn(0);
-    setPotRiver(0);
-    setDeadMoney(0);
-    setManualPotOverride('');
-    setIsEditingPotDirectly(false);
+    setOpponents(
+      Array.from({ length: numOpponents }, (_, i) => ({
+        id: i + 1,
+        streetBets: { preflop: 0, flop: 0, turn: 0, river: 0 },
+        folded: false,
+        foldedStreet: null,
+      }))
+    );
     setShowdownResult('win');
     setSplitWay(2);
 
@@ -223,53 +245,121 @@ export default function PokerScreen({ navigation }) {
     }));
   };
 
-  // --- Handlers: Hero Position Selector ---
-  const handlePositionSelect = (pos) => {
-    setHeroPosition(pos);
-    const sbVal = activeSession && activeSession.smallBlind !== undefined ? activeSession.smallBlind : (hasBlinds ? parseFloat(smallBlind) || 1 : 0);
-    const bbVal = activeSession && activeSession.bigBlind !== undefined ? activeSession.bigBlind : (hasBlinds ? parseFloat(bigBlind) || 2 : 0);
-
-    if (pos === 'SB' && sbVal > 0) {
-      setStreetBets((prev) => ({
-        ...prev,
-        preflop: sbVal,
-      }));
-    } else if (pos === 'BB' && bbVal > 0) {
-      setStreetBets((prev) => ({
-        ...prev,
-        preflop: bbVal,
-      }));
-    }
+  const handleHeroCall = () => {
+    setStreetBets((prev) => ({
+      ...prev,
+      [currentStreetKey]: currentStreetMaxBet,
+    }));
   };
 
-  // --- Handlers: Table Raises & Pot Builder ---
-  const handleApplyTableRaise = () => {
-    const rAmt = parseFloat(raiseAmount);
-    if (isNaN(rAmt) || rAmt <= 0) {
-      setRaiseModalVisible(false);
-      return;
-    }
-    const callers = parseInt(callersCount, 10) || 1;
-    const addedPot = rAmt * (1 + callers);
-
-    if (currentStreetKey === 'preflop') setPotPreFlop((p) => p + addedPot);
-    else if (currentStreetKey === 'flop') setPotFlop((p) => p + addedPot);
-    else if (currentStreetKey === 'turn') setPotTurn((p) => p + addedPot);
-    else if (currentStreetKey === 'river') setPotRiver((p) => p + addedPot);
-
-    setRaiseAmount('');
-    setCallersCount(1);
-    setRaiseModalVisible(false);
+  // --- Handlers: Other Players' Bets & Folds ---
+  const handleOpponentChipPress = (id, chipValue) => {
+    const val = parseFloat(chipValue) || 0;
+    setOpponents((prev) =>
+      prev.map((o) =>
+        o.id === id
+          ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: (o.streetBets[currentStreetKey] || 0) + val } }
+          : o
+      )
+    );
   };
 
-  const handleApplyDeadMoneyFold = () => {
-    const dAmt = parseFloat(deadMoneyAmount);
-    if (!isNaN(dAmt) && dAmt > 0) {
-      setDeadMoney((prev) => prev + dAmt);
-      setActivePlayers((p) => Math.max(2, p - 1));
+  const handleOpponentClearBet = (id) => {
+    setOpponents((prev) =>
+      prev.map((o) =>
+        o.id === id ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: 0 } } : o
+      )
+    );
+  };
+
+  const handleOpponentDirectBetChange = (id, text) => {
+    const val = parseFloat(text) || 0;
+    setOpponents((prev) =>
+      prev.map((o) =>
+        o.id === id ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: val } } : o
+      )
+    );
+  };
+
+  const handleToggleOpponentFold = (id) => {
+    setOpponents((prev) =>
+      prev.map((o) =>
+        o.id === id
+          ? {
+              ...o,
+              folded: !o.folded,
+              foldedStreet: !o.folded ? STREETS[currentStreetIdx]?.label : null,
+            }
+          : o
+      )
+    );
+  };
+
+  const handleOpponentCall = (id) => {
+    setOpponents((prev) =>
+      prev.map((o) =>
+        o.id === id
+          ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: currentStreetMaxBet } }
+          : o
+      )
+    );
+  };
+
+  // --- Handlers: Player Names ---
+  const handlePlayerNameChange = (id, name) => {
+    const updated = { ...playerNames, [id]: name };
+    setPlayerNames(updated);
+    updateActiveSessionMetadata({ playerNames: updated });
+  };
+
+  // --- Handlers: Street Betting Validation & Advancement ---
+  const getStreetMismatch = () => {
+    const liveBets = [{ label: 'You', amount: currentHeroBet }];
+    opponents.forEach((o) => {
+      if (!o.folded) {
+        liveBets.push({ label: getPlayerLabel(o.id), amount: o.streetBets[currentStreetKey] || 0 });
+      }
+    });
+    if (liveBets.length <= 1) return null;
+    const first = liveBets[0].amount;
+    return liveBets.some((b) => b.amount !== first) ? liveBets : null;
+  };
+
+  const handleAdvanceStreet = (targetIdx) => {
+    if (targetIdx > currentStreetIdx) {
+      const mismatch = getStreetMismatch();
+      if (mismatch) {
+        setAlertModal({
+          variant: 'warning',
+          icon: 'git-compare-outline',
+          title: "Bets Don't Match",
+          message: `Everyone still in the hand needs to match the same bet on ${STREETS[currentStreetIdx]?.label} before moving on. Update their bet, use Call, or fold them.`,
+          children: (
+            <View style={styles.mismatchList}>
+              {mismatch.map((b, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    styles.mismatchRow,
+                    idx === mismatch.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                >
+                  <Text style={styles.mismatchLabel}>{b.label}</Text>
+                  <Text style={styles.mismatchAmount}>
+                    {currencySymbol}{b.amount.toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ),
+          confirmText: 'Got It',
+          showCancel: false,
+          onConfirm: closeAlertModal,
+        });
+        return;
+      }
     }
-    setDeadMoneyAmount('');
-    setDeadMoneyModalVisible(false);
+    setCurrentStreetIdx(targetIdx);
   };
 
   // --- Handlers: Early Fold ---
@@ -279,7 +369,6 @@ export default function PokerScreen({ navigation }) {
     const handRecord = {
       id: Date.now(),
       gameType: 'Poker',
-      position: heroPosition,
       outcome: 'fold',
       foldReason, // 'bluffed' | 'good_fold' | 'no_show'
       streetFolded: STREETS[currentStreetIdx]?.label || 'Pre-Flop',
@@ -309,7 +398,6 @@ export default function PokerScreen({ navigation }) {
     const handRecord = {
       id: Date.now(),
       gameType: 'Poker',
-      position: heroPosition,
       outcome: showdownResult,
       splitCount: showdownResult === 'split' ? splitWay : 1,
       heroInvestment: heroTotalInvestment,
@@ -358,21 +446,40 @@ export default function PokerScreen({ navigation }) {
   };
 
   const handleDiscardPress = () => {
-    Alert.alert(
-      'Discard this session?',
-      'Nothing from this live session will be saved. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Discard',
-          style: 'destructive',
-          onPress: () => {
-            discardActiveSession();
-            navigation.navigate('MainTabs', { screen: 'Home' });
-          },
+    const hands = activeSession?.hands || [];
+
+    if (hands.length > 0) {
+      setAlertModal({
+        variant: 'primary',
+        icon: 'stop-circle-outline',
+        title: 'End This Session?',
+        message: `You've logged ${hands.length} hand${hands.length === 1 ? '' : 's'} this session. Leaving now will end it and save your results to history.`,
+        confirmText: 'End Session',
+        cancelText: 'Keep Playing',
+        onConfirm: () => {
+          closeAlertModal();
+          endActiveSession();
+          navigation.navigate('MainTabs', { screen: 'History' });
         },
-      ]
-    );
+        onCancel: closeAlertModal,
+      });
+      return;
+    }
+
+    setAlertModal({
+      variant: 'danger',
+      icon: 'trash-outline',
+      title: 'Discard This Session?',
+      message: 'Nothing from this live session will be saved. This cannot be undone.',
+      confirmText: 'Discard',
+      cancelText: 'Cancel',
+      onConfirm: () => {
+        closeAlertModal();
+        discardActiveSession();
+        navigation.navigate('MainTabs', { screen: 'Home' });
+      },
+      onCancel: closeAlertModal,
+    });
   };
 
   // --- Session Stats Computation ---
@@ -392,7 +499,10 @@ export default function PokerScreen({ navigation }) {
   // ==========================================
   // VIEW 1: INITIAL SESSION SETUP
   // ==========================================
-  if (viewMode === 'setup') {
+  if (viewMode === 'setup' && setupStep === 'players') {
+    const count = parseInt(playerCount, 10);
+    const isValidCount = !isNaN(count) && count >= 2 && count <= 10;
+
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.topNav}>
@@ -417,47 +527,109 @@ export default function PokerScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           <View style={[styles.card, SHADOWS.card]}>
-            <Text style={styles.sectionHeaderTitle}>Select Table Blinds</Text>
+            <Text style={styles.sectionHeaderTitle}>How Many Players?</Text>
             <Text style={styles.cardSubtitle}>
-              Choose a standard blind level or input your custom stakes.
+              Enter the total number of players at the table, including yourself.
             </Text>
 
-            {/* Blind Presets */}
+            <Text style={styles.label}>Players at the Table</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="number-pad"
+              placeholder="e.g. 6"
+              placeholderTextColor={COLORS.textMuted}
+              value={playerCount}
+              onChangeText={setPlayerCount}
+              autoFocus
+              maxLength={2}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              SHADOWS.card,
+              !isValidCount && styles.submitButtonDisabled,
+            ]}
+            activeOpacity={0.85}
+            disabled={!isValidCount}
+            onPress={handleConfirmPlayerCount}
+          >
+            <Ionicons name="arrow-forward-circle" size={20} color={COLORS.textDark} style={{ marginRight: 8 }} />
+            <Text style={styles.submitText}>Continue to Blinds</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <ConfirmModal visible={!!alertModal} {...alertModal} />
+      </View>
+    );
+  }
+
+  if (viewMode === 'setup' && setupStep === 'blinds') {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.topNav}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => setSetupStep('players')}
+          >
+            <Ionicons name="arrow-back" size={20} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.navTitleContainer}>
+            <MaterialCommunityIcons name="cards-playing-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.navTitle}>Poker Setup</Text>
+          </View>
+          <View style={{ width: 38 }} />
+        </View>
+
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: insets.bottom + moderateScale(40) },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.card, SHADOWS.card]}>
+            <Text style={styles.sectionHeaderTitle}>Table Blinds</Text>
+            <Text style={styles.cardSubtitle}>
+              Choose which blinds are in play, then type in your own stakes.
+            </Text>
+
+            {/* Blind Mode Selector */}
             <View style={styles.presetRow}>
-              {BLIND_PRESETS.map((preset) => {
-                const isSelected =
-                  hasBlinds
-                    ? preset.sb === parseFloat(smallBlind) && preset.bb === parseFloat(bigBlind)
-                    : preset.sb === 0 && preset.bb === 0;
+              {BLIND_MODES.map((mode) => {
+                const isSelected = blindMode === mode.key;
                 return (
                   <TouchableOpacity
-                    key={preset.label}
+                    key={mode.key}
                     style={[styles.presetButton, isSelected && styles.presetButtonActive]}
-                    onPress={() => handlePresetSelect(preset)}
+                    onPress={() => handleBlindModeSelect(mode.key)}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.presetText, isSelected && styles.presetTextActive]}>
-                      {preset.label}
+                      {mode.label}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
 
-            {hasBlinds && (
+            {blindMode !== 'none' && (
               <View style={styles.customBlindRow}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.label}>Small Blind ({currencySymbol})</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="numeric"
-                    placeholder="1"
-                    placeholderTextColor={COLORS.textMuted}
-                    value={smallBlind}
-                    onChangeText={setSmallBlind}
-                  />
-                </View>
-                <View style={{ flex: 1, marginLeft: 8 }}>
+                {blindMode === 'both' && (
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={styles.label}>Small Blind ({currencySymbol})</Text>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="numeric"
+                      placeholder="1"
+                      placeholderTextColor={COLORS.textMuted}
+                      value={smallBlind}
+                      onChangeText={setSmallBlind}
+                    />
+                  </View>
+                )}
+                <View style={{ flex: 1, marginLeft: blindMode === 'both' ? 8 : 0 }}>
                   <Text style={styles.label}>Big Blind ({currencySymbol})</Text>
                   <TextInput
                     style={styles.input}
@@ -518,9 +690,75 @@ export default function PokerScreen({ navigation }) {
   // VIEW 2: MULTI-PHASE HAND TRACKER
   // ==========================================
   if (viewMode === 'hand') {
-    const isPreFlop = currentStreetIdx === 0;
     const isShowdown = currentStreetIdx === 4;
-    const currentHeroBet = streetBets[currentStreetKey] || 0;
+
+    const renderBetChips = (currentBet, onChipPress, onCall) => {
+      const canCall = currentStreetMaxBet > currentBet;
+
+      return (
+        <>
+          <View style={styles.blindCallRow}>
+            {sbVal > 0 && (
+              <TouchableOpacity
+                style={[styles.blindCallBtn, styles.blindCallBtnBlind]}
+                onPress={() => onChipPress(sbVal)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.blindCallBtnBlindText}>
+                  SB +{currencySymbol}{sbVal}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {bbVal > 0 && (
+              <TouchableOpacity
+                style={[styles.blindCallBtn, styles.blindCallBtnBlind]}
+                onPress={() => onChipPress(bbVal)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.blindCallBtnBlindText}>
+                  BB +{currencySymbol}{bbVal}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.blindCallBtn,
+                canCall ? styles.blindCallBtnCall : styles.blindCallBtnCallDisabled,
+              ]}
+              onPress={canCall ? onCall : undefined}
+              disabled={!canCall}
+              activeOpacity={0.75}
+            >
+              <Text
+                style={
+                  canCall ? styles.blindCallBtnCallText : styles.blindCallBtnCallTextDisabled
+                }
+              >
+                Call {currencySymbol}{currentStreetMaxBet}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.chipGrid}>
+            {chipDenominations.map((chip) => (
+              <TouchableOpacity
+                key={chip}
+                style={styles.chipButton}
+                onPress={() => onChipPress(chip)}
+                activeOpacity={0.75}
+              >
+                <View style={styles.chipInnerCircle}>
+                  <Text style={styles.chipText}>
+                    +{currencySymbol}
+                    {chip}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      );
+    };
 
     return (
       <View
@@ -533,10 +771,19 @@ export default function PokerScreen({ navigation }) {
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => {
-              Alert.alert('Cancel this hand?', 'Progress for this hand will be lost.', [
-                { text: 'Keep Tracking', style: 'cancel' },
-                { text: 'Cancel Hand', style: 'destructive', onPress: () => setViewMode('dashboard') },
-              ]);
+              setAlertModal({
+                variant: 'danger',
+                icon: 'close-circle-outline',
+                title: 'Cancel This Hand?',
+                message: 'Progress for this hand will be lost.',
+                confirmText: 'Cancel Hand',
+                cancelText: 'Keep Tracking',
+                onConfirm: () => {
+                  closeAlertModal();
+                  setViewMode('dashboard');
+                },
+                onCancel: closeAlertModal,
+              });
             }}
           >
             <Ionicons name="arrow-back" size={20} color={COLORS.textPrimary} />
@@ -572,7 +819,7 @@ export default function PokerScreen({ navigation }) {
                   isActive && styles.stepTabActive,
                   isCompleted && styles.stepTabCompleted,
                 ]}
-                onPress={() => setCurrentStreetIdx(idx)}
+                onPress={() => handleAdvanceStreet(idx)}
                 activeOpacity={0.7}
               >
                 <Text
@@ -596,102 +843,10 @@ export default function PokerScreen({ navigation }) {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Main Pot & Investment Overview Card */}
-          <View style={[styles.statsBox, SHADOWS.card]}>
-            <View style={styles.potHeaderRow}>
-              <View>
-                <Text style={styles.statsSubtext}>TOTAL TABLE POT</Text>
-                <TouchableOpacity
-                  onPress={() => setIsEditingPotDirectly(!isEditingPotDirectly)}
-                  style={styles.potValueRow}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.netAmount, { color: COLORS.primary }]}>
-                    {currencySymbol}
-                    {effectiveTotalPot.toFixed(2)}
-                  </Text>
-                  <Ionicons
-                    name="pencil-outline"
-                    size={16}
-                    color={COLORS.textMuted}
-                    style={{ marginLeft: 6, marginBottom: 8 }}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.heroInvestmentBadge}>
-                <Text style={styles.heroInvestmentLabel}>Your Total Bet</Text>
-                <Text style={styles.heroInvestmentValue}>
-                  {currencySymbol}
-                  {heroTotalInvestment.toFixed(2)}
-                </Text>
-              </View>
-            </View>
-
-            {/* Direct Pot Edit Field */}
-            {isEditingPotDirectly && (
-              <View style={styles.directPotEditBox}>
-                <Text style={styles.directPotEditHint}>Override Pot Amount Directly:</Text>
-                <TextInput
-                  style={styles.directPotInput}
-                  keyboardType="numeric"
-                  placeholder={String(effectiveTotalPot)}
-                  placeholderTextColor={COLORS.textMuted}
-                  value={manualPotOverride}
-                  onChangeText={setManualPotOverride}
-                />
-              </View>
-            )}
-
-            {/* Active Players Row */}
-            <View style={styles.activePlayersRow}>
-              <Text style={styles.activePlayersLabel}>Active Players in Hand:</Text>
-              <View style={styles.stepperControl}>
-                <TouchableOpacity
-                  style={styles.stepperBtn}
-                  onPress={() => setActivePlayers((p) => Math.max(2, p - 1))}
-                >
-                  <Ionicons name="remove" size={16} color={COLORS.textPrimary} />
-                </TouchableOpacity>
-                <Text style={styles.stepperVal}>{activePlayers} Players</Text>
-                <TouchableOpacity
-                  style={styles.stepperBtn}
-                  onPress={() => setActivePlayers((p) => Math.min(10, p + 1))}
-                >
-                  <Ionicons name="add" size={16} color={COLORS.textPrimary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
           {/* NON-SHOWDOWN STREETS (Pre-Flop, Flop, Turn, River) */}
           {!isShowdown ? (
             <>
-              {/* Pre-Flop Position Shortcuts */}
-              {isPreFlop && (
-                <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.label}>Your Position</Text>
-                  <View style={styles.positionRow}>
-                    {['SB', 'BB', 'IP', 'OOP', 'None'].map((pos) => {
-                      const isSel = heroPosition === pos;
-                      return (
-                        <TouchableOpacity
-                          key={pos}
-                          style={[styles.positionBtn, isSel && styles.positionBtnActive]}
-                          onPress={() => handlePositionSelect(pos)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.positionText, isSel && styles.positionTextActive]}>
-                            {pos}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-
-              {/* Hero's Bet for Current Street */}
+              {/* Your Bet for Current Street */}
               <View style={[styles.card, SHADOWS.card]}>
                 <View style={styles.streetBetHeader}>
                   <Text style={styles.sectionHeaderTitle}>
@@ -722,63 +877,96 @@ export default function PokerScreen({ navigation }) {
 
                 {/* Incremental Quick Chips */}
                 <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
-                <View style={styles.chipGrid}>
-                  {chipDenominations.map((chip) => (
+                {renderBetChips(currentHeroBet, handleHeroChipPress, handleHeroCall)}
+              </View>
+
+              {/* Other Players' Bets for Current Street */}
+              {opponents.map((opp) => {
+                const oppBet = opp.streetBets[currentStreetKey] || 0;
+                const oppTotalContributed =
+                  (opp.streetBets.preflop || 0) +
+                  (opp.streetBets.flop || 0) +
+                  (opp.streetBets.turn || 0) +
+                  (opp.streetBets.river || 0);
+
+                return (
+                  <View
+                    key={opp.id}
+                    style={[styles.card, SHADOWS.card, opp.folded && styles.playerCardFolded]}
+                  >
+                    <View style={styles.streetBetHeader}>
+                      <Text style={styles.sectionHeaderTitle}>{getPlayerLabel(opp.id)}</Text>
+                      {opp.folded ? (
+                        <View style={styles.foldedBadge}>
+                          <Text style={styles.foldedBadgeText}>FOLDED</Text>
+                        </View>
+                      ) : (
+                        oppBet > 0 && (
+                          <TouchableOpacity
+                            onPress={() => handleOpponentClearBet(opp.id)}
+                            style={styles.clearBtn}
+                          >
+                            <Ionicons name="refresh" size={14} color={COLORS.danger} style={{ marginRight: 3 }} />
+                            <Text style={styles.clearBtnText}>Reset $0</Text>
+                          </TouchableOpacity>
+                        )
+                      )}
+                    </View>
+
+                    {opp.folded ? (
+                      <Text style={styles.foldedContributionText}>
+                        Folded on {opp.foldedStreet || 'this street'} • Contributed {currencySymbol}
+                        {oppTotalContributed.toFixed(2)} total
+                      </Text>
+                    ) : (
+                      <>
+                        <View style={styles.heroBetDisplayRow}>
+                          <Text style={styles.heroBetSymbol}>{currencySymbol}</Text>
+                          <TextInput
+                            style={styles.heroBetInput}
+                            keyboardType="numeric"
+                            placeholder="0"
+                            placeholderTextColor={COLORS.textMuted}
+                            value={oppBet > 0 ? String(oppBet) : ''}
+                            onChangeText={(text) => handleOpponentDirectBetChange(opp.id, text)}
+                          />
+                          <Text style={styles.heroBetPhaseTag}>
+                            {oppBet === 0 ? 'Check / $0' : 'Committed'}
+                          </Text>
+                        </View>
+
+                        <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
+                        {renderBetChips(
+                          oppBet,
+                          (val) => handleOpponentChipPress(opp.id, val),
+                          () => handleOpponentCall(opp.id)
+                        )}
+                      </>
+                    )}
+
                     <TouchableOpacity
-                      key={chip}
-                      style={styles.chipButton}
-                      onPress={() => handleHeroChipPress(chip)}
-                      activeOpacity={0.75}
+                      style={[styles.foldToggleBtn, opp.folded && styles.foldToggleBtnActive]}
+                      onPress={() => handleToggleOpponentFold(opp.id)}
+                      activeOpacity={0.8}
                     >
-                      <View style={styles.chipInnerCircle}>
-                        <Text style={styles.chipText}>
-                          +{currencySymbol}
-                          {chip}
-                        </Text>
-                      </View>
+                      <Ionicons
+                        name={opp.folded ? 'refresh' : 'close-circle-outline'}
+                        size={16}
+                        color={opp.folded ? COLORS.textSecondary : COLORS.danger}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text
+                        style={[
+                          styles.foldToggleBtnText,
+                          opp.folded && styles.foldToggleBtnTextActive,
+                        ]}
+                      >
+                        {opp.folded ? 'Undo Fold' : 'Fold This Player'}
+                      </Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Table Action & Opponent Raise Log */}
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.sectionHeaderTitle}>Table Action & Raises</Text>
-                <Text style={styles.cardSubtitle}>
-                  Track opponent raises and callers to auto-calculate the total pot.
-                </Text>
-
-                <View style={styles.tableActionBtnRow}>
-                  <TouchableOpacity
-                    style={[styles.tableActionBtn, { borderColor: COLORS.primaryGlow }]}
-                    onPress={() => setRaiseModalVisible(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="trending-up" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
-                    <Text style={styles.tableActionBtnText}>Log Opponent Raise</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.tableActionBtn, { borderColor: COLORS.neutralBorder }]}
-                    onPress={() => setDeadMoneyModalVisible(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="person-remove-outline" size={18} color={COLORS.neutral} style={{ marginRight: 6 }} />
-                    <Text style={[styles.tableActionBtnText, { color: COLORS.textSecondary }]}>
-                      Folded Player ($ in pot)
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {deadMoney > 0 && (
-                  <View style={styles.deadMoneyNotice}>
-                    <Ionicons name="lock-closed-outline" size={14} color={COLORS.textSecondary} />
-                    <Text style={styles.deadMoneyText}>
-                      Dead money retained in pot: {currencySymbol}{deadMoney.toFixed(2)}
-                    </Text>
                   </View>
-                )}
-              </View>
+                );
+              })}
             </>
           ) : (
             // SHOWDOWN STAGE (STAGE 5)
@@ -955,7 +1143,7 @@ export default function PokerScreen({ navigation }) {
           {!isShowdown ? (
             <TouchableOpacity
               style={[styles.handPrimaryBtn, SHADOWS.card]}
-              onPress={() => setCurrentStreetIdx((p) => Math.min(STREETS.length - 1, p + 1))}
+              onPress={() => handleAdvanceStreet(Math.min(STREETS.length - 1, currentStreetIdx + 1))}
               activeOpacity={0.85}
             >
               <Text style={styles.handPrimaryBtnText}>
@@ -1045,110 +1233,7 @@ export default function PokerScreen({ navigation }) {
           </View>
         </Modal>
 
-        {/* LOG OPPONENT RAISE MODAL */}
-        <Modal
-          visible={raiseModalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setRaiseModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalCard, SHADOWS.card]}>
-              <Text style={styles.modalTitle}>Log Table Bet / Raise</Text>
-              <Text style={styles.modalSubtitle}>
-                Add an opponent bet and the number of other callers to update the pot.
-              </Text>
-
-              <Text style={styles.label}>Raise Amount ({currencySymbol})</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                placeholder="e.g. 20"
-                placeholderTextColor={COLORS.textMuted}
-                value={raiseAmount}
-                onChangeText={setRaiseAmount}
-                autoFocus
-              />
-
-              <Text style={styles.label}>Other Opponents Who Called</Text>
-              <View style={styles.stepperControl}>
-                <TouchableOpacity
-                  style={styles.stepperBtn}
-                  onPress={() => setCallersCount((c) => Math.max(0, c - 1))}
-                >
-                  <Ionicons name="remove" size={16} color={COLORS.textPrimary} />
-                </TouchableOpacity>
-                <Text style={styles.stepperVal}>{callersCount} Caller(s)</Text>
-                <TouchableOpacity
-                  style={styles.stepperBtn}
-                  onPress={() => setCallersCount((c) => Math.min(8, c + 1))}
-                >
-                  <Ionicons name="add" size={16} color={COLORS.textPrimary} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalActionRow}>
-                <TouchableOpacity
-                  style={styles.modalSecondaryBtn}
-                  onPress={() => setRaiseModalVisible(false)}
-                >
-                  <Text style={styles.modalSecondaryText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modalPrimaryBtn}
-                  onPress={handleApplyTableRaise}
-                >
-                  <Text style={styles.modalPrimaryText}>Add to Pot</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* DEAD MONEY / FOLDED PLAYER MODAL */}
-        <Modal
-          visible={deadMoneyModalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setDeadMoneyModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalCard, SHADOWS.card]}>
-              <Text style={styles.modalTitle}>Player Folded with Chips in Pot</Text>
-              <Text style={styles.modalSubtitle}>
-                If a player put money in (e.g. called a bet) then folded to a re-raise, enter their dead money to keep it in the pot.
-              </Text>
-
-              <Text style={styles.label}>Chips Contributed by Folded Player ({currencySymbol})</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                placeholder="e.g. 20"
-                placeholderTextColor={COLORS.textMuted}
-                value={deadMoneyAmount}
-                onChangeText={setDeadMoneyAmount}
-                autoFocus
-              />
-
-              <View style={styles.modalActionRow}>
-                <TouchableOpacity
-                  style={styles.modalSecondaryBtn}
-                  onPress={() => setDeadMoneyModalVisible(false)}
-                >
-                  <Text style={styles.modalSecondaryText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modalPrimaryBtn}
-                  onPress={handleApplyDeadMoneyFold}
-                >
-                  <Text style={styles.modalPrimaryText}>Apply Dead Money</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        <ConfirmModal visible={!!alertModal} {...alertModal} />
       </View>
     );
   }
@@ -1190,8 +1275,10 @@ export default function PokerScreen({ navigation }) {
         <View style={[styles.statsBox, SHADOWS.card]}>
           <View style={styles.blindsHeaderPill}>
             <Text style={styles.blindsHeaderText}>
-              {hasBlinds
+              {blindMode === 'both'
                 ? `STAKES: ${currencySymbol}${smallBlind} / ${currencySymbol}${bigBlind}`
+                : blindMode === 'big'
+                ? `STAKES: BB ${currencySymbol}${bigBlind}`
                 : 'CASUAL / NO BLINDS'}
             </Text>
           </View>
@@ -1255,6 +1342,31 @@ export default function PokerScreen({ navigation }) {
             </View>
           )}
         </View>
+
+        {/* Player Names */}
+        {numOpponents > 0 && (
+          <View style={[styles.card, SHADOWS.card]}>
+            <Text style={styles.sectionHeaderTitle}>Name Your Players</Text>
+            <Text style={styles.cardSubtitle}>
+              Optional — give the other seats real names instead of "Player 1, 2, 3…"
+            </Text>
+
+            <View style={styles.playerNameList}>
+              {Array.from({ length: numOpponents }, (_, i) => i + 1).map((id) => (
+                <View key={id} style={styles.playerNameRow}>
+                  <Text style={styles.playerNameTag}>P{id}</Text>
+                  <TextInput
+                    style={styles.playerNameInput}
+                    placeholder={`Player ${id}`}
+                    placeholderTextColor={COLORS.textMuted}
+                    value={playerNames[id] || ''}
+                    onChangeText={(text) => handlePlayerNameChange(id, text)}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Prominent CTA: Start Hand */}
         <TouchableOpacity
@@ -1359,6 +1471,8 @@ export default function PokerScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      <ConfirmModal visible={!!alertModal} {...alertModal} />
     </View>
   );
 }
@@ -1484,6 +1598,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
   },
+  submitButtonDisabled: {
+    opacity: 0.4,
+  },
   submitText: {
     color: COLORS.textDark,
     fontWeight: '800',
@@ -1524,6 +1641,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  playerNameList: {
+    gap: 8,
+  },
+  playerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  playerNameTag: {
+    width: 30,
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+  },
+  playerNameInput: {
+    flex: 1,
+    backgroundColor: COLORS.backgroundSecondary,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    fontWeight: '600',
   },
   chipConfigBox: {
     width: '30%',
@@ -1628,119 +1771,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  potHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  potValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  heroInvestmentBadge: {
-    backgroundColor: COLORS.backgroundSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: 'flex-end',
-  },
-  heroInvestmentLabel: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  heroInvestmentValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
-    marginTop: 2,
-  },
-  directPotEditBox: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.cardBorder,
-  },
-  directPotEditHint: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    marginBottom: 6,
-  },
-  directPotInput: {
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 10,
-    padding: 10,
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  activePlayersRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.cardBorder,
-  },
-  activePlayersLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  stepperControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 10,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  stepperBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: COLORS.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperVal: {
-    paddingHorizontal: 12,
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  positionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  positionBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: COLORS.backgroundSecondary,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  positionBtnActive: {
-    backgroundColor: COLORS.primaryMuted,
-    borderColor: COLORS.primary,
-  },
-  positionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-  },
-  positionTextActive: {
-    color: COLORS.primary,
-  },
   streetBetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1812,6 +1842,50 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  blindCallRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  blindCallBtn: {
+    flex: 1,
+    backgroundColor: COLORS.backgroundSecondary,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+  },
+  blindCallBtnBlind: {
+    backgroundColor: COLORS.primaryMuted,
+    borderColor: COLORS.primary,
+  },
+  blindCallBtnBlindText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  blindCallBtnCall: {
+    backgroundColor: COLORS.successMuted,
+    borderColor: COLORS.success,
+  },
+  blindCallBtnCallText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.success,
+  },
+  blindCallBtnCallDisabled: {
+    backgroundColor: COLORS.backgroundSecondary,
+    borderColor: COLORS.cardBorder,
+    opacity: 0.5,
+  },
+  blindCallBtnCallTextDisabled: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+  },
   chipInnerCircle: {
     alignItems: 'center',
   },
@@ -1820,41 +1894,77 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
   },
-  tableActionBtnRow: {
-    flexDirection: 'row',
-    gap: 10,
+  playerCardFolded: {
+    opacity: 0.6,
+  },
+  foldedBadge: {
+    backgroundColor: COLORS.backgroundSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.dangerBorder,
+  },
+  foldedBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.danger,
+    letterSpacing: 0.5,
+  },
+  foldedContributionText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
     marginBottom: 8,
   },
-  tableActionBtn: {
-    flex: 1,
+  mismatchList: {
+    width: '100%',
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    paddingVertical: 4,
+    marginBottom: SPACING.sm,
+  },
+  mismatchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.cardBorder,
+  },
+  mismatchLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  mismatchAmount: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  foldToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginTop: 10,
     borderWidth: 1,
+    borderColor: COLORS.dangerBorder,
   },
-  tableActionBtnText: {
+  foldToggleBtnActive: {
+    borderColor: COLORS.cardBorder,
+  },
+  foldToggleBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.primary,
-    textAlign: 'center',
+    color: COLORS.danger,
   },
-  deadMoneyNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 8,
-    padding: 8,
-    marginTop: 6,
-    gap: 6,
-  },
-  deadMoneyText: {
-    fontSize: 11,
+  foldToggleBtnTextActive: {
     color: COLORS.textSecondary,
-    fontWeight: '600',
   },
   showdownRow: {
     flexDirection: 'row',
@@ -2083,37 +2193,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.textSecondary,
-  },
-  modalActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
-  },
-  modalSecondaryBtn: {
-    flex: 1,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  modalSecondaryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-  },
-  modalPrimaryBtn: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  modalPrimaryText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.textDark,
   },
   statsRow: {
     flexDirection: 'row',
