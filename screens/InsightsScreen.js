@@ -8,26 +8,16 @@ import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { computeInsights } from '../utils/statsEngine';
-
-function StatLine({ label, value, valueColor }) {
-  return (
-    <View style={styles.statRow}>
-      <Text style={styles.statRowLabel}>{label}</Text>
-      <Text
-        style={[styles.statRowValue, valueColor && { color: valueColor }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.7}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
+import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
+import StatLine from '../components/InsightStatLine';
+import CompareStat from '../components/InsightCompareStat';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers — same split
-// used for the poker and sports-betting insights screens.
+// used for the poker and sports-betting insights screens. Only ever
+// called when unlocked — locked users see LockedLeakTeaser instead, which
+// never touches real leak data (some leak titles interpolate real values,
+// e.g. which day or bet type).
 function getLeakCopy(leak, { fmtDollar, fmtPct }) {
   switch (leak.id) {
     case 'loss_chasing':
@@ -65,32 +55,12 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
   }
 }
 
-function CompareStat({ label, value, valueColor, sub }) {
-  return (
-    <View style={styles.compareCol}>
-      <Text style={styles.compareColLabel}>{label}</Text>
-      <Text
-        style={[styles.compareColValue, valueColor && { color: valueColor }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.6}
-      >
-        {value}
-      </Text>
-      {sub ? (
-        <Text style={styles.compareColSub} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-          {sub}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
 export default function InsightsScreen({ route, navigation }) {
   const { gameType } = route.params;
   const { sessionHistory } = useSession();
-  const { currencySymbol = '$' } = usePreferences();
+  const { currencySymbol = '$', proUnlocked } = usePreferences();
   const insets = useSafeAreaInsets();
+  const isLocked = !proUnlocked;
 
   const stats = computeInsights(sessionHistory, gameType);
   const hasEnoughData = stats.totalHands >= 5;
@@ -228,6 +198,10 @@ export default function InsightsScreen({ route, navigation }) {
   };
 
   const handleCopyReport = async () => {
+    if (isLocked) {
+      navigation.navigate('MainTabs', { screen: 'Profile' });
+      return;
+    }
     await Clipboard.setStringAsync(buildReportText());
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -247,11 +221,12 @@ export default function InsightsScreen({ route, navigation }) {
         <View style={{ width: 22 }} />
       </View>
 
+      <View style={styles.contentArea}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + moderateScale(60) }]}
         showsVerticalScrollIndicator={false}
       >
-        {!hasEnoughData ? (
+        {!hasEnoughData && !isLocked ? (
           <View style={styles.emptyCard}>
             <Ionicons name="analytics-outline" size={28} color={COLORS.textMuted} />
             <Text style={styles.emptyTitle}>Not Enough Data Yet</Text>
@@ -262,7 +237,9 @@ export default function InsightsScreen({ route, navigation }) {
         ) : (
           <>
             {/* Leak Spotlight */}
-            {topLeak ? (
+            {isLocked ? (
+              <LockedLeakTeaser />
+            ) : topLeak ? (
               <View style={[styles.leakCard, SHADOWS.card]}>
                 <View style={styles.leakEyebrowRow}>
                   <Ionicons name="warning" size={14} color={COLORS.warning} />
@@ -289,32 +266,47 @@ export default function InsightsScreen({ route, navigation }) {
               <Text style={styles.cardLabel}>PERFORMANCE OVERVIEW</Text>
               <Text style={styles.cardHint}>Your actual results across {outcomes.sample} hands</Text>
 
-              <View style={styles.outcomeBarRow}>
-                {outcomes.winRate > 0 && (
-                  <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />
-                )}
-                {outcomes.pushRate > 0 && (
-                  <View style={[styles.outcomeBarSeg, { flex: outcomes.pushRate, backgroundColor: COLORS.textMuted }]} />
-                )}
-                {outcomes.lossRate > 0 && (
-                  <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />
-                )}
-              </View>
+              {isLocked ? (
+                <>
+                  <View style={styles.outcomeBarRow}>
+                    <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
+                  </View>
+                  <View style={styles.outcomeLegendRow}>
+                    <SkeletonBar width={80} height={12} />
+                    <SkeletonBar width={80} height={12} />
+                    <SkeletonBar width={80} height={12} />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.outcomeBarRow}>
+                    {outcomes.winRate > 0 && (
+                      <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />
+                    )}
+                    {outcomes.pushRate > 0 && (
+                      <View style={[styles.outcomeBarSeg, { flex: outcomes.pushRate, backgroundColor: COLORS.textMuted }]} />
+                    )}
+                    {outcomes.lossRate > 0 && (
+                      <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />
+                    )}
+                  </View>
 
-              <View style={styles.outcomeLegendRow}>
-                <View style={styles.outcomeLegendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                  <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)} ({outcomes.wins})</Text>
-                </View>
-                <View style={styles.outcomeLegendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                  <Text style={styles.outcomeLegendText}>Push {fmtPct(outcomes.pushRate)} ({outcomes.pushes})</Text>
-                </View>
-                <View style={styles.outcomeLegendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                  <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)} ({outcomes.losses})</Text>
-                </View>
-              </View>
+                  <View style={styles.outcomeLegendRow}>
+                    <View style={styles.outcomeLegendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
+                      <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)} ({outcomes.wins})</Text>
+                    </View>
+                    <View style={styles.outcomeLegendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
+                      <Text style={styles.outcomeLegendText}>Push {fmtPct(outcomes.pushRate)} ({outcomes.pushes})</Text>
+                    </View>
+                    <View style={styles.outcomeLegendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
+                      <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)} ({outcomes.losses})</Text>
+                    </View>
+                  </View>
+                </>
+              )}
 
               <View style={styles.overviewDivider} />
 
@@ -323,15 +315,18 @@ export default function InsightsScreen({ route, navigation }) {
                   label="Net Result"
                   value={fmtMoney(returns.netProfit)}
                   valueColor={returns.netProfit > 0 ? COLORS.success : returns.netProfit < 0 ? COLORS.danger : COLORS.textPrimary}
+                  locked={isLocked}
                 />
                 <CompareStat
                   label="Return on Wagered"
                   value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
                   valueColor={(returns.roi || 0) > 0 ? COLORS.success : (returns.roi || 0) < 0 ? COLORS.danger : COLORS.textPrimary}
+                  locked={isLocked}
                 />
                 <CompareStat
                   label="Avg / Hand"
                   value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'}
+                  locked={isLocked}
                 />
               </View>
               <Text style={styles.cardFootnote}>
@@ -344,11 +339,15 @@ export default function InsightsScreen({ route, navigation }) {
             {/* Current Streak */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>CURRENT STREAK</Text>
-              <Text style={[styles.streakValue, { color: streakColor }]}>
-                {stats.currentStreakType
-                  ? `${stats.currentStreakLength} ${stats.currentStreakType === 'win' ? 'Win' : 'Loss'}${stats.currentStreakLength !== 1 ? 's' : ''}`
-                  : 'None'}
-              </Text>
+              {isLocked ? (
+                <SkeletonBar width={110} height={26} style={{ marginTop: 4 }} />
+              ) : (
+                <Text style={[styles.streakValue, { color: streakColor }]}>
+                  {stats.currentStreakType
+                    ? `${stats.currentStreakLength} ${stats.currentStreakType === 'win' ? 'Win' : 'Loss'}${stats.currentStreakLength !== 1 ? 's' : ''}`
+                    : 'None'}
+                </Text>
+              )}
             </View>
 
             <View style={styles.rowCards}>
@@ -356,13 +355,21 @@ export default function InsightsScreen({ route, navigation }) {
                 <View style={styles.halfCardHeader}>
                   <Text style={styles.cardLabel}>LONGEST WIN STREAK</Text>
                 </View>
-                <Text style={[styles.halfValue, { color: COLORS.success }]}>{stats.longestWinStreak}</Text>
+                {isLocked ? (
+                  <SkeletonBar width={40} height={22} />
+                ) : (
+                  <Text style={[styles.halfValue, { color: COLORS.success }]}>{stats.longestWinStreak}</Text>
+                )}
               </View>
               <View style={[styles.halfCard, SHADOWS.card]}>
                 <View style={styles.halfCardHeader}>
                   <Text style={styles.cardLabel}>LONGEST LOSS STREAK</Text>
                 </View>
-                <Text style={[styles.halfValue, { color: COLORS.danger }]}>{stats.longestLossStreak}</Text>
+                {isLocked ? (
+                  <SkeletonBar width={40} height={22} />
+                ) : (
+                  <Text style={[styles.halfValue, { color: COLORS.danger }]}>{stats.longestLossStreak}</Text>
+                )}
               </View>
             </View>
 
@@ -370,11 +377,11 @@ export default function InsightsScreen({ route, navigation }) {
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>CONDITIONAL WIN RATE</Text>
               <Text style={styles.cardHint}>Your win rate depending on what just happened</Text>
-              <StatLine label={`After a Win (n=${cwr.afterWin.sample})`} value={fmtPct(cwr.afterWin.rate)} />
-              <StatLine label={`After a Loss (n=${cwr.afterLoss.sample})`} value={fmtPct(cwr.afterLoss.rate)} />
-              <StatLine label={`After 2 Wins (n=${cwr.afterTwoWins.sample})`} value={fmtPct(cwr.afterTwoWins.rate)} />
-              <StatLine label={`After 2 Losses (n=${cwr.afterTwoLosses.sample})`} value={fmtPct(cwr.afterTwoLosses.rate)} />
-              {cwr.afterWin.rate !== null && cwr.afterLoss.rate !== null && (
+              <StatLine label={`After a Win (n=${cwr.afterWin.sample})`} value={fmtPct(cwr.afterWin.rate)} locked={isLocked} />
+              <StatLine label={`After a Loss (n=${cwr.afterLoss.sample})`} value={fmtPct(cwr.afterLoss.rate)} locked={isLocked} />
+              <StatLine label={`After 2 Wins (n=${cwr.afterTwoWins.sample})`} value={fmtPct(cwr.afterTwoWins.rate)} locked={isLocked} />
+              <StatLine label={`After 2 Losses (n=${cwr.afterTwoLosses.sample})`} value={fmtPct(cwr.afterTwoLosses.rate)} locked={isLocked} />
+              {!isLocked && cwr.afterWin.rate !== null && cwr.afterLoss.rate !== null && (
                 <View style={styles.insightNote}>
                   <Ionicons name="information-circle-outline" size={16} color={COLORS.textSecondary} />
                   <Text style={styles.insightNoteText}>
@@ -397,11 +404,13 @@ export default function InsightsScreen({ route, navigation }) {
                       label={`Doubled (n=${dbl.doubled.sample})`}
                       value={fmtPct(dbl.doubled.winRate)}
                       sub={`ROI: ${dbl.doubled.roi !== null ? `${dbl.doubled.roi.toFixed(1)}%` : '—'}`}
+                      locked={isLocked}
                     />
                     <CompareStat
                       label={`Not Doubled (n=${dbl.notDoubled.sample})`}
                       value={fmtPct(dbl.notDoubled.winRate)}
                       sub={`ROI: ${dbl.notDoubled.roi !== null ? `${dbl.notDoubled.roi.toFixed(1)}%` : '—'}`}
+                      locked={isLocked}
                     />
                   </View>
                   <Text style={styles.cardFootnote}>
@@ -415,11 +424,13 @@ export default function InsightsScreen({ route, navigation }) {
                     <Text style={styles.cardLabel}>DOUBLE-DOWN FREQUENCY</Text>
                     <Text style={styles.cardHint}>How often you double, vs. roughly how often basic strategy calls for it</Text>
                     <View style={styles.compareRow}>
-                      <CompareStat label={`You (n=${ddr.sample})`} value={`${ddr.rate.toFixed(1)}%`} />
+                      <CompareStat label={`You (n=${ddr.sample})`} value={`${ddr.rate.toFixed(1)}%`} locked={isLocked} />
                       <CompareStat label="Reference" value={`~${ddr.benchmarkRate}%`} />
                     </View>
                     <Text style={styles.cardFootnote}>
-                      {ddr.rate < ddr.benchmarkRate - 2
+                      {isLocked
+                        ? 'Unlock Pro to see how your doubling frequency compares to basic strategy.'
+                        : ddr.rate < ddr.benchmarkRate - 2
                         ? "You're doubling less often than basic strategy suggests — you may be leaving profitable doubles on the table."
                         : ddr.rate > ddr.benchmarkRate + 4
                         ? "You're doubling noticeably more than basic strategy suggests — worth checking you're only doubling hard 9–11 and strong soft hands."
@@ -432,11 +443,13 @@ export default function InsightsScreen({ route, navigation }) {
                 <View style={[styles.card, SHADOWS.card]}>
                   <Text style={styles.cardLabel}>NATURAL BLACKJACK RATE</Text>
                   <View style={styles.compareRow}>
-                    <CompareStat label="Your Rate" value={`${bj.actualRate.toFixed(1)}%`} />
+                    <CompareStat label="Your Rate" value={`${bj.actualRate.toFixed(1)}%`} locked={isLocked} />
                     <CompareStat label="Expected" value={`~${bj.expectedRate}%`} />
                   </View>
                   <Text style={styles.cardFootnote}>
-                    {bj.sample < 30
+                    {isLocked
+                      ? 'Unlock Pro to see whether you\'re running hot or cold on naturals compared to the baseline.'
+                      : bj.sample < 30
                       ? `${bj.count} blackjacks out of ${bj.sample} hands — still a small sample, so don't read much into the gap yet.`
                       : Math.abs(bjRateDelta) < 1.5
                       ? `${bj.count} blackjacks out of ${bj.sample} hands — right in line with the expected rate.`
@@ -456,14 +469,17 @@ export default function InsightsScreen({ route, navigation }) {
                 <StatLine
                   label={`Small (avg ${currencySymbol}${tiers.small.avgBet.toFixed(0)}, n=${tiers.small.sample})`}
                   value={fmtPct(tiers.small.winRate)}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Medium (avg ${currencySymbol}${tiers.medium.avgBet.toFixed(0)}, n=${tiers.medium.sample})`}
                   value={fmtPct(tiers.medium.winRate)}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Large (avg ${currencySymbol}${tiers.large.avgBet.toFixed(0)}, n=${tiers.large.sample})`}
                   value={fmtPct(tiers.large.winRate)}
+                  locked={isLocked}
                 />
                 <Text style={styles.cardFootnote}>Pushes aren't counted as wins or losses in these rates.</Text>
               </View>
@@ -473,22 +489,29 @@ export default function InsightsScreen({ route, navigation }) {
             <View style={[styles.card, SHADOWS.card]}>
               <View style={styles.riskHeaderRow}>
                 <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-                {vol.riskLabel && (
-                  <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                    <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel.toUpperCase()}</Text>
-                  </View>
+                {isLocked ? (
+                  <SkeletonBar width={56} height={18} />
+                ) : (
+                  vol.riskLabel && (
+                    <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
+                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel.toUpperCase()}</Text>
+                    </View>
+                  )
                 )}
               </View>
               <Text style={styles.cardHint}>
-                {vol.riskLabel
+                {isLocked
+                  ? 'See how consistent your bet sizing and results really are.'
+                  : vol.riskLabel
                   ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average bet, hand to hand.`
                   : 'Not enough bet variation yet to score this.'}
               </Text>
-              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} />
-              <StatLine label="Bet Size Std. Deviation" value={`${currencySymbol}${vol.betSizeStdDev.toFixed(2)}`} />
+              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} locked={isLocked} />
+              <StatLine label="Bet Size Std. Deviation" value={`${currencySymbol}${vol.betSizeStdDev.toFixed(2)}`} locked={isLocked} />
               <StatLine
                 label="Bet Sizing Consistency"
                 value={vol.betSizeConsistency !== null ? `${vol.betSizeConsistency.toFixed(0)}/100` : '—'}
+                locked={isLocked}
               />
               <Text style={styles.cardFootnote}>
                 Higher net result deviation means bigger swings hand to hand; a higher consistency score means steadier bet sizing.
@@ -498,9 +521,9 @@ export default function InsightsScreen({ route, navigation }) {
             {/* Bet Size After Outcome */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>BET SIZE AFTER OUTCOME</Text>
-              <StatLine label="After a Win" value={`${currencySymbol}${stats.avgBetAfterWin.toFixed(2)}`} />
-              <StatLine label="After a Loss" value={`${currencySymbol}${stats.avgBetAfterLoss.toFixed(2)}`} />
-              {chasesLosses && (
+              <StatLine label="After a Win" value={`${currencySymbol}${stats.avgBetAfterWin.toFixed(2)}`} locked={isLocked} />
+              <StatLine label="After a Loss" value={`${currencySymbol}${stats.avgBetAfterLoss.toFixed(2)}`} locked={isLocked} />
+              {!isLocked && chasesLosses && (
                 <View style={styles.insightNote}>
                   <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
                   <Text style={styles.insightNoteText}>
@@ -508,7 +531,7 @@ export default function InsightsScreen({ route, navigation }) {
                   </Text>
                 </View>
               )}
-              {disciplinedSizing && (
+              {!isLocked && disciplinedSizing && (
                 <View style={styles.insightNote}>
                   <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
                   <Text style={styles.insightNoteText}>
@@ -526,11 +549,13 @@ export default function InsightsScreen({ route, navigation }) {
                   label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
                   value={fmtMoney(dow.best.avgNet)}
                   valueColor={COLORS.success}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
                   value={fmtMoney(dow.worst.avgNet)}
                   valueColor={COLORS.danger}
+                  locked={isLocked}
                 />
                 <Text style={styles.cardFootnote}>
                   {dow.best.sessions < 3 || dow.worst.sessions < 3
@@ -547,14 +572,17 @@ export default function InsightsScreen({ route, navigation }) {
                 <StatLine
                   label={`Short: ≤10 hands (n=${lenPerf.short.sample})`}
                   value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Medium: 11–25 hands (n=${lenPerf.medium.sample})`}
                   value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
                   value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <Text style={styles.cardFootnote}>
                   If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.
@@ -564,18 +592,18 @@ export default function InsightsScreen({ route, navigation }) {
 
             {/* Copy Report */}
             <TouchableOpacity
-              style={[styles.copyReportBtn, SHADOWS.card]}
+              style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]}
               activeOpacity={0.85}
               onPress={handleCopyReport}
             >
               <Ionicons
-                name={copied ? 'checkmark-circle' : 'clipboard-outline'}
+                name={isLocked ? 'lock-closed' : copied ? 'checkmark-circle' : 'clipboard-outline'}
                 size={18}
                 color={COLORS.textDark}
                 style={{ marginRight: 8 }}
               />
               <Text style={styles.copyReportBtnText}>
-                {copied ? 'Copied to Clipboard' : 'Copy Full Report'}
+                {isLocked ? 'Unlock Pro to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}
               </Text>
             </TouchableOpacity>
             <Text style={styles.copyReportHint}>
@@ -584,6 +612,13 @@ export default function InsightsScreen({ route, navigation }) {
           </>
         )}
       </ScrollView>
+      {isLocked && (
+        <InsightsUnlockCta
+          subtitle="Conditional win rates, doubling performance, and leak detection — unlocked with Ante Pro."
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' })}
+        />
+      )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -601,6 +636,7 @@ const styles = StyleSheet.create({
   },
   backIcon: { padding: 4 },
   navTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  contentArea: { flex: 1 },
   scroll: { padding: 16 },
   emptyCard: {
     backgroundColor: COLORS.card,
@@ -657,20 +693,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   halfValue: { fontSize: 24, fontWeight: '900' },
-  statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  statRowLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', flex: 1, marginRight: 8 },
-  statRowValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '800' },
   compareRow: { flexDirection: 'row', gap: 10 },
-  compareCol: {
-    flex: 1,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-  },
-  compareColLabel: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', marginBottom: 4 },
-  compareColValue: { fontSize: 18, fontWeight: '900', color: COLORS.textPrimary },
-  compareColSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   insightNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -725,6 +748,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 15,
     marginTop: 8,
+  },
+  copyReportBtnLocked: {
+    backgroundColor: COLORS.textMuted,
   },
   copyReportBtnText: {
     color: COLORS.textDark,

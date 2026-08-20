@@ -8,47 +8,15 @@ import { moderateScale } from '../constants/layout';
 import { useSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { computePokerInsights } from '../utils/pokerStatsEngine';
-
-function StatLine({ label, value, valueColor }) {
-  return (
-    <View style={styles.statRow}>
-      <Text style={styles.statRowLabel}>{label}</Text>
-      <Text
-        style={[styles.statRowValue, valueColor && { color: valueColor }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.7}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-function CompareStat({ label, value, valueColor, sub }) {
-  return (
-    <View style={styles.compareCol}>
-      <Text style={styles.compareColLabel}>{label}</Text>
-      <Text
-        style={[styles.compareColValue, valueColor && { color: valueColor }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.6}
-      >
-        {value}
-      </Text>
-      {sub ? (
-        <Text style={styles.compareColSub} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-          {sub}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
+import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
+import StatLine from '../components/InsightStatLine';
+import CompareStat from '../components/InsightCompareStat';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers, same split
-// InsightsScreen.js uses for blackjack.
+// InsightsScreen.js uses for blackjack. Only ever called when unlocked —
+// locked users see LockedLeakTeaser instead, which never touches real
+// leak data (e.g. street_leak's title names the actual street).
 function getLeakCopy(leak, { fmtMoney, fmtPct }) {
   switch (leak.id) {
     case 'bluff_catching':
@@ -88,7 +56,8 @@ function getLeakCopy(leak, { fmtMoney, fmtPct }) {
 
 export default function PokerInsightsScreen({ navigation }) {
   const { sessionHistory } = useSession();
-  const { currencySymbol = '$' } = usePreferences();
+  const { currencySymbol = '$', proUnlocked } = usePreferences();
+  const isLocked = !proUnlocked;
   const insets = useSafeAreaInsets();
 
   const stats = computePokerInsights(sessionHistory);
@@ -232,6 +201,10 @@ export default function PokerInsightsScreen({ navigation }) {
   };
 
   const handleCopyReport = async () => {
+    if (isLocked) {
+      navigation.navigate('MainTabs', { screen: 'Profile' });
+      return;
+    }
     await Clipboard.setStringAsync(buildReportText());
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -251,11 +224,12 @@ export default function PokerInsightsScreen({ navigation }) {
         <View style={{ width: 22 }} />
       </View>
 
+      <View style={styles.contentArea}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + moderateScale(60) }]}
         showsVerticalScrollIndicator={false}
       >
-        {!hasEnoughData ? (
+        {!hasEnoughData && !isLocked ? (
           <View style={styles.emptyCard}>
             <Ionicons name="analytics-outline" size={28} color={COLORS.textMuted} />
             <Text style={styles.emptyTitle}>Not Enough Data Yet</Text>
@@ -266,7 +240,9 @@ export default function PokerInsightsScreen({ navigation }) {
         ) : (
           <>
             {/* Leak Spotlight — the headline "why this is worth paying for" card */}
-            {topLeak ? (
+            {isLocked ? (
+              <LockedLeakTeaser />
+            ) : topLeak ? (
               <View style={[styles.leakCard, SHADOWS.card]}>
                 <View style={styles.leakEyebrowRow}>
                   <Ionicons name="warning" size={14} color={COLORS.warning} />
@@ -293,31 +269,47 @@ export default function PokerInsightsScreen({ navigation }) {
               <Text style={styles.cardLabel}>PERFORMANCE OVERVIEW</Text>
               <Text style={styles.cardHint}>Your actual results across {outcomes.sample} hands</Text>
 
-              <View style={styles.outcomeBarRow}>
-                {outcomes.winRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />}
-                {outcomes.splitRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.splitRate, backgroundColor: COLORS.accentCyan }]} />}
-                {outcomes.foldRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.foldRate, backgroundColor: COLORS.textMuted }]} />}
-                {outcomes.lossRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />}
-              </View>
+              {isLocked ? (
+                <>
+                  <View style={styles.outcomeBarRow}>
+                    <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
+                  </View>
+                  <View style={styles.outcomeLegendRow}>
+                    <SkeletonBar width={70} height={12} />
+                    <SkeletonBar width={70} height={12} />
+                    <SkeletonBar width={70} height={12} />
+                    <SkeletonBar width={70} height={12} />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.outcomeBarRow}>
+                    {outcomes.winRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />}
+                    {outcomes.splitRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.splitRate, backgroundColor: COLORS.accentCyan }]} />}
+                    {outcomes.foldRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.foldRate, backgroundColor: COLORS.textMuted }]} />}
+                    {outcomes.lossRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />}
+                  </View>
 
-              <View style={styles.outcomeLegendRow}>
-                <View style={styles.outcomeLegendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                  <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)}</Text>
-                </View>
-                <View style={styles.outcomeLegendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: COLORS.accentCyan }]} />
-                  <Text style={styles.outcomeLegendText}>Split {fmtPct(outcomes.splitRate)}</Text>
-                </View>
-                <View style={styles.outcomeLegendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                  <Text style={styles.outcomeLegendText}>Fold {fmtPct(outcomes.foldRate)}</Text>
-                </View>
-                <View style={styles.outcomeLegendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                  <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)}</Text>
-                </View>
-              </View>
+                  <View style={styles.outcomeLegendRow}>
+                    <View style={styles.outcomeLegendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
+                      <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)}</Text>
+                    </View>
+                    <View style={styles.outcomeLegendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: COLORS.accentCyan }]} />
+                      <Text style={styles.outcomeLegendText}>Split {fmtPct(outcomes.splitRate)}</Text>
+                    </View>
+                    <View style={styles.outcomeLegendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
+                      <Text style={styles.outcomeLegendText}>Fold {fmtPct(outcomes.foldRate)}</Text>
+                    </View>
+                    <View style={styles.outcomeLegendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
+                      <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)}</Text>
+                    </View>
+                  </View>
+                </>
+              )}
 
               <View style={styles.overviewDivider} />
 
@@ -326,13 +318,15 @@ export default function PokerInsightsScreen({ navigation }) {
                   label="Net Result"
                   value={fmtMoney(returns.netProfit)}
                   valueColor={returns.netProfit > 0 ? COLORS.success : returns.netProfit < 0 ? COLORS.danger : COLORS.textPrimary}
+                  locked={isLocked}
                 />
                 <CompareStat
                   label="Return on Invested"
                   value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
                   valueColor={(returns.roi || 0) > 0 ? COLORS.success : (returns.roi || 0) < 0 ? COLORS.danger : COLORS.textPrimary}
+                  locked={isLocked}
                 />
-                <CompareStat label="Avg / Hand" value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} />
+                <CompareStat label="Avg / Hand" value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} locked={isLocked} />
               </View>
 
               {bb && (
@@ -347,13 +341,15 @@ export default function PokerInsightsScreen({ navigation }) {
                       label="Net (BB)"
                       value={fmtBB(bb.netBB)}
                       valueColor={bb.netBB > 0 ? COLORS.success : bb.netBB < 0 ? COLORS.danger : COLORS.textPrimary}
+                      locked={isLocked}
                     />
                     <CompareStat
                       label="bb / 100 hands"
                       value={`${bb.bbPer100 >= 0 ? '+' : ''}${bb.bbPer100.toFixed(1)}`}
                       valueColor={bb.bbPer100 > 0 ? COLORS.success : bb.bbPer100 < 0 ? COLORS.danger : COLORS.textPrimary}
+                      locked={isLocked}
                     />
-                    <CompareStat label="Avg Bet (BB)" value={`${bb.avgInvestmentBB.toFixed(1)} bb`} />
+                    <CompareStat label="Avg Bet (BB)" value={`${bb.avgInvestmentBB.toFixed(1)} bb`} locked={isLocked} />
                   </View>
                   <Text style={styles.cardFootnote}>
                     bb/100 is how serious players compare results across different stakes — a dollar total alone can't do that.
@@ -369,25 +365,40 @@ export default function PokerInsightsScreen({ navigation }) {
 
               {fold.sample > 0 ? (
                 <>
-                  <View style={styles.outcomeBarRow}>
-                    {fold.bluffedRate > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.bluffed, backgroundColor: COLORS.primary }]} />}
-                    {fold.goodFold > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.goodFold, backgroundColor: COLORS.success }]} />}
-                    {fold.noShow > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.noShow, backgroundColor: COLORS.textMuted }]} />}
-                  </View>
-                  <View style={styles.outcomeLegendRow}>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
-                      <Text style={styles.outcomeLegendText}>Bluffed {fold.bluffed}</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                      <Text style={styles.outcomeLegendText}>Good Fold {fold.goodFold}</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                      <Text style={styles.outcomeLegendText}>No-Show {fold.noShow}</Text>
-                    </View>
-                  </View>
+                  {isLocked ? (
+                    <>
+                      <View style={styles.outcomeBarRow}>
+                        <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
+                      </View>
+                      <View style={styles.outcomeLegendRow}>
+                        <SkeletonBar width={64} height={12} />
+                        <SkeletonBar width={64} height={12} />
+                        <SkeletonBar width={64} height={12} />
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.outcomeBarRow}>
+                        {fold.bluffedRate > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.bluffed, backgroundColor: COLORS.primary }]} />}
+                        {fold.goodFold > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.goodFold, backgroundColor: COLORS.success }]} />}
+                        {fold.noShow > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.noShow, backgroundColor: COLORS.textMuted }]} />}
+                      </View>
+                      <View style={styles.outcomeLegendRow}>
+                        <View style={styles.outcomeLegendItem}>
+                          <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
+                          <Text style={styles.outcomeLegendText}>Bluffed {fold.bluffed}</Text>
+                        </View>
+                        <View style={styles.outcomeLegendItem}>
+                          <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
+                          <Text style={styles.outcomeLegendText}>Good Fold {fold.goodFold}</Text>
+                        </View>
+                        <View style={styles.outcomeLegendItem}>
+                          <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
+                          <Text style={styles.outcomeLegendText}>No-Show {fold.noShow}</Text>
+                        </View>
+                      </View>
+                    </>
+                  )}
 
                   <View style={styles.overviewDivider} />
 
@@ -396,12 +407,14 @@ export default function PokerInsightsScreen({ navigation }) {
                       label={`Bluffed-Fold Rate (n=${fold.judgedSample})`}
                       value={fmtPct(fold.bluffedRate)}
                       valueColor={fold.bluffedRate !== null && fold.bluffedRate > 35 ? COLORS.danger : COLORS.success}
+                      locked={isLocked}
                     />
                     <CompareStat
                       label="Money Left On The Table"
                       value={fmtMoneyAbs(fold.moneyLeftOnTable)}
                       valueColor={COLORS.warning}
                       sub={fold.moneyLeftOnTableBB !== null ? `${fold.moneyLeftOnTableBB.toFixed(1)} bb` : undefined}
+                      locked={isLocked}
                     />
                   </View>
                   <Text style={styles.cardFootnote}>
@@ -424,6 +437,7 @@ export default function PokerInsightsScreen({ navigation }) {
                     label={`${s.street} (n=${s.sample})`}
                     value={s.bluffedRate !== null ? `${fmtPct(s.bluffedRate)} bluffed` : '—'}
                     valueColor={s.bluffedRate !== null && s.bluffedRate > 40 ? COLORS.danger : undefined}
+                    locked={isLocked}
                   />
                 ))}
                 <Text style={styles.cardFootnote}>
@@ -437,9 +451,9 @@ export default function PokerInsightsScreen({ navigation }) {
               <View style={[styles.card, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>POST-BLUFF TILT INDEX</Text>
                 <Text style={styles.cardHint}>Does getting bluffed change your very next fold read?</Text>
-                <StatLine label={`Bluffed Again, Right After a Bluff (n=${postBluff.afterBluffed.sample})`} value={fmtPct(postBluff.afterBluffed.rate)} />
-                <StatLine label={`Bluffed Again, Right After a Good Fold (n=${postBluff.afterGood.sample})`} value={fmtPct(postBluff.afterGood.rate)} />
-                {postBluff.tiltIndex !== null && (
+                <StatLine label={`Bluffed Again, Right After a Bluff (n=${postBluff.afterBluffed.sample})`} value={fmtPct(postBluff.afterBluffed.rate)} locked={isLocked} />
+                <StatLine label={`Bluffed Again, Right After a Good Fold (n=${postBluff.afterGood.sample})`} value={fmtPct(postBluff.afterGood.rate)} locked={isLocked} />
+                {!isLocked && postBluff.tiltIndex !== null && (
                   <View style={styles.insightNote}>
                     <Ionicons
                       name={postBluff.tiltIndex > 15 ? 'alert-circle-outline' : 'information-circle-outline'}
@@ -462,10 +476,10 @@ export default function PokerInsightsScreen({ navigation }) {
                 <Text style={styles.cardLabel}>SESSION FATIGUE ON FOLD JUDGMENT</Text>
                 <Text style={styles.cardHint}>Bluffed-fold rate, first half of your sessions vs. the second half</Text>
                 <View style={styles.compareRow}>
-                  <CompareStat label={`First Half (n=${fatigue.firstHalf.sample})`} value={fmtPct(fatigue.firstHalf.rate)} />
-                  <CompareStat label={`Second Half (n=${fatigue.secondHalf.sample})`} value={fmtPct(fatigue.secondHalf.rate)} />
+                  <CompareStat label={`First Half (n=${fatigue.firstHalf.sample})`} value={fmtPct(fatigue.firstHalf.rate)} locked={isLocked} />
+                  <CompareStat label={`Second Half (n=${fatigue.secondHalf.sample})`} value={fmtPct(fatigue.secondHalf.rate)} locked={isLocked} />
                 </View>
-                {fatigue.fatigueDelta > 15 && (
+                {!isLocked && fatigue.fatigueDelta > 15 && (
                   <View style={styles.insightNote}>
                     <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
                     <Text style={styles.insightNoteText}>
@@ -479,9 +493,9 @@ export default function PokerInsightsScreen({ navigation }) {
             {/* Investment After Outcome (Chasing) */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>INVESTMENT AFTER OUTCOME</Text>
-              <StatLine label="After a Winning Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterWin.toFixed(2)}`} />
-              <StatLine label="After a Losing Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterLoss.toFixed(2)}`} />
-              {chasesLosses && (
+              <StatLine label="After a Winning Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterWin.toFixed(2)}`} locked={isLocked} />
+              <StatLine label="After a Losing Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterLoss.toFixed(2)}`} locked={isLocked} />
+              {!isLocked && chasesLosses && (
                 <View style={styles.insightNote}>
                   <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
                   <Text style={styles.insightNoteText}>
@@ -489,7 +503,7 @@ export default function PokerInsightsScreen({ navigation }) {
                   </Text>
                 </View>
               )}
-              {disciplinedSizing && (
+              {!isLocked && disciplinedSizing && (
                 <View style={styles.insightNote}>
                   <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
                   <Text style={styles.insightNoteText}>You don't bet bigger after losing to try to win it back — that's disciplined sizing.</Text>
@@ -500,21 +514,25 @@ export default function PokerInsightsScreen({ navigation }) {
             {/* Streaks */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>CURRENT STREAK</Text>
-              <Text style={[styles.streakValue, { color: streakColor }]}>
-                {streaks.currentStreakType
-                  ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'up' ? 'Up' : 'Down'}`
-                  : 'None'}
-              </Text>
+              {isLocked ? (
+                <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
+              ) : (
+                <Text style={[styles.streakValue, { color: streakColor }]}>
+                  {streaks.currentStreakType
+                    ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'up' ? 'Up' : 'Down'}`
+                    : 'None'}
+                </Text>
+              )}
             </View>
 
             <View style={styles.rowCards}>
               <View style={[styles.halfCard, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>LONGEST UP STREAK</Text>
-                <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestUpStreak}</Text>
+                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestUpStreak}</Text>}
               </View>
               <View style={[styles.halfCard, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>LONGEST DOWN STREAK</Text>
-                <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestDownStreak}</Text>
+                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestDownStreak}</Text>}
               </View>
             </View>
 
@@ -524,9 +542,9 @@ export default function PokerInsightsScreen({ navigation }) {
                 <Text style={styles.cardLabel}>SHOWDOWN WIN RATE</Text>
                 <Text style={styles.cardHint}>Of the hands you didn't fold, how often you won or chopped</Text>
                 <View style={styles.compareRow}>
-                  <CompareStat label={`Won or Split (n=${showdown.sample})`} value={fmtPct(showdown.winOrSplitRate)} />
-                  <CompareStat label="Won Outright" value={String(showdown.wins)} />
-                  <CompareStat label="Split" value={String(showdown.splits)} />
+                  <CompareStat label={`Won or Split (n=${showdown.sample})`} value={fmtPct(showdown.winOrSplitRate)} locked={isLocked} />
+                  <CompareStat label="Won Outright" value={String(showdown.wins)} locked={isLocked} />
+                  <CompareStat label="Split" value={String(showdown.splits)} locked={isLocked} />
                 </View>
               </View>
             )}
@@ -536,7 +554,7 @@ export default function PokerInsightsScreen({ navigation }) {
               <View style={[styles.card, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>POT COMMITMENT</Text>
                 <Text style={styles.cardHint}>Your share of the average final pot</Text>
-                <StatLine label={`Your Investment vs. Pot (n=${commitment.sample})`} value={`${commitment.avgCommitmentPct.toFixed(1)}%`} />
+                <StatLine label={`Your Investment vs. Pot (n=${commitment.sample})`} value={`${commitment.avgCommitmentPct.toFixed(1)}%`} locked={isLocked} />
                 <Text style={styles.cardFootnote}>
                   Higher means you're usually the one driving the betting; lower means you're more often calling into pots others built.
                 </Text>
@@ -547,18 +565,26 @@ export default function PokerInsightsScreen({ navigation }) {
             <View style={[styles.card, SHADOWS.card]}>
               <View style={styles.riskHeaderRow}>
                 <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-                {vol.riskLabel && (
-                  <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                    <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel.toUpperCase()}</Text>
-                  </View>
+                {isLocked ? (
+                  <SkeletonBar width={56} height={18} />
+                ) : (
+                  vol.riskLabel && (
+                    <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
+                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel.toUpperCase()}</Text>
+                    </View>
+                  )
                 )}
               </View>
               <Text style={styles.cardHint}>
-                {vol.riskLabel ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average investment, hand to hand.` : 'Not enough investment variation yet to score this.'}
+                {isLocked
+                  ? 'See how consistent your bet sizing and results really are.'
+                  : vol.riskLabel
+                  ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average investment, hand to hand.`
+                  : 'Not enough investment variation yet to score this.'}
               </Text>
-              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} />
-              <StatLine label="Investment Std. Deviation" value={`${currencySymbol}${vol.investmentStdDev.toFixed(2)}`} />
-              <StatLine label="Sizing Consistency" value={vol.investmentConsistency !== null ? `${vol.investmentConsistency.toFixed(0)}/100` : '—'} />
+              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} locked={isLocked} />
+              <StatLine label="Investment Std. Deviation" value={`${currencySymbol}${vol.investmentStdDev.toFixed(2)}`} locked={isLocked} />
+              <StatLine label="Sizing Consistency" value={vol.investmentConsistency !== null ? `${vol.investmentConsistency.toFixed(0)}/100` : '—'} locked={isLocked} />
             </View>
 
             {/* Day of Week */}
@@ -569,11 +595,13 @@ export default function PokerInsightsScreen({ navigation }) {
                   label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
                   value={fmtMoney(dow.best.avgNet)}
                   valueColor={COLORS.success}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
                   value={fmtMoney(dow.worst.avgNet)}
                   valueColor={COLORS.danger}
+                  locked={isLocked}
                 />
               </View>
             )}
@@ -585,23 +613,26 @@ export default function PokerInsightsScreen({ navigation }) {
                 <StatLine
                   label={`Short: ≤10 hands (n=${lenPerf.short.sample})`}
                   value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Medium: 11–25 hands (n=${lenPerf.medium.sample})`}
                   value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <StatLine
                   label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
                   value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
+                  locked={isLocked}
                 />
                 <Text style={styles.cardFootnote}>If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.</Text>
               </View>
             )}
 
             {/* Copy Report */}
-            <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card]} activeOpacity={0.85} onPress={handleCopyReport}>
-              <Ionicons name={copied ? 'checkmark-circle' : 'clipboard-outline'} size={18} color={COLORS.textDark} style={{ marginRight: 8 }} />
-              <Text style={styles.copyReportBtnText}>{copied ? 'Copied to Clipboard' : 'Copy Full Report'}</Text>
+            <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]} activeOpacity={0.85} onPress={handleCopyReport}>
+              <Ionicons name={isLocked ? 'lock-closed' : copied ? 'checkmark-circle' : 'clipboard-outline'} size={18} color={COLORS.textDark} style={{ marginRight: 8 }} />
+              <Text style={styles.copyReportBtnText}>{isLocked ? 'Unlock Pro to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}</Text>
             </TouchableOpacity>
             <Text style={styles.copyReportHint}>
               Paste this into a doc or an AI chat to dig into your numbers further. It's a plain-text summary of everything on this page — not gambling advice.
@@ -609,6 +640,13 @@ export default function PokerInsightsScreen({ navigation }) {
           </>
         )}
       </ScrollView>
+      {isLocked && (
+        <InsightsUnlockCta
+          subtitle="Your bluff-catcher score, tilt index, and leak detection — unlocked with Ante Pro."
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' })}
+        />
+      )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -626,6 +664,7 @@ const styles = StyleSheet.create({
   },
   backIcon: { padding: 4 },
   navTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  contentArea: { flex: 1 },
   scroll: { padding: 16 },
   emptyCard: {
     backgroundColor: COLORS.card,
@@ -678,20 +717,7 @@ const styles = StyleSheet.create({
     minHeight: 90,
   },
   halfValue: { fontSize: 24, fontWeight: '900', marginTop: 8 },
-  statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  statRowLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', flex: 1, marginRight: 8 },
-  statRowValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '800' },
   compareRow: { flexDirection: 'row', gap: 10 },
-  compareCol: {
-    flex: 1,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-  },
-  compareColLabel: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', marginBottom: 4 },
-  compareColValue: { fontSize: 18, fontWeight: '900', color: COLORS.textPrimary },
-  compareColSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   insightNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -731,6 +757,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginTop: 8,
   },
+  copyReportBtnLocked: { backgroundColor: COLORS.textMuted },
   copyReportBtnText: { color: COLORS.textDark, fontWeight: '800', fontSize: 15 },
   copyReportHint: {
     fontSize: 11,

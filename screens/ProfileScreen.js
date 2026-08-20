@@ -39,6 +39,7 @@ export default function ProfileScreen({ navigation }) {
     privacyMode = false,
     stopLossAlert = false,
     stopLossAmount = 250,
+    proUnlocked = false,
     updatePreferences,
   } = usePreferences();
 
@@ -412,6 +413,36 @@ export default function ProfileScreen({ navigation }) {
               </Text>
             </View>
           </View>
+        </View>
+
+        {/* Section 0: Ante Pro */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>ANTE PRO</Text>
+          <View style={styles.devBadge}>
+            <Text style={styles.devBadgeText}>DEV PREVIEW</Text>
+          </View>
+        </View>
+        <View style={[styles.menuCard, styles.proMenuCard, SHADOWS.card]}>
+          <View style={styles.menuRow}>
+            <View style={styles.proIconCircle}>
+              <Ionicons name="sparkles" size={moderateScale(18)} color={COLORS.primary} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Pro Insights</Text>
+              <Text style={styles.menuSubtitle}>
+                Unlocks every behavioral insights page — leak detection, streaks, and more
+              </Text>
+            </View>
+            <Switch
+              value={proUnlocked}
+              onValueChange={(val) => updatePreferences && updatePreferences({ proUnlocked: val })}
+              trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
+              thumbColor={proUnlocked ? COLORS.primary : '#8E9BAE'}
+            />
+          </View>
+          <Text style={styles.proFootnote}>
+            Standing in for a real subscription for now — flip this on to preview what Pro unlocks. This will be replaced by an actual purchase before launch.
+          </Text>
         </View>
 
         {/* Section 1: Gameplay Preferences */}
@@ -1022,6 +1053,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
     marginBottom: SPACING.lg,
+  },
+  devBadge: {
+    backgroundColor: COLORS.warningMuted,
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: moderateScale(3),
+    borderRadius: RADIUS.xs,
+    borderWidth: 1,
+    borderColor: COLORS.warningBorder,
+  },
+  devBadgeText: {
+    fontSize: fluidFont(9),
+    fontWeight: '800',
+    color: COLORS.warning,
+    letterSpacing: 0.5,
+  },
+  proMenuCard: {
+    borderColor: COLORS.primaryGlow,
+    paddingBottom: SPACING.sm,
+  },
+  proIconCircle: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: RADIUS.xs,
+    backgroundColor: COLORS.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.primaryGlow,
+  },
+  proFootnote: {
+    fontSize: fluidFont(11),
+    color: COLORS.textMuted,
+    lineHeight: fluidFont(15),
+    paddingBottom: SPACING.sm,
   },
   menuRow: {
     flexDirection: 'row',
