@@ -12,6 +12,7 @@ import {
   calcVolatility,
   calcDayOfWeekPerformance,
   calcSessionLengthPerformance,
+  buildLeakReport,
   computeInsights,
 } from '../statsEngine';
 
@@ -388,5 +389,137 @@ describe('14. computeInsights End-to-End Smoke Test', () => {
     expect(
       stats.outcomeBreakdown.wins + stats.outcomeBreakdown.losses + stats.outcomeBreakdown.pushes
     ).toBe(stats.totalHands);
+  });
+});
+
+describe('15. Leak Detector', () => {
+  const noVolatility = { riskLabel: 'Low' };
+  const emptyBetSizeAfterOutcome = { sampleAfterWin: 0, sampleAfterLoss: 0, avgBetAfterWin: 0, avgBetAfterLoss: 0 };
+  const emptyDoublingStats = { doubled: { sample: 0, roi: null }, notDoubled: { sample: 0, roi: null } };
+
+  test('flags loss_chasing when post-loss bet size clearly outpaces post-win', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: { sampleAfterWin: 5, sampleAfterLoss: 5, avgBetAfterWin: 10, avgBetAfterLoss: 25 },
+      doubleDownRate: null,
+      doublingStats: emptyDoublingStats,
+      betTierWinRates: null,
+      volatility: noVolatility,
+    });
+    expect(leaks.map((l) => l.id)).toContain('loss_chasing');
+    expect(leaks.find((l) => l.id === 'loss_chasing').pctIncrease).toBeCloseTo(150, 2);
+  });
+
+  test('flags double_down_underuse when doubling rate sits well below the basic-strategy benchmark', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: emptyBetSizeAfterOutcome,
+      doubleDownRate: { rate: 2, benchmarkRate: 10, sample: 50, count: 1 },
+      doublingStats: emptyDoublingStats,
+      betTierWinRates: null,
+      volatility: noVolatility,
+    });
+    expect(leaks.map((l) => l.id)).toContain('double_down_underuse');
+  });
+
+  test('flags double_down_overuse when doubling rate sits well above the basic-strategy benchmark', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: emptyBetSizeAfterOutcome,
+      doubleDownRate: { rate: 22, benchmarkRate: 10, sample: 50, count: 11 },
+      doublingStats: emptyDoublingStats,
+      betTierWinRates: null,
+      volatility: noVolatility,
+    });
+    expect(leaks.map((l) => l.id)).toContain('double_down_overuse');
+  });
+
+  test('does not flag doubling deviation under a small sample, even at an extreme rate', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: emptyBetSizeAfterOutcome,
+      doubleDownRate: { rate: 50, benchmarkRate: 10, sample: 4, count: 2 },
+      doublingStats: emptyDoublingStats,
+      betTierWinRates: null,
+      volatility: noVolatility,
+    });
+    expect(leaks.map((l) => l.id)).not.toContain('double_down_overuse');
+  });
+
+  test('flags doubling_underperformance when doubled ROI is deeply negative vs. not-doubled', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: emptyBetSizeAfterOutcome,
+      doubleDownRate: null,
+      doublingStats: { doubled: { sample: 8, roi: -40 }, notDoubled: { sample: 40, roi: 5 } },
+      betTierWinRates: null,
+      volatility: noVolatility,
+    });
+    expect(leaks.map((l) => l.id)).toContain('doubling_underperformance');
+  });
+
+  test('flags bet_tier_dropoff when win rate falls sharply on the largest bets', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: emptyBetSizeAfterOutcome,
+      doubleDownRate: null,
+      doublingStats: emptyDoublingStats,
+      betTierWinRates: {
+        small: { sample: 10, winRate: 55, avgBet: 10 },
+        medium: { sample: 10, winRate: 48, avgBet: 50 },
+        large: { sample: 10, winRate: 30, avgBet: 200 },
+      },
+      volatility: noVolatility,
+    });
+    expect(leaks.map((l) => l.id)).toContain('bet_tier_dropoff');
+  });
+
+  test('flags volatility on a High risk label', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: emptyBetSizeAfterOutcome,
+      doubleDownRate: null,
+      doublingStats: emptyDoublingStats,
+      betTierWinRates: null,
+      volatility: { riskLabel: 'High', volatilityRatio: 3 },
+    });
+    expect(leaks.map((l) => l.id)).toContain('volatility');
+  });
+
+  test('flags nothing when every input is clean', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: { sampleAfterWin: 10, sampleAfterLoss: 10, avgBetAfterWin: 20, avgBetAfterLoss: 20 },
+      doubleDownRate: { rate: 11, benchmarkRate: 10, sample: 50, count: 5 },
+      doublingStats: { doubled: { sample: 10, roi: 8 }, notDoubled: { sample: 40, roi: 2 } },
+      betTierWinRates: {
+        small: { sample: 10, winRate: 48, avgBet: 10 },
+        medium: { sample: 10, winRate: 46, avgBet: 50 },
+        large: { sample: 10, winRate: 45, avgBet: 200 },
+      },
+      volatility: noVolatility,
+    });
+    expect(leaks).toHaveLength(0);
+  });
+
+  test('ranks multiple triggered leaks by descending score', () => {
+    const leaks = buildLeakReport({
+      betSizeAfterOutcome: { sampleAfterWin: 5, sampleAfterLoss: 5, avgBetAfterWin: 10, avgBetAfterLoss: 12 },
+      doubleDownRate: null,
+      doublingStats: emptyDoublingStats,
+      betTierWinRates: null,
+      volatility: { riskLabel: 'High', volatilityRatio: 3 },
+    });
+    expect(leaks.length).toBe(2);
+    expect(leaks[0].score).toBeGreaterThanOrEqual(leaks[1].score);
+  });
+
+  test('computeInsights exposes leaks/topLeak and stays consistent on a loss-chasing dataset', () => {
+    // Alternating win/loss so every "after a win" bet is small (10) and
+    // every "after a loss" bet is tripled (30) — 5 samples in each bucket,
+    // clearing buildLeakReport's >=4-per-bucket evidence threshold.
+    const outcomes = ['win', 'loss', 'win', 'loss', 'win', 'loss', 'win', 'loss', 'win', 'loss', 'win'];
+    const bets = [10, 10, 30, 10, 30, 10, 30, 10, 30, 10, 30];
+    const hands = outcomes.map((outcome, i) => hand({ bet: bets[i], outcome }));
+    const session = makeSession({ hands });
+    const sessionHistory = historyFromSessions([session]);
+    const stats = computeInsights(sessionHistory, 'Blackjack');
+
+    expect(Array.isArray(stats.leaks)).toBe(true);
+    expect(stats.topLeak).not.toBeNull();
+    expect(stats.topLeak.id).toBe('loss_chasing');
+    expect(stats.topLeak).toBe(stats.leaks[0]);
   });
 });

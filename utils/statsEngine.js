@@ -324,9 +324,112 @@ export function calcSessionLengthPerformance(sessionHistory, gameType) {
   };
 }
 
+// --- Leak detector, same shape as the poker/sports-betting engines: scans
+// the stats already being computed for known -EV signatures and ranks
+// whichever clear their evidence threshold. `score` is a heuristic 0-100
+// used only to rank leaks against each other, not a probability. Day-of-
+// week and session-length are deliberately excluded — they're descriptive
+// (and largely outside the player's control), not a fixable leak, and
+// blackjack_frequency is pure card-luck, not behavior, so neither is
+// leak material here either — consistent with what the poker and sports
+// engines treat as in-scope. ---
+export function buildLeakReport({ betSizeAfterOutcome, doubleDownRate, doublingStats, betTierWinRates, volatility }) {
+  const leaks = [];
+
+  if (
+    betSizeAfterOutcome.sampleAfterLoss >= 4 &&
+    betSizeAfterOutcome.sampleAfterWin >= 4 &&
+    betSizeAfterOutcome.avgBetAfterWin > 0 &&
+    betSizeAfterOutcome.avgBetAfterLoss > betSizeAfterOutcome.avgBetAfterWin * 1.15
+  ) {
+    const pctIncrease =
+      ((betSizeAfterOutcome.avgBetAfterLoss - betSizeAfterOutcome.avgBetAfterWin) / betSizeAfterOutcome.avgBetAfterWin) * 100;
+    leaks.push({
+      id: 'loss_chasing',
+      score: Math.min(100, pctIncrease),
+      sample: Math.min(betSizeAfterOutcome.sampleAfterWin, betSizeAfterOutcome.sampleAfterLoss),
+      avgBetAfterWin: betSizeAfterOutcome.avgBetAfterWin,
+      avgBetAfterLoss: betSizeAfterOutcome.avgBetAfterLoss,
+      pctIncrease,
+    });
+  }
+
+  if (doubleDownRate && doubleDownRate.sample >= 15) {
+    const diff = doubleDownRate.rate - doubleDownRate.benchmarkRate;
+    if (Math.abs(diff) > 5) {
+      leaks.push({
+        id: diff < 0 ? 'double_down_underuse' : 'double_down_overuse',
+        score: Math.min(100, Math.abs(diff) * 6),
+        sample: doubleDownRate.sample,
+        rate: doubleDownRate.rate,
+        benchmarkRate: doubleDownRate.benchmarkRate,
+        diff,
+      });
+    }
+  }
+
+  if (
+    doublingStats.doubled.sample >= 6 &&
+    doublingStats.doubled.roi !== null &&
+    doublingStats.doubled.roi < -15 &&
+    (doublingStats.notDoubled.roi === null || doublingStats.doubled.roi < doublingStats.notDoubled.roi - 15)
+  ) {
+    leaks.push({
+      id: 'doubling_underperformance',
+      score: Math.min(100, Math.abs(doublingStats.doubled.roi)),
+      sample: doublingStats.doubled.sample,
+      doubledRoi: doublingStats.doubled.roi,
+      notDoubledRoi: doublingStats.notDoubled.roi,
+    });
+  }
+
+  if (
+    betTierWinRates &&
+    betTierWinRates.small.sample >= 4 &&
+    betTierWinRates.large.sample >= 4 &&
+    betTierWinRates.small.winRate !== null &&
+    betTierWinRates.large.winRate !== null &&
+    betTierWinRates.small.winRate - betTierWinRates.large.winRate > 15
+  ) {
+    leaks.push({
+      id: 'bet_tier_dropoff',
+      score: Math.min(100, betTierWinRates.small.winRate - betTierWinRates.large.winRate),
+      sampleSmall: betTierWinRates.small.sample,
+      sampleLarge: betTierWinRates.large.sample,
+      smallWinRate: betTierWinRates.small.winRate,
+      largeWinRate: betTierWinRates.large.winRate,
+    });
+  }
+
+  if (volatility.riskLabel === 'High') {
+    leaks.push({
+      id: 'volatility',
+      score: Math.min(100, (volatility.volatilityRatio || 0) * 25),
+      volatilityRatio: volatility.volatilityRatio,
+    });
+  }
+
+  leaks.sort((a, b) => b.score - a.score);
+  return leaks;
+}
+
 // --- Master function ---
 export function computeInsights(sessionHistory, gameType) {
   const hands = getChronologicalHands(sessionHistory, gameType);
+
+  const betSizeAfterOutcome = calcBetSizeAfterOutcome(hands);
+  const doubleDownRate = calcDoubleDownRate(hands);
+  const doublingStats = calcDoublingStats(hands);
+  const betTierWinRates = calcBetTierWinRates(hands);
+  const volatility = calcVolatility(hands);
+
+  const leaks = buildLeakReport({
+    betSizeAfterOutcome,
+    doubleDownRate,
+    doublingStats,
+    betTierWinRates,
+    volatility,
+  });
 
   return {
     totalHands: hands.length,
@@ -334,15 +437,17 @@ export function computeInsights(sessionHistory, gameType) {
     returnStats: calcReturnStats(hands),
     averageBet: calcAverageBet(hands),
     medianBet: calcMedianBet(hands),
-    ...calcBetSizeAfterOutcome(hands),
+    ...betSizeAfterOutcome,
     ...calcStreaks(hands),
     conditionalWinRates: calcConditionalWinRates(hands),
-    doublingStats: calcDoublingStats(hands),
-    doubleDownRate: calcDoubleDownRate(hands),
+    doublingStats,
+    doubleDownRate,
     blackjackFrequency: calcBlackjackFrequency(hands),
-    betTierWinRates: calcBetTierWinRates(hands),
-    volatility: calcVolatility(hands),
+    betTierWinRates,
+    volatility,
     dayOfWeekPerformance: calcDayOfWeekPerformance(sessionHistory, gameType),
     sessionLengthPerformance: calcSessionLengthPerformance(sessionHistory, gameType),
+    leaks,
+    topLeak: leaks[0] || null,
   };
 }
