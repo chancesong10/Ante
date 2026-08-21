@@ -77,6 +77,7 @@ export function PreferencesProvider({ children }) {
       value={{
         ...preferences,
         preferences,
+        isLoaded,
         updatePreferences,
         setQuickChipsEnabled,
         resetPreferences,
