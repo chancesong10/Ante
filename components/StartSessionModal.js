@@ -11,11 +11,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useActiveSession } from '../context/SessionContext';
 import { Dimensions } from 'react-native';
 
 export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker, onNavigateToSportsBetting, onNavigateToGeneral,}) {
-  const { activeSession, startSession, endActiveSession } = useSession();
+  const { activeSession, startSession, endActiveSession } = useActiveSession();
   const insets = useSafeAreaInsets();
 
   const handleStartBlackjack = () => {

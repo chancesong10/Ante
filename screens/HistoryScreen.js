@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, TOUCH_TARGET } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 
@@ -25,7 +25,7 @@ const renderFilterIcon = (gameType, size = 18, color = COLORS.primary) => {
 };
 
 export default function HistoryScreen({ navigation }) {
-  const { sessionHistory, deleteSession } = useSession();
+  const { sessionHistory, deleteSession } = useSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
   const [gameFilter, setGameFilter] = useState('All');

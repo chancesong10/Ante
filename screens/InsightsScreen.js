@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { computeInsights } from '../utils/statsEngine';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
@@ -57,12 +57,12 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
 
 export default function InsightsScreen({ route, navigation }) {
   const { gameType } = route.params;
-  const { sessionHistory } = useSession();
+  const { sessionHistory } = useSessionHistory();
   const { currencySymbol = '$', proUnlocked } = usePreferences();
   const insets = useSafeAreaInsets();
   const isLocked = !proUnlocked;
 
-  const stats = computeInsights(sessionHistory, gameType);
+  const stats = useMemo(() => computeInsights(sessionHistory, gameType), [sessionHistory, gameType]);
   const hasEnoughData = stats.totalHands >= 5;
 
   const streakColor =

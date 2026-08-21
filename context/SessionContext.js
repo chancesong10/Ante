@@ -1,10 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   loadSessionHistory,
   saveSessionHistory,
 } from '../services/storageService';
 
-const SessionContext = createContext();
+// Split into two contexts by update frequency:
+// - ActiveSessionContext changes on every hand/bet logged during live play
+//   (hot path — screens like PokerScreen call an update per action).
+// - SessionHistoryContext changes only when a session starts/ends/is
+//   deleted (cold path — Analytics/History/Profile/Insights screens only
+//   ever read completed history).
+// Keeping them separate means a screen that only cares about history
+// (e.g. Analytics, kept mounted in the background by the bottom tab bar)
+// doesn't re-render on every hand of an in-progress session elsewhere in
+// the app. Both are still owned and updated from one SessionProvider
+// below, since a couple of actions (ending a session, clearing all data)
+// legitimately need to touch both pieces of state at once.
+const ActiveSessionContext = createContext();
+const SessionHistoryContext = createContext();
 
 export function formatSessionDateTime(timestamp) {
   if (!timestamp) return '';
@@ -57,6 +70,16 @@ export function SessionProvider({ children }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const hasLoadedOnce = useRef(false);
 
+  // Mirrors activeSession so action callbacks below can read the latest
+  // value without listing it as a dependency — keeps their identities
+  // stable across every hand logged, so components/contexts memoized on
+  // these functions (or on the provider's value object) don't get
+  // invalidated on the app's hottest update path.
+  const activeSessionRef = useRef(activeSession);
+  useEffect(() => {
+    activeSessionRef.current = activeSession;
+  }, [activeSession]);
+
   // Load persisted history once on app start.
   // Note: activeSession is intentionally NOT persisted — an in-progress
   // session left mid-entry is safer to discard on force-close than to
@@ -78,7 +101,7 @@ export function SessionProvider({ children }) {
     saveSessionHistory(sessionHistory);
   }, [sessionHistory, isLoaded]);
 
-  const startSession = (gameType = 'Blackjack') => {
+  const startSession = useCallback((gameType = 'Blackjack') => {
     const newSession = {
       id: Date.now().toString(),
       gameType,
@@ -89,10 +112,9 @@ export function SessionProvider({ children }) {
     };
     setActiveSession(newSession);
     return newSession;
-  };
+  }, []);
 
-  const logHandToActiveSession = (handRecord) => {
-    if (!activeSession) return;
+  const logHandToActiveSession = useCallback((handRecord) => {
     setActiveSession((prev) => {
       if (!prev) return null;
       return {
@@ -100,10 +122,9 @@ export function SessionProvider({ children }) {
         hands: [handRecord, ...prev.hands],
       };
     });
-  };
+  }, []);
 
-  const removeHandFromActiveSession = (handId) => {
-    if (!activeSession) return;
+  const removeHandFromActiveSession = useCallback((handId) => {
     setActiveSession((prev) => {
       if (!prev) return null;
       return {
@@ -111,10 +132,9 @@ export function SessionProvider({ children }) {
         hands: prev.hands.filter((h) => h.id !== handId),
       };
     });
-  };
+  }, []);
 
-  const setSessionBuyInCashOut = (buyIn, cashOut) => {
-    if (!activeSession) return;
+  const setSessionBuyInCashOut = useCallback((buyIn, cashOut) => {
     setActiveSession((prev) => {
       if (!prev) return null;
       return {
@@ -123,10 +143,9 @@ export function SessionProvider({ children }) {
         cashOut,
       };
     });
-  };
+  }, []);
 
-  const updateActiveSessionMetadata = (metadata) => {
-    if (!activeSession) return;
+  const updateActiveSessionMetadata = useCallback((metadata) => {
     setActiveSession((prev) => {
       if (!prev) return null;
       return {
@@ -134,9 +153,10 @@ export function SessionProvider({ children }) {
         ...metadata,
       };
     });
-  };
+  }, []);
 
-  const endActiveSession = (overrideBuyIn = null, overrideCashOut = null) => {
+  const endActiveSession = useCallback((overrideBuyIn = null, overrideCashOut = null) => {
+    const activeSession = activeSessionRef.current;
     if (!activeSession) return null;
 
     const endTime = Date.now();
@@ -221,47 +241,78 @@ export function SessionProvider({ children }) {
     setSessionHistory((prev) => [completedRecord, ...prev]);
     setActiveSession(null);
     return completedRecord;
-  };
+  }, []);
 
-  const discardActiveSession = () => {
+  const discardActiveSession = useCallback(() => {
     setActiveSession(null);
-  };
+  }, []);
 
-  const deleteSession = (sessionId) => {
+  const deleteSession = useCallback((sessionId) => {
     setSessionHistory((prev) => prev.filter((s) => s.id !== sessionId));
-  };
+  }, []);
 
-  const clearAllSessions = () => {
+  const clearAllSessions = useCallback(() => {
     setActiveSession(null);
     setSessionHistory([]);
-  };
+  }, []);
+
+  // Each recomputed only when its own underlying data actually changes, so
+  // a screen subscribed to just one of the two contexts doesn't re-render
+  // when the other one updates.
+  const activeSessionValue = useMemo(
+    () => ({
+      activeSession,
+      startSession,
+      updateActiveSessionMetadata,
+      logHandToActiveSession,
+      removeHandFromActiveSession,
+      setSessionBuyInCashOut,
+      endActiveSession,
+      discardActiveSession,
+    }),
+    [
+      activeSession,
+      startSession,
+      updateActiveSessionMetadata,
+      logHandToActiveSession,
+      removeHandFromActiveSession,
+      setSessionBuyInCashOut,
+      endActiveSession,
+      discardActiveSession,
+    ]
+  );
+
+  const sessionHistoryValue = useMemo(
+    () => ({
+      sessionHistory,
+      isLoaded,
+      deleteSession,
+      clearAllSessions,
+    }),
+    [sessionHistory, isLoaded, deleteSession, clearAllSessions]
+  );
 
   return (
-    <SessionContext.Provider
-      value={{
-        activeSession,
-        sessionHistory,
-        isLoaded,
-        startSession,
-        updateActiveSessionMetadata,
-        logHandToActiveSession,
-        removeHandFromActiveSession,
-        setSessionBuyInCashOut,
-        endActiveSession,
-        discardActiveSession,
-        deleteSession,
-        clearAllSessions,
-      }}
-    >
-      {children}
-    </SessionContext.Provider>
+    <SessionHistoryContext.Provider value={sessionHistoryValue}>
+      <ActiveSessionContext.Provider value={activeSessionValue}>
+        {children}
+      </ActiveSessionContext.Provider>
+    </SessionHistoryContext.Provider>
   );
 }
 
-export function useSession() {
-  const context = useContext(SessionContext);
+export function useActiveSession() {
+  const context = useContext(ActiveSessionContext);
   if (!context) {
-    throw new Error('useSession must be used within a SessionProvider');
+    throw new Error('useActiveSession must be used within a SessionProvider');
+  }
+  return context;
+}
+
+export function useSessionHistory() {
+  const context = useContext(SessionHistoryContext);
+  if (!context) {
+    throw new Error('useSessionHistory must be used within a SessionProvider');
   }
   return context;
 }

@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useActiveSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 import ConfirmModal from '../components/ConfirmModal';
@@ -43,7 +43,7 @@ export default function PokerScreen({ navigation }) {
     removeHandFromActiveSession,
     endActiveSession,
     discardActiveSession,
-  } = useSession();
+  } = useActiveSession();
 
   // Screen View Mode: 'setup' | 'dashboard' | 'hand'
   const [viewMode, setViewMode] = useState('setup');

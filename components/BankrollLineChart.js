@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path, Line, Circle, ClipPath, Rect, Defs, Text as SvgText } from 'react-native-svg';
 import { COLORS } from '../constants/theme';
@@ -19,60 +19,104 @@ const fmtDate = (ts) => new Date(ts).toLocaleDateString('en-US', { month: 'short
 // late dip. Peak and trough are called out directly on the chart, not
 // just implied by its shape, and the header row gives the three numbers
 // that actually matter without having to read pixel heights.
-export default function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false }) {
+function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false }) {
   const [containerWidth, setContainerWidth] = useState(0);
 
-  const cumulative = [];
-  let running = 0;
-  sessions.forEach((s) => {
-    running += s.netProfit || 0;
-    cumulative.push(running);
-  });
-  const series = [0, ...cumulative]; // index 0 is the implicit pre-session start
+  // The geometry pass (cumulative series, SVG path strings, peak/trough
+  // scan) only needs to redo when the sessions themselves or the measured
+  // container width change — not on every parent re-render.
+  const chart = useMemo(() => {
+    const cumulative = [];
+    let running = 0;
+    sessions.forEach((s) => {
+      running += s.netProfit || 0;
+      cumulative.push(running);
+    });
+    const series = [0, ...cumulative]; // index 0 is the implicit pre-session start
 
-  if (cumulative.length < 2 || containerWidth === 0) {
+    if (cumulative.length < 2 || containerWidth === 0) {
+      return { ready: false, cumulative };
+    }
+
+    const width = containerWidth;
+    const plotHeight = CHART_HEIGHT - TOP_PADDING - BOTTOM_PADDING;
+    const minVal = Math.min(...series);
+    const maxVal = Math.max(...series);
+    const range = maxVal - minVal || 1;
+
+    const xFor = (i) => (i / (series.length - 1)) * width;
+    const yFor = (v) => TOP_PADDING + plotHeight - ((v - minVal) / range) * plotHeight;
+    const zeroY = yFor(0);
+
+    const points = series.map((v, i) => [xFor(i), yFor(v)]);
+
+    const linePath = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+    const areaPath =
+      `${linePath} ` +
+      `L ${points[points.length - 1][0].toFixed(1)} ${(TOP_PADDING + plotHeight).toFixed(1)} ` +
+      `L ${points[0][0].toFixed(1)} ${(TOP_PADDING + plotHeight).toFixed(1)} Z`;
+
+    const lastIndex = series.length - 1;
+    const finalNet = series[lastIndex];
+    const trendColor = finalNet >= 0 ? COLORS.success : COLORS.danger;
+
+    // Peak/trough, excluding the implicit start (index 0) and the endpoint
+    // (already marked) so the callouts point at something new.
+    let peakIndex = null;
+    let troughIndex = null;
+    for (let i = 1; i < lastIndex; i++) {
+      if (peakIndex === null || series[i] > series[peakIndex]) peakIndex = i;
+      if (troughIndex === null || series[i] < series[troughIndex]) troughIndex = i;
+    }
+    const showPeak = peakIndex !== null && series[peakIndex] > Math.max(series[0], finalNet);
+    const showTrough = troughIndex !== null && series[troughIndex] < Math.min(series[0], finalNet) && troughIndex !== peakIndex;
+
+    return {
+      ready: true,
+      series,
+      cumulative,
+      width,
+      minVal,
+      maxVal,
+      zeroY,
+      points,
+      linePath,
+      areaPath,
+      finalNet,
+      trendColor,
+      peakIndex,
+      troughIndex,
+      showPeak,
+      showTrough,
+    };
+  }, [sessions, containerWidth]);
+
+  if (!chart.ready) {
     return (
       <View style={styles.wrap} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
-        {cumulative.length < 2 && (
+        {chart.cumulative.length < 2 && (
           <Text style={styles.notEnoughText}>Log at least 2 sessions to see your bankroll trend.</Text>
         )}
       </View>
     );
   }
 
-  const width = containerWidth;
-  const plotHeight = CHART_HEIGHT - TOP_PADDING - BOTTOM_PADDING;
-  const minVal = Math.min(...series);
-  const maxVal = Math.max(...series);
-  const range = maxVal - minVal || 1;
-
-  const xFor = (i) => (i / (series.length - 1)) * width;
-  const yFor = (v) => TOP_PADDING + plotHeight - ((v - minVal) / range) * plotHeight;
-  const zeroY = yFor(0);
-
-  const points = series.map((v, i) => [xFor(i), yFor(v)]);
-
-  const linePath = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
-  const areaPath =
-    `${linePath} ` +
-    `L ${points[points.length - 1][0].toFixed(1)} ${(TOP_PADDING + plotHeight).toFixed(1)} ` +
-    `L ${points[0][0].toFixed(1)} ${(TOP_PADDING + plotHeight).toFixed(1)} Z`;
-
-  const lastIndex = series.length - 1;
-  const [lastX, lastY] = points[lastIndex];
-  const finalNet = series[lastIndex];
-  const trendColor = finalNet >= 0 ? COLORS.success : COLORS.danger;
-
-  // Peak/trough, excluding the implicit start (index 0) and the endpoint
-  // (already marked) so the callouts point at something new.
-  let peakIndex = null;
-  let troughIndex = null;
-  for (let i = 1; i < lastIndex; i++) {
-    if (peakIndex === null || series[i] > series[peakIndex]) peakIndex = i;
-    if (troughIndex === null || series[i] < series[troughIndex]) troughIndex = i;
-  }
-  const showPeak = peakIndex !== null && series[peakIndex] > Math.max(series[0], finalNet);
-  const showTrough = troughIndex !== null && series[troughIndex] < Math.min(series[0], finalNet) && troughIndex !== peakIndex;
+  const {
+    width,
+    minVal,
+    maxVal,
+    zeroY,
+    points,
+    linePath,
+    areaPath,
+    finalNet,
+    trendColor,
+    peakIndex,
+    troughIndex,
+    showPeak,
+    showTrough,
+    series,
+  } = chart;
 
   const fmt = (v) => (privacyMode ? '••••' : `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(0)}`);
   const fmtFull = (v) => (privacyMode ? '••••••' : `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`);
@@ -165,6 +209,8 @@ export default function BankrollLineChart({ sessions, currencySymbol = '$', priv
     </View>
   );
 }
+
+export default React.memo(BankrollLineChart);
 
 const styles = StyleSheet.create({
   wrap: { width: '100%' },
