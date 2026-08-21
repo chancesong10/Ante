@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -32,6 +32,11 @@ export default function HistoryScreen({ navigation }) {
   const [outcomeFilter, setOutcomeFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
   const [gameFilterModalVisible, setGameFilterModalVisible] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [gameFilter, outcomeFilter]);
 
   // Only show a chip for a game the user actually has sessions for, so the
   // row doesn't fill up with dead filters for games never played.
@@ -48,6 +53,12 @@ export default function HistoryScreen({ navigation }) {
     if (outcomeFilter === 'Losses') return item.netProfit < 0;
     return true;
   });
+
+  const paginatedHistory = filteredHistory.slice(0, visibleCount);
+
+  const loadMore = () => {
+    setVisibleCount((prev) => prev + 10);
+  };
 
   const toggleExpand = (id) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -365,9 +376,17 @@ export default function HistoryScreen({ navigation }) {
           </View>
         ) : (
           <FlatList
-            data={filteredHistory}
+            data={paginatedHistory}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderSessionItem}
+            ListFooterComponent={() => {
+              if (visibleCount >= filteredHistory.length) return null;
+              return (
+                <TouchableOpacity style={styles.loadMoreButton} onPress={loadMore}>
+                  <Text style={styles.loadMoreText}>See More</Text>
+                </TouchableOpacity>
+              );
+            }}
             contentContainerStyle={[
               styles.listContent,
               { paddingBottom: insets.bottom + moderateScale(96) },
@@ -524,6 +543,15 @@ const styles = StyleSheet.create({
   },
   listContent: {
     gap: 12,
+  },
+  loadMoreButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   card: {
     backgroundColor: COLORS.card,
