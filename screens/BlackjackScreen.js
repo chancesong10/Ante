@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useActiveSession } from '../context/SessionContext';
 import SwipeableRow from '../components/SwipeableRow';
 import { usePreferences } from '../context/PreferencesContext';
 
@@ -26,7 +26,7 @@ export default function BlackjackScreen({ navigation }) {
     removeHandFromActiveSession,
     endActiveSession,
     discardActiveSession,
-  } = useSession();
+  } = useActiveSession();
 
   useEffect(() => {
     if (!activeSession) {

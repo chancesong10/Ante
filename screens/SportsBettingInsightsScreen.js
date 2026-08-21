@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { computeSportsInsights } from '../utils/sportsStatsEngine';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
@@ -60,12 +60,12 @@ function getLeakCopy(leak, { fmtMoney, fmtPct }) {
 }
 
 export default function SportsBettingInsightsScreen({ navigation }) {
-  const { sessionHistory } = useSession();
+  const { sessionHistory } = useSessionHistory();
   const { currencySymbol = '$', proUnlocked } = usePreferences();
   const isLocked = !proUnlocked;
   const insets = useSafeAreaInsets();
 
-  const stats = computeSportsInsights(sessionHistory);
+  const stats = useMemo(() => computeSportsInsights(sessionHistory), [sessionHistory]);
   const hasEnoughData = stats.totalHands >= 5;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);

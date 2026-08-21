@@ -12,7 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useActiveSession, useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 
 const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
@@ -29,7 +29,8 @@ const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
 };
 
 export default function HomeScreen({ navigation, onOpenAddModal }) {
-  const { activeSession, sessionHistory, endActiveSession } = useSession();
+  const { activeSession, endActiveSession } = useActiveSession();
+  const { sessionHistory } = useSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
 

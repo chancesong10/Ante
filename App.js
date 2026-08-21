@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -28,7 +28,7 @@ import ResponsibleGamingAlertModal from './components/ResponsibleGamingAlertModa
 import AnimatedLoadingScreen from './components/AnimatedLoadingScreen';
 import { COLORS } from './constants/theme';
 import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
-import { SessionProvider, useSession } from './context/SessionContext';
+import { SessionProvider, useActiveSession, useSessionHistory } from './context/SessionContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -38,8 +38,55 @@ function EmptyAddSlot() {
   return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
 }
 
+// Blank "in-between" screen shown briefly while switching tabs, so the
+// next screen's heavy layout/render work happens hidden behind a spinner
+// instead of jumping visibly (mirrors the Wealthsimple-style tab transition).
+function TabTransitionOverlay({ visible }) {
+  if (!visible) return null;
+  return (
+    <View style={styles.transitionOverlay} pointerEvents="auto">
+      <ActivityIndicator size="large" color={COLORS.textSecondary} />
+    </View>
+  );
+}
+
 function MainTabNavigator({ onOpenAddModal }) {
   const insets = useSafeAreaInsets();
+  const [transitioning, setTransitioning] = useState(false);
+  const rafIds = useRef([]);
+
+  useEffect(() => {
+    return () => {
+      rafIds.current.forEach((id) => cancelAnimationFrame(id));
+    };
+  }, []);
+
+  // Intercepts a tab press, shows the blank spinner overlay, then performs
+  // the actual navigation on the next frame so it happens hidden underneath.
+  // The overlay is dismissed as soon as the new screen has actually painted
+  // (nested rAF), rather than after a guessed fixed delay — so it's exactly
+  // as short as each screen needs, never longer.
+  const withTabTransition = (navigation, route) => (e) => {
+    const state = navigation.getState();
+    const activeRoute = state.routes[state.index];
+    if (activeRoute.key === route.key) return; // already on this tab
+
+    e.preventDefault();
+    setTransitioning(true);
+    const id1 = requestAnimationFrame(() => {
+      navigation.navigate(route.name);
+      // First rAF: fires once the navigation render has committed.
+      // Second rAF: fires after that frame has actually painted.
+      const id2 = requestAnimationFrame(() => {
+        const id3 = requestAnimationFrame(() => {
+          setTransitioning(false);
+        });
+        rafIds.current.push(id3);
+      });
+      rafIds.current.push(id2);
+    });
+    rafIds.current.push(id1);
+  };
 
   // Dynamic calculation for bottom floating tab bar across iOS home indicators & Android gesture/button bars
   const bottomOffset = insets.bottom > 0 ? insets.bottom + moderateScale(4) : moderateScale(16);
@@ -48,6 +95,7 @@ function MainTabNavigator({ onOpenAddModal }) {
   const addBtnSize = moderateScale(48);
 
   return (
+    <View style={{ flex: 1 }}>
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
@@ -88,6 +136,9 @@ function MainTabNavigator({ onOpenAddModal }) {
             />
           ),
         }}
+        listeners={({ navigation, route }) => ({
+          tabPress: withTabTransition(navigation, route),
+        })}
       />
 
       {/* 2. Analytics */}
@@ -104,6 +155,9 @@ function MainTabNavigator({ onOpenAddModal }) {
             />
           ),
         }}
+        listeners={({ navigation, route }) => ({
+          tabPress: withTabTransition(navigation, route),
+        })}
       />
 
       {/* 3. Center Prominent & Ergonomic Action Button */}
@@ -159,12 +213,18 @@ function MainTabNavigator({ onOpenAddModal }) {
             />
           ),
         }}
+        listeners={({ navigation, route }) => ({
+          tabPress: withTabTransition(navigation, route),
+        })}
       />
 
       {/* 5. Profile */}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
+        listeners={({ navigation, route }) => ({
+          tabPress: withTabTransition(navigation, route),
+        })}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color, focused }) => (
@@ -177,6 +237,8 @@ function MainTabNavigator({ onOpenAddModal }) {
         }}
       />
     </Tab.Navigator>
+    <TabTransitionOverlay visible={transitioning} />
+    </View>
   );
 }
 
@@ -184,7 +246,8 @@ function AppContent() {
   const [appReady, setAppReady] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const navigationRef = useNavigationContainerRef();
-  const { activeSession, endActiveSession, isLoaded: isSessionLoaded } = useSession();
+  const { activeSession, endActiveSession } = useActiveSession();
+  const { isLoaded: isSessionLoaded } = useSessionHistory();
   const {
     stopLossAlert = false,
     stopLossAmount = 250,
@@ -361,6 +424,13 @@ const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  transitionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 500,
   },
   tabBar: {
     position: 'absolute',

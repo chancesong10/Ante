@@ -17,7 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { getOrCreateDeviceId } from '../services/storageService';
 
@@ -29,7 +29,7 @@ const CURRENCY_OPTIONS = [
 ];
 
 export default function ProfileScreen({ navigation }) {
-  const { sessionHistory } = useSession();
+  const { sessionHistory } = useSessionHistory();
   const insets = useSafeAreaInsets();
   const {
     quickChipsEnabled = true,

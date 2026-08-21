@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,56 +12,99 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
-import { useSession } from '../context/SessionContext';
+import { useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import BankrollLineChart from '../components/BankrollLineChart';
 
 export default function AnalyticsScreen({ navigation }) {
-  const { sessionHistory } = useSession();
+  const { sessionHistory } = useSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
 
-  // Dynamic calculations from real history
-  const totalSessions = sessionHistory.length;
-  const totalHands = sessionHistory.reduce((sum, s) => sum + s.totalHands, 0);
-  const totalNetProfit = sessionHistory.reduce((sum, s) => sum + s.netProfit, 0);
-  const totalWins = sessionHistory.reduce((sum, s) => sum + s.wins, 0);
-  const totalLosses = sessionHistory.reduce((sum, s) => sum + s.losses, 0);
-  const totalPushes = sessionHistory.reduce((sum, s) => sum + s.pushes, 0);
+  // Dynamic calculations from real history. Recomputed only when
+  // sessionHistory actually changes (not on every unrelated context
+  // update, e.g. a live hand being logged elsewhere in the app), since
+  // this is a full O(n) scan over the whole session list.
+  const {
+    totalSessions,
+    totalHands,
+    totalNetProfit,
+    totalWins,
+    totalLosses,
+    totalPushes,
+    winRate,
+    profitFactor,
+    bestSession,
+    worstSession,
+    avgSessionNet,
+    allChronologicalSessions,
+    chronologicalSessions,
+    maxAbsNet,
+    winPercent,
+    lossPercent,
+    pushPercent,
+  } = useMemo(() => {
+    const totalSessions = sessionHistory.length;
+    const totalHands = sessionHistory.reduce((sum, s) => sum + s.totalHands, 0);
+    const totalNetProfit = sessionHistory.reduce((sum, s) => sum + s.netProfit, 0);
+    const totalWins = sessionHistory.reduce((sum, s) => sum + s.wins, 0);
+    const totalLosses = sessionHistory.reduce((sum, s) => sum + s.losses, 0);
+    const totalPushes = sessionHistory.reduce((sum, s) => sum + s.pushes, 0);
 
-  const winRate =
-    totalWins + totalLosses > 0
-      ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
-      : '0.0';
+    const winRate =
+      totalWins + totalLosses > 0
+        ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
+        : '0.0';
 
-  const totalGrossWins = sessionHistory.reduce((sum, s) => sum + (s.grossWins || 0), 0);
-  const totalGrossLosses = sessionHistory.reduce((sum, s) => sum + (s.grossLosses || 0), 0);
+    const totalGrossWins = sessionHistory.reduce((sum, s) => sum + (s.grossWins || 0), 0);
+    const totalGrossLosses = sessionHistory.reduce((sum, s) => sum + (s.grossLosses || 0), 0);
 
-  const profitFactor =
-    totalGrossLosses > 0
-      ? (totalGrossWins / totalGrossLosses).toFixed(2)
-      : totalGrossWins > 0
-      ? '∞'
-      : '0.00';
+    const profitFactor =
+      totalGrossLosses > 0
+        ? (totalGrossWins / totalGrossLosses).toFixed(2)
+        : totalGrossWins > 0
+        ? '∞'
+        : '0.00';
 
-  const bestSession =
-    totalSessions > 0 ? Math.max(...sessionHistory.map((s) => s.netProfit)) : 0;
-  const worstSession =
-    totalSessions > 0 ? Math.min(...sessionHistory.map((s) => s.netProfit)) : 0;
-  const avgSessionNet =
-    totalSessions > 0 ? totalNetProfit / totalSessions : 0;
+    const bestSession =
+      totalSessions > 0 ? Math.max(...sessionHistory.map((s) => s.netProfit)) : 0;
+    const worstSession =
+      totalSessions > 0 ? Math.min(...sessionHistory.map((s) => s.netProfit)) : 0;
+    const avgSessionNet =
+      totalSessions > 0 ? totalNetProfit / totalSessions : 0;
 
-  // Real session-by-session data for charts (reversed to chronological order)
-  const allChronologicalSessions = [...sessionHistory].reverse();
-  const chronologicalSessions = allChronologicalSessions.slice(-7);
-  const maxAbsNet = Math.max(
-    ...chronologicalSessions.map((s) => Math.abs(s.netProfit)),
-    50
-  );
+    // Real session-by-session data for charts (reversed to chronological order)
+    const allChronologicalSessions = [...sessionHistory].reverse();
+    const chronologicalSessions = allChronologicalSessions.slice(-7);
+    const maxAbsNet = Math.max(
+      ...chronologicalSessions.map((s) => Math.abs(s.netProfit)),
+      50
+    );
 
-  const winPercent = totalHands > 0 ? (totalWins / totalHands) * 100 : 0;
-  const lossPercent = totalHands > 0 ? (totalLosses / totalHands) * 100 : 0;
-  const pushPercent = totalHands > 0 ? (totalPushes / totalHands) * 100 : 0;
+    const winPercent = totalHands > 0 ? (totalWins / totalHands) * 100 : 0;
+    const lossPercent = totalHands > 0 ? (totalLosses / totalHands) * 100 : 0;
+    const pushPercent = totalHands > 0 ? (totalPushes / totalHands) * 100 : 0;
+
+    return {
+      totalSessions,
+      totalHands,
+      totalNetProfit,
+      totalWins,
+      totalLosses,
+      totalPushes,
+      winRate,
+      profitFactor,
+      bestSession,
+      worstSession,
+      avgSessionNet,
+      allChronologicalSessions,
+      chronologicalSessions,
+      maxAbsNet,
+      winPercent,
+      lossPercent,
+      pushPercent,
+    };
+  }, [sessionHistory]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

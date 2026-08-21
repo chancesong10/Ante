@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { loadPreferences, savePreferences } from '../services/storageService';
 
 const PreferencesContext = createContext();
@@ -57,32 +57,38 @@ export function PreferencesProvider({ children }) {
     savePreferences(preferences);
   }, [preferences, isLoaded]);
 
-  const updatePreferences = (partial) => {
+  const updatePreferences = useCallback((partial) => {
     setPreferences((prev) => ({
       ...prev,
       ...partial,
     }));
-  };
+  }, []);
 
-  const setQuickChipsEnabled = (value) => {
+  const setQuickChipsEnabled = useCallback((value) => {
     updatePreferences({ quickChipsEnabled: value });
-  };
+  }, [updatePreferences]);
 
-  const resetPreferences = () => {
+  const resetPreferences = useCallback(() => {
     setPreferences(DEFAULT_PREFERENCES);
-  };
+  }, []);
+
+  // Recomputed only when preferences/isLoaded actually change, so this
+  // provider's re-renders don't force every consuming screen to re-render
+  // with identical data.
+  const value = useMemo(
+    () => ({
+      ...preferences,
+      preferences,
+      isLoaded,
+      updatePreferences,
+      setQuickChipsEnabled,
+      resetPreferences,
+    }),
+    [preferences, isLoaded, updatePreferences, setQuickChipsEnabled, resetPreferences]
+  );
 
   return (
-    <PreferencesContext.Provider
-      value={{
-        ...preferences,
-        preferences,
-        isLoaded,
-        updatePreferences,
-        setQuickChipsEnabled,
-        resetPreferences,
-      }}
-    >
+    <PreferencesContext.Provider value={value}>
       {children}
     </PreferencesContext.Provider>
   );
