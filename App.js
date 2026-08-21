@@ -25,6 +25,7 @@ import LegalScreen from './screens/LegalScreen';
 
 import StartSessionModal from './components/StartSessionModal';
 import ResponsibleGamingAlertModal from './components/ResponsibleGamingAlertModal';
+import AnimatedLoadingScreen from './components/AnimatedLoadingScreen';
 import { COLORS } from './constants/theme';
 import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useSession } from './context/SessionContext';
@@ -180,13 +181,15 @@ function MainTabNavigator({ onOpenAddModal }) {
 }
 
 function AppContent() {
+  const [appReady, setAppReady] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const navigationRef = useNavigationContainerRef();
-  const { activeSession, endActiveSession } = useSession();
+  const { activeSession, endActiveSession, isLoaded: isSessionLoaded } = useSession();
   const {
     stopLossAlert = false,
     stopLossAmount = 250,
     currencySymbol = '$',
+    isLoaded: isPrefsLoaded,
   } = usePreferences();
 
   // Responsible Gaming Alert state
@@ -276,6 +279,8 @@ function AppContent() {
     });
   };
 
+
+
   return (
     <View style={styles.rootContainer}>
       <StatusBar style="light" backgroundColor={COLORS.background} />
@@ -325,6 +330,15 @@ function AppContent() {
         onEndSession={handleEndSession}
         onAcknowledge={handleAcknowledge}
       />
+
+      {!appReady && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
+          <AnimatedLoadingScreen
+            isAppReady={isPrefsLoaded && isSessionLoaded}
+            onFinish={() => setAppReady(true)}
+          />
+        </View>
+      )}
     </View>
   );
 }
