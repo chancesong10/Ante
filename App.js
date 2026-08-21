@@ -54,6 +54,9 @@ function MainTabNavigator({ onOpenAddModal }) {
   const insets = useSafeAreaInsets();
   const [transitioning, setTransitioning] = useState(false);
   const rafIds = useRef([]);
+  // Track which tabs have been visited so we only show the loading screen the first time.
+  // 'Home' is the initial route so it's already loaded.
+  const loadedTabs = useRef(new Set(['Home']));
 
   useEffect(() => {
     return () => {
@@ -70,6 +73,16 @@ function MainTabNavigator({ onOpenAddModal }) {
     const state = navigation.getState();
     const activeRoute = state.routes[state.index];
     if (activeRoute.key === route.key) return; // already on this tab
+
+    // If the tab has already been loaded, just navigate immediately without overlay
+    if (loadedTabs.current.has(route.name)) {
+      e.preventDefault();
+      navigation.navigate(route.name);
+      return;
+    }
+
+    // Mark tab as loaded for future visits
+    loadedTabs.current.add(route.name);
 
     e.preventDefault();
     setTransitioning(true);
