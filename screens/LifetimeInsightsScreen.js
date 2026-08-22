@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, BackHandler } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
-import { useSessionHistory } from '../context/SessionContext';
+import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import { computeLifetimeInsights } from '../utils/lifetimeInsightsEngine';
@@ -54,11 +54,23 @@ const GAME_ICONS = {
 };
 
 export default function LifetimeInsightsScreen({ navigation }) {
-  const { sessionHistory } = useSessionHistory();
+  const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$', proUnlocked } = usePreferences();
   const { user } = useAuth();
   const isLocked = !proUnlocked;
   const insets = useSafeAreaInsets();
+
+  // Without this, Android hardware back on this screen falls through to
+  // whatever BackHandler listener is still registered on a screen mounted
+  // underneath it in the stack (e.g. an in-progress game session) — see the
+  // same fix on AuthScreen.js.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigation.goBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [navigation]);
 
   // Multi-pass scan (game breakdown, streaks, day-of-week, volatility, leak
   // report) over the full session history — memoized so it only recomputes

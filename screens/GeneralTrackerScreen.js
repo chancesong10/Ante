@@ -14,11 +14,14 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
+import GuestModeBanner from '../components/GuestModeBanner';
 
 export default function GeneralTrackerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { currencySymbol = '$' } = usePreferences();
+  const { user } = useAuth();
   const {
     activeSession,
     startSession,
@@ -130,6 +133,8 @@ export default function GeneralTrackerScreen({ navigation }) {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {!user && <GuestModeBanner />}
+
         <View style={[styles.statsBox, SHADOWS.card]}>
           <Text style={styles.statsSubtext}>PROJECTED NET OUTCOME</Text>
           <Text

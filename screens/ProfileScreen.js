@@ -18,7 +18,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { useSessionHistory } from '../context/SessionContext';
+import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import { getOrCreateDeviceId } from '../services/storageService';
@@ -31,7 +31,7 @@ const CURRENCY_OPTIONS = [
 ];
 
 export default function ProfileScreen({ navigation }) {
-  const { sessionHistory } = useSessionHistory();
+  const { sessionHistory } = useVisibleSessionHistory();
   const { user, profile, signOut } = useAuth();
   const insets = useSafeAreaInsets();
   const {
