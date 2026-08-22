@@ -301,10 +301,12 @@ function AppContent() {
       );
       totalBets = allHands.length;
       netOutcome = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
-    } else if (activeSession.buyIn !== null) {
+    } else if (activeSession.buyIn !== null && activeSession.cashOut !== null) {
+      // Until cash-out is entered there's no known live balance for a
+      // buy-in/cash-out session, so leave netOutcome at 0 rather than
+      // treating the un-entered cash-out as a total loss of the buy-in.
       totalBets = 1;
-      const cashOut = activeSession.cashOut !== null ? activeSession.cashOut : 0;
-      netOutcome = cashOut - activeSession.buyIn;
+      netOutcome = activeSession.cashOut - activeSession.buyIn;
     }
 
     return { netOutcome, totalBets, durationMinutes };

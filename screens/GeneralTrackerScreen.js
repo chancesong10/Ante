@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,6 +92,14 @@ export default function GeneralTrackerScreen({ navigation }) {
       onCancel: closeAlertModal,
     });
   };
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleDiscardPress();
+      return true;
+    });
+    return () => sub.remove();
+  }, [hasValidNumbers, parsedBuyIn, parsedCashOut]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
