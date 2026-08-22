@@ -1,6 +1,6 @@
 # Ante Terms of Service
 
-**Last Updated: August 20, 2026**
+**Last Updated: August 21, 2026**
 
 ## 1. Agreement to Terms
 
@@ -26,7 +26,7 @@ Ante includes optional tools — including a configurable stop-loss alert and ac
 
 ## 6. Your account and data
 
-Ante currently requires no account and stores your data locally on your device, as described in our [Privacy Policy](./PRIVACY_POLICY.md). You are responsible for safeguarding access to your own device. Ante is not responsible for data loss resulting from device loss, damage, factory reset, or app uninstallation — we recommend using the in-app export feature periodically if your history matters to you.
+Ante can be used without an account, in which case your data stays local to your device. You may optionally create an account to sync your data across devices; if you do, your session data is also stored on our server as described in our [Privacy Policy](./PRIVACY_POLICY.md). You are responsible for safeguarding access to your own device and account. Ante is not responsible for data loss resulting from device loss, damage, factory reset, app uninstallation, or loss of access to your account.
 
 ## 7. Acceptable use
 

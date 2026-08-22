@@ -55,9 +55,10 @@ export function useSyncEngine() {
         return isSyncable(s);
       });
 
-      await pushSessions(userId, toPush);
-      markSessionsSynced(toPush.map((s) => s.id), userId);
-      knownIds.current = new Set([...cloudSessions.map((s) => s.id), ...toPush.map((s) => s.id)]);
+      const { error } = await pushSessions(userId, toPush);
+      const pushedIds = error ? [] : toPush.map((s) => s.id);
+      if (pushedIds.length) markSessionsSynced(pushedIds, userId);
+      knownIds.current = new Set([...cloudSessions.map((s) => s.id), ...pushedIds]);
     })();
   }, [user, isLoaded, sessionHistory, mergeSessionsFromCloud, markSessionsSynced]);
 
@@ -79,16 +80,22 @@ export function useSyncEngine() {
     const newSessions = eligible.filter((s) => !knownIds.current.has(s.id));
     const removedIds = [...knownIds.current].filter((id) => !currentIds.has(id));
 
-    knownIds.current = currentIds;
+    // Only mark ids "known" (skip on future diffs) once we've confirmed they
+    // were actually pushed — a failed push must stay eligible for retry.
+    knownIds.current = new Set([...knownIds.current].filter((id) => currentIds.has(id)));
     if (!newSessions.length && !removedIds.length) return;
 
     (async () => {
       if (newSessions.length) {
-        await pushSessions(userId, newSessions);
-        markSessionsSynced(newSessions.map((s) => s.id), userId);
+        const { error } = await pushSessions(userId, newSessions);
+        if (!error) {
+          markSessionsSynced(newSessions.map((s) => s.id), userId);
+          newSessions.forEach((s) => knownIds.current.add(s.id));
+        }
       }
       if (removedIds.length) {
-        await deleteCloudSessions(userId, removedIds);
+        const { error } = await deleteCloudSessions(userId, removedIds);
+        if (error) removedIds.forEach((id) => knownIds.current.add(id));
       }
     })();
   }, [sessionHistory, isLoaded, user, markSessionsSynced]);
