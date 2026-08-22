@@ -36,9 +36,9 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 
   // Dynamic calculations from real session history
   const totalSessions = sessionHistory.length;
-  const totalNet = sessionHistory.reduce((sum, s) => sum + s.netProfit, 0);
-  const totalWins = sessionHistory.reduce((sum, s) => sum + s.wins, 0);
-  const totalLosses = sessionHistory.reduce((sum, s) => sum + s.losses, 0);
+  const totalNet = sessionHistory.reduce((sum, s) => sum + (s.netProfit || 0), 0);
+  const totalWins = sessionHistory.reduce((sum, s) => sum + (s.wins || 0), 0);
+  const totalLosses = sessionHistory.reduce((sum, s) => sum + (s.losses || 0), 0);
   const winRate =
     totalWins + totalLosses > 0
       ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
