@@ -3,6 +3,7 @@
     "name": "Ante",
     "slug": "Ante",
     "version": "1.0.0",
+    "scheme": "ante",
     "orientation": "portrait",
     "icon": "./assets/App Icon.png",
     "userInterfaceStyle": "dark",
@@ -19,6 +20,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }

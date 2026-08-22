@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import * as Crypto from 'expo-crypto';
 import {
   loadSessionHistory,
   saveSessionHistory,
@@ -103,7 +104,7 @@ export function SessionProvider({ children }) {
 
   const startSession = useCallback((gameType = 'Blackjack') => {
     const newSession = {
-      id: Date.now().toString(),
+      id: Crypto.randomUUID(),
       gameType,
       startTime: Date.now(),
       hands: [],
@@ -256,6 +257,32 @@ export function SessionProvider({ children }) {
     setSessionHistory([]);
   }, []);
 
+  // Unions cloud sessions pulled for the current account into local history,
+  // deduped by id (the same client-generated UUID on both sides). Existing
+  // local records win on conflict since they're the more recently-touched
+  // copy; sessions are immutable once completed so this is a plain union,
+  // never a field-level merge.
+  const mergeSessionsFromCloud = useCallback((cloudSessions) => {
+    if (!cloudSessions?.length) return;
+    setSessionHistory((prev) => {
+      const knownIds = new Set(prev.map((s) => s.id));
+      const additions = cloudSessions.filter((s) => !knownIds.has(s.id));
+      if (!additions.length) return prev;
+      return [...prev, ...additions].sort((a, b) => b.startTime - a.startTime);
+    });
+  }, []);
+
+  // Stamps synced sessions with the account they now belong to, so a later
+  // login from a *different* account on this device knows not to re-push
+  // (or re-attribute) sessions that already belong to someone else.
+  const markSessionsSynced = useCallback((sessionIds, userId) => {
+    if (!sessionIds?.length) return;
+    const idSet = new Set(sessionIds);
+    setSessionHistory((prev) =>
+      prev.map((s) => (idSet.has(s.id) ? { ...s, syncedUserId: userId } : s))
+    );
+  }, []);
+
   // Each recomputed only when its own underlying data actually changes, so
   // a screen subscribed to just one of the two contexts doesn't re-render
   // when the other one updates.
@@ -288,8 +315,10 @@ export function SessionProvider({ children }) {
       isLoaded,
       deleteSession,
       clearAllSessions,
+      mergeSessionsFromCloud,
+      markSessionsSynced,
     }),
-    [sessionHistory, isLoaded, deleteSession, clearAllSessions]
+    [sessionHistory, isLoaded, deleteSession, clearAllSessions, mergeSessionsFromCloud, markSessionsSynced]
   );
 
   return (
