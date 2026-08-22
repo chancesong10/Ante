@@ -8,6 +8,7 @@ import {
   ScrollView,
   Modal,
   Dimensions,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -238,7 +239,7 @@ export default function PokerScreen({ navigation }) {
   };
 
   const handleHeroDirectBetChange = (text) => {
-    const val = parseFloat(text) || 0;
+    const val = Math.max(0, parseFloat(text) || 0);
     setStreetBets((prev) => ({
       ...prev,
       [currentStreetKey]: val,
@@ -273,7 +274,7 @@ export default function PokerScreen({ navigation }) {
   };
 
   const handleOpponentDirectBetChange = (id, text) => {
-    const val = parseFloat(text) || 0;
+    const val = Math.max(0, parseFloat(text) || 0);
     setOpponents((prev) =>
       prev.map((o) =>
         o.id === id ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: val } } : o
@@ -481,6 +482,43 @@ export default function PokerScreen({ navigation }) {
       onCancel: closeAlertModal,
     });
   };
+
+  // Mirrors whichever on-screen back button is showing for the current
+  // viewMode/setupStep, so the Android hardware back button can't bypass
+  // the same discard/cancel confirmations the UI back arrow already shows.
+  useEffect(() => {
+    const handleHardwareBack = () => {
+      if (viewMode === 'hand') {
+        setAlertModal({
+          variant: 'danger',
+          icon: 'close-circle-outline',
+          title: 'Cancel This Hand?',
+          message: 'Progress for this hand will be lost.',
+          confirmText: 'Cancel Hand',
+          cancelText: 'Keep Tracking',
+          onConfirm: () => {
+            closeAlertModal();
+            setViewMode('dashboard');
+          },
+          onCancel: closeAlertModal,
+        });
+        return true;
+      }
+      if (viewMode === 'setup' && setupStep === 'blinds') {
+        setSetupStep('players');
+        return true;
+      }
+      if (viewMode === 'setup') {
+        navigation.navigate('MainTabs', { screen: 'Home' });
+        return true;
+      }
+      handleDiscardPress();
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
+    return () => sub.remove();
+  }, [viewMode, setupStep, activeSession]);
 
   // --- Session Stats Computation ---
   const sessionHands = activeSession?.hands || [];
