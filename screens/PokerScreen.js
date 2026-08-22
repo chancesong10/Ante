@@ -16,8 +16,10 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAuth } from '../context/AuthContext';
 import SwipeableRow from '../components/SwipeableRow';
 import ConfirmModal from '../components/ConfirmModal';
+import GuestModeBanner from '../components/GuestModeBanner';
 
 const STREETS = [
   { key: 'preflop', label: 'Pre-Flop', short: 'Pre' },
@@ -36,6 +38,7 @@ const BLIND_MODES = [
 export default function PokerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { currencySymbol = '$' } = usePreferences();
+  const { user } = useAuth();
   const {
     activeSession,
     startSession,
@@ -1309,6 +1312,8 @@ export default function PokerScreen({ navigation }) {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {!user && <GuestModeBanner />}
+
         {/* Session Net Banner Card */}
         <View style={[styles.statsBox, SHADOWS.card]}>
           <View style={styles.blindsHeaderPill}>

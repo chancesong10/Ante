@@ -12,8 +12,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { useActiveSession, useSessionHistory } from '../context/SessionContext';
+import { useActiveSession } from '../context/SessionContext';
+import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAuth } from '../context/AuthContext';
+import GuestModeBanner from '../components/GuestModeBanner';
 
 const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
   if (gameType === 'Poker') {
@@ -30,8 +33,9 @@ const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
 
 export default function HomeScreen({ navigation, onOpenAddModal }) {
   const { activeSession, endActiveSession } = useActiveSession();
-  const { sessionHistory } = useSessionHistory();
+  const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
 
   // Dynamic calculations from real session history
@@ -100,6 +104,8 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
             </View>
           </View>
         </View>
+
+        {!user && <GuestModeBanner />}
 
         {/* ACTIVE SESSION CARD (Rendered whenever a session is active) */}
         {activeSession && (

@@ -14,6 +14,8 @@ import { moderateScale } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
+import { useAuth } from '../context/AuthContext';
+import GuestModeBanner from '../components/GuestModeBanner';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
 const BET_TYPES = ['Moneyline', 'Spread', 'Total', 'Parlay', 'Prop'];
@@ -32,6 +34,7 @@ const calcPayout = (stake, americanOdds) => {
 export default function SportsBettingScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { currencySymbol = '$', quickChipsEnabled } = usePreferences();
+  const { user } = useAuth();
   const {
     activeSession,
     startSession,
@@ -162,6 +165,8 @@ export default function SportsBettingScreen({ navigation }) {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {!user && <GuestModeBanner />}
+
         <View style={[styles.statsBox, SHADOWS.card]}>
           <Text style={styles.statsSubtext}>SESSION NET OUTCOME</Text>
           <Text

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,19 @@ export default function AuthScreen({ navigation }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  // Without this, Android hardware back on this screen falls through to
+  // whatever BackHandler listener is still registered on a screen mounted
+  // underneath it in the stack (e.g. an in-progress Poker/Blackjack session
+  // reached via an Insights sign-in gate) — silently discarding that
+  // session instead of just closing this screen.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigation.goBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [navigation]);
 
   const resetFeedback = () => {
     setError('');

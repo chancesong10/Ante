@@ -12,12 +12,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
-import { useSessionHistory } from '../context/SessionContext';
+import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import BankrollLineChart from '../components/BankrollLineChart';
 
 export default function AnalyticsScreen({ navigation }) {
-  const { sessionHistory } = useSessionHistory();
+  const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
 

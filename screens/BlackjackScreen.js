@@ -14,11 +14,14 @@ import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import SwipeableRow from '../components/SwipeableRow';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAuth } from '../context/AuthContext';
+import GuestModeBanner from '../components/GuestModeBanner';
 
 const emptyHand = () => ({ betAmount: '', doubled: false, blackjack: false, outcome: null });
 
 export default function BlackjackScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const {
     activeSession,
     startSession,
@@ -286,6 +289,8 @@ export default function BlackjackScreen({ navigation }) {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {!user && <GuestModeBanner />}
+
         <View style={[styles.statsBox, SHADOWS.card]}>
           <Text style={styles.statsSubtext}>SESSION NET OUTCOME</Text>
           <Text
