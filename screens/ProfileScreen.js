@@ -19,6 +19,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAuth } from '../context/AuthContext';
 import { getOrCreateDeviceId } from '../services/storageService';
 
 const CURRENCY_OPTIONS = [
@@ -30,6 +31,7 @@ const CURRENCY_OPTIONS = [
 
 export default function ProfileScreen({ navigation }) {
   const { sessionHistory } = useSessionHistory();
+  const { user, profile, signOut } = useAuth();
   const insets = useSafeAreaInsets();
   const {
     quickChipsEnabled = true,
@@ -52,6 +54,19 @@ export default function ProfileScreen({ navigation }) {
   const [tempStopLossAlert, setTempStopLossAlert] = useState(stopLossAlert);
   const [tempLossLimit, setTempLossLimit] = useState(String(stopLossAmount));
   const [copiedSeed, setCopiedSeed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('ProfileScreen: sign out failed', err);
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -170,31 +185,63 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Stake-Style Identity Hero Card */}
+        {/* Identity Hero Card — real account once signed in, anonymous otherwise */}
         <View style={[styles.profileCard, SHADOWS.card]}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarCircle}>
               <Ionicons name="person" size={moderateScale(28)} color={COLORS.primary} />
             </View>
-            <View style={styles.onlineBadge}>
-              <View style={styles.onlineDot} />
-            </View>
+            {!!user && (
+              <View style={styles.onlineBadge}>
+                <View style={styles.onlineDot} />
+              </View>
+            )}
           </View>
 
           <View style={styles.profileMeta}>
             <View style={styles.userNameRow}>
-              <Text style={styles.userName}>Ante Highroller</Text>
-              <Ionicons name="checkmark-circle" size={16} color={COLORS.accentCyan} style={{ marginLeft: 5 }} />
+              <Text style={styles.userName}>{profile?.username || 'Ante Highroller'}</Text>
+              {!!user && (
+                <Ionicons name="checkmark-circle" size={16} color={COLORS.accentCyan} style={{ marginLeft: 5 }} />
+              )}
             </View>
-            <Text style={styles.userHandle}>@ante_vault_{deviceId.slice(-4)}</Text>
+            <Text style={styles.userHandle} numberOfLines={1}>
+              {user ? profile?.email || user.email : `@ante_vault_${deviceId.slice(-4)}`}
+            </Text>
             <View style={styles.rankBadgeRow}>
               <View style={styles.tierBadge}>
-                <Ionicons name="sparkles" size={11} color={COLORS.primary} style={{ marginRight: 4 }} />
-                <Text style={styles.tierBadgeText}>VERIFIED HIGH ROLLER</Text>
+                <Ionicons
+                  name={user ? 'sparkles' : 'person-outline'}
+                  size={11}
+                  color={COLORS.primary}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.tierBadgeText}>{user ? 'VERIFIED HIGH ROLLER' : 'NOT SIGNED IN'}</Text>
               </View>
             </View>
           </View>
         </View>
+
+        {user ? (
+          <TouchableOpacity
+            style={[styles.signOutButton, SHADOWS.card]}
+            activeOpacity={0.8}
+            onPress={handleSignOut}
+            disabled={signingOut}
+          >
+            <Ionicons name="log-out-outline" size={16} color={COLORS.danger} />
+            <Text style={styles.signOutButtonText}>{signingOut ? 'Signing Out…' : 'Sign Out'}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.signInButton, SHADOWS.card]}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('Auth')}
+          >
+            <Ionicons name="log-in-outline" size={16} color={COLORS.textDark} />
+            <Text style={styles.signInButtonText}>Sign In / Create Account</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 2x2 High-Impact Bankroll Vault Grid */}
         <View style={styles.sectionHeaderRow}>
@@ -928,6 +975,38 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(10),
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  signInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(13),
+    marginBottom: SPACING.lg,
+  },
+  signInButtonText: {
+    color: COLORS.textDark,
+    fontWeight: '700',
+    fontSize: fluidFont(14),
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    paddingVertical: moderateScale(13),
+    marginBottom: SPACING.lg,
+  },
+  signOutButtonText: {
+    color: COLORS.danger,
+    fontWeight: '700',
+    fontSize: fluidFont(14),
   },
 
   // 2x2 Vault Grid

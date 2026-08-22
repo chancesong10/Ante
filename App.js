@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PreferencesProvider, usePreferences } from './context/PreferencesContext';
+import { AuthProvider } from './context/AuthContext';
+import { useSyncEngine } from './context/SyncContext';
 
 import PokerScreen from './screens/PokerScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -22,6 +24,7 @@ import PokerInsightsScreen from './screens/PokerInsightsScreen';
 import SportsBettingInsightsScreen from './screens/SportsBettingInsightsScreen';
 import LifetimeInsightsScreen from './screens/LifetimeInsightsScreen';
 import LegalScreen from './screens/LegalScreen';
+import AuthScreen from './screens/AuthScreen';
 
 import StartSessionModal from './components/StartSessionModal';
 import ResponsibleGamingAlertModal from './components/ResponsibleGamingAlertModal';
@@ -261,6 +264,7 @@ function AppContent() {
   const navigationRef = useNavigationContainerRef();
   const { activeSession, endActiveSession } = useActiveSession();
   const { isLoaded: isSessionLoaded } = useSessionHistory();
+  useSyncEngine();
   const {
     stopLossAlert = false,
     stopLossAmount = 250,
@@ -378,6 +382,7 @@ function AppContent() {
           <Stack.Screen name="SportsBettingInsights" component={SportsBettingInsightsScreen} />
           <Stack.Screen name="LifetimeInsights" component={LifetimeInsightsScreen} />
           <Stack.Screen name="Legal" component={LegalScreen} />
+          <Stack.Screen name="Auth" component={AuthScreen} options={{ presentation: 'modal' }} />
         </Stack.Navigator>
       </NavigationContainer>
 
@@ -423,11 +428,13 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <PreferencesProvider>
-          <SessionProvider>
-            <AppContent />
-          </SessionProvider>
-        </PreferencesProvider>
+        <AuthProvider>
+          <PreferencesProvider>
+            <SessionProvider>
+              <AppContent />
+            </SessionProvider>
+          </PreferencesProvider>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

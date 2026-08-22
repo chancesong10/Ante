@@ -7,8 +7,10 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAuth } from '../context/AuthContext';
 import { computeLifetimeInsights } from '../utils/lifetimeInsightsEngine';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
+import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 
@@ -54,6 +56,7 @@ const GAME_ICONS = {
 export default function LifetimeInsightsScreen({ navigation }) {
   const { sessionHistory } = useSessionHistory();
   const { currencySymbol = '$', proUnlocked } = usePreferences();
+  const { user } = useAuth();
   const isLocked = !proUnlocked;
   const insets = useSafeAreaInsets();
 
@@ -157,6 +160,10 @@ export default function LifetimeInsightsScreen({ navigation }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
+
+  if (!user) {
+    return <AuthGateScreen navigation={navigation} />;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

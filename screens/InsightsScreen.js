@@ -7,8 +7,10 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useSessionHistory } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAuth } from '../context/AuthContext';
 import { computeInsights } from '../utils/statsEngine';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
+import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 
@@ -59,6 +61,7 @@ export default function InsightsScreen({ route, navigation }) {
   const { gameType } = route.params;
   const { sessionHistory } = useSessionHistory();
   const { currencySymbol = '$', proUnlocked } = usePreferences();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const isLocked = !proUnlocked;
 
@@ -206,6 +209,10 @@ export default function InsightsScreen({ route, navigation }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
+
+  if (!user) {
+    return <AuthGateScreen navigation={navigation} />;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
