@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useSessionHistory } from '../context/SessionContext';
@@ -140,7 +141,8 @@ export default function ProfileScreen({ navigation }) {
     return prefix ? `${sign}${formatted}` : formatted;
   };
 
-  const handleCopySeed = () => {
+  const handleCopySeed = async () => {
+    await Clipboard.setStringAsync(deviceId);
     setCopiedSeed(true);
     setTimeout(() => setCopiedSeed(false), 2500);
   };

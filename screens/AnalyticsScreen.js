@@ -45,11 +45,11 @@ export default function AnalyticsScreen({ navigation }) {
     pushPercent,
   } = useMemo(() => {
     const totalSessions = sessionHistory.length;
-    const totalHands = sessionHistory.reduce((sum, s) => sum + s.totalHands, 0);
-    const totalNetProfit = sessionHistory.reduce((sum, s) => sum + s.netProfit, 0);
-    const totalWins = sessionHistory.reduce((sum, s) => sum + s.wins, 0);
-    const totalLosses = sessionHistory.reduce((sum, s) => sum + s.losses, 0);
-    const totalPushes = sessionHistory.reduce((sum, s) => sum + s.pushes, 0);
+    const totalHands = sessionHistory.reduce((sum, s) => sum + (s.totalHands || 0), 0);
+    const totalNetProfit = sessionHistory.reduce((sum, s) => sum + (s.netProfit || 0), 0);
+    const totalWins = sessionHistory.reduce((sum, s) => sum + (s.wins || 0), 0);
+    const totalLosses = sessionHistory.reduce((sum, s) => sum + (s.losses || 0), 0);
+    const totalPushes = sessionHistory.reduce((sum, s) => sum + (s.pushes || 0), 0);
 
     const winRate =
       totalWins + totalLosses > 0
