@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, getGameColor, getGameColorMuted } from '../constants/theme';
 import { moderateScale, TOUCH_TARGET } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -10,7 +10,7 @@ import SwipeableRow from '../components/SwipeableRow';
 
 const GAME_TYPE_ORDER = ['Blackjack', 'Poker', 'Sports Betting', 'General'];
 
-const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
+const renderGameIcon = (gameType, size = 18, color = getGameColor(gameType)) => {
   if (gameType === 'Poker') return <Ionicons name="cash-outline" size={size} color={color} />;
   if (gameType === 'Sports Betting') return <Ionicons name="basketball-outline" size={size} color={color} />;
   if (gameType === 'General') return <Ionicons name="dice-outline" size={size} color={color} />;
@@ -82,8 +82,13 @@ export default function HistoryScreen({ navigation }) {
             onPress={() => toggleExpand(item.id)}
             style={styles.cardHeader}
           >
-            <View style={styles.iconCircle}>
-              {renderGameIcon(item.gameType, 18, COLORS.primary)}
+            <View
+              style={[
+                styles.iconCircle,
+                { backgroundColor: getGameColorMuted(item.gameType) },
+              ]}
+            >
+              {renderGameIcon(item.gameType, 18)}
             </View>
 
             <View style={styles.sessionMeta}>
@@ -595,6 +600,7 @@ const styles = StyleSheet.create({
   netProfitText: {
     fontSize: 16,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   durationRow: {
     flexDirection: 'row',
