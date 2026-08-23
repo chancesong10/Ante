@@ -10,12 +10,13 @@ const AuthContext = createContext();
 const redirectTo = Linking.createURL('');
 
 async function exchangeCodeFromUrl(url) {
-  if (!url) return;
+  if (!url) return null;
   const { queryParams } = Linking.parse(url);
   const code = queryParams?.code;
-  if (!code) return;
+  if (!code) return null;
   try {
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data } = await supabase.auth.exchangeCodeForSession(code);
+    return data ?? null;
   } catch (err) {
     // A code can arrive twice (once via openAuthSessionAsync's return value,
     // once via the OS-level deep link event) — the second exchange is
@@ -23,7 +24,46 @@ async function exchangeCodeFromUrl(url) {
     if (!/code verifier|invalid request|already/i.test(err?.message || '')) {
       console.error('AuthContext: failed to exchange code for session', err);
     }
+    return null;
   }
+}
+
+// Supabase sets both timestamps to the moment the account row is created;
+// last_sign_in_at only starts diverging from created_at on the *next*
+// login. A wide-ish threshold absorbs the network/redirect round-trip time
+// of the OAuth flow itself without misclassifying a real second login.
+const NEW_USER_WINDOW_MS = 15000;
+function isNewAuthUser(user) {
+  if (!user?.created_at || !user?.last_sign_in_at) return false;
+  return Math.abs(new Date(user.last_sign_in_at) - new Date(user.created_at)) < NEW_USER_WINDOW_MS;
+}
+
+// The OAuth code that comes back from the Google flow gets exchanged twice —
+// once from signInWithGoogle's own return value, once from the separate
+// deep-link listener above that exists to catch email-confirmation links.
+// Codes are single-use, so exactly one of those two exchange calls actually
+// saves the session; the other fails harmlessly. That means whichever call
+// signInWithGoogle itself makes can be the *loser* of that race, in which
+// case trusting its own return value for isNewUser would silently and
+// incorrectly report false every time it loses. Subscribing directly at the
+// SDK level instead catches the SIGNED_IN event regardless of which of the
+// two calls actually won.
+function waitForNextSignIn(timeoutMs = 12000) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (settled || event !== 'SIGNED_IN' || !newSession?.user) return;
+      settled = true;
+      sub.subscription.unsubscribe();
+      resolve(newSession.user);
+    });
+    setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      sub.subscription.unsubscribe();
+      resolve(null);
+    }, timeoutMs);
+  });
 }
 
 export function AuthProvider({ children }) {
@@ -108,10 +148,17 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
 
+    // Subscribed before the exchange races start, so it can't miss the
+    // SIGNED_IN event no matter which of the two exchange calls wins it.
+    const signedInUserPromise = waitForNextSignIn();
+
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type === 'success' && result.url) {
       await exchangeCodeFromUrl(result.url);
     }
+
+    const signedInUser = await signedInUserPromise;
+    return { isNewUser: isNewAuthUser(signedInUser) };
   }, []);
 
   const signOut = useCallback(async () => {

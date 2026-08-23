@@ -209,7 +209,7 @@ export default function ProfileScreen({ navigation }) {
             </View>
             {!!user && (
               <Text style={styles.userHandle} numberOfLines={1}>
-                @{profile?.username || user?.email?.split('@')[0]}
+                {user?.email}
               </Text>
             )}
             <View style={styles.rankBadgeRow}>

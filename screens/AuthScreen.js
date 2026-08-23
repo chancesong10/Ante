@@ -19,7 +19,7 @@ import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../cons
 import { useAuth } from '../context/AuthContext';
 
 export default function AuthScreen({ navigation }) {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } = useAuth();
+  const { user, signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, updateUsername } = useAuth();
 
   const [mode, setMode] = useState('signIn'); // 'signIn' | 'signUp'
   const [email, setEmail] = useState('');
@@ -29,6 +29,28 @@ export default function AuthScreen({ navigation }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  // Set right after a signUp submit so this screen knows a later user
+  // appearing (via the email-confirmation deep link, handled entirely
+  // inside AuthContext) is that confirmation completing, not some other
+  // sign-in — see the effect below.
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  // Set when signInWithGoogle reports a brand-new account: Google sign-in
+  // doesn't collect a username the way the email form does, so this screen
+  // has to ask for one before the account is otherwise "done" signing in.
+  const [needsUsername, setNeedsUsername] = useState(false);
+  const [pendingUsername, setPendingUsername] = useState('');
+  const [usernameLoading, setUsernameLoading] = useState(false);
+
+  // Lands the user on Profile once a session actually appears, instead of
+  // leaving them stranded on this screen — covers both the email-confirm
+  // deep link (session appears while this screen is still showing the
+  // "check your email" message) and, once needsUsername resolves, Google.
+  useEffect(() => {
+    if (user && awaitingConfirmation) {
+      setAwaitingConfirmation(false);
+      navigation.navigate('MainTabs', { screen: 'Profile' });
+    }
+  }, [user, awaitingConfirmation, navigation]);
 
   // Without this, Android hardware back on this screen falls through to
   // whatever BackHandler listener is still registered on a screen mounted
@@ -37,11 +59,15 @@ export default function AuthScreen({ navigation }) {
   // session instead of just closing this screen.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Swallow back during the mandatory post-Google-signup username step —
+      // there's nowhere else in the app to set a username afterward, so
+      // letting them back out here would strand them on the auto-generated one.
+      if (needsUsername) return true;
       navigation.goBack();
       return true;
     });
     return () => sub.remove();
-  }, [navigation]);
+  }, [navigation, needsUsername]);
 
   const resetFeedback = () => {
     setError('');
@@ -59,7 +85,10 @@ export default function AuthScreen({ navigation }) {
     try {
       if (mode === 'signUp') {
         await signUpWithEmail(email.trim(), password, username.trim() || undefined);
-        setMessage('Account created — check your email to confirm before signing in.');
+        setPassword('');
+        setMode('signIn');
+        setAwaitingConfirmation(true);
+        setMessage('Account created — check your email to confirm. You\'ll be signed in automatically once you do.');
       } else {
         await signInWithEmail(email.trim(), password);
         navigation.goBack();
@@ -75,12 +104,33 @@ export default function AuthScreen({ navigation }) {
     resetFeedback();
     setGoogleLoading(true);
     try {
-      await signInWithGoogle();
-      navigation.goBack();
+      const { isNewUser } = await signInWithGoogle();
+      if (isNewUser) {
+        setNeedsUsername(true);
+      } else {
+        navigation.goBack();
+      }
     } catch (err) {
       setError(err?.message || 'Google sign-in failed. Try again.');
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleSetUsername = async () => {
+    resetFeedback();
+    if (!pendingUsername.trim()) {
+      setError('Enter a username to continue.');
+      return;
+    }
+    setUsernameLoading(true);
+    try {
+      await updateUsername(pendingUsername.trim());
+      navigation.navigate('MainTabs', { screen: 'Profile' });
+    } catch (err) {
+      setError(err?.message || 'Could not save username. Try again.');
+    } finally {
+      setUsernameLoading(false);
     }
   };
 
@@ -107,15 +157,17 @@ export default function AuthScreen({ navigation }) {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            {mode === 'signUp' ? 'Create Account' : 'Sign In'}
+            {needsUsername ? 'Choose a Username' : mode === 'signUp' ? 'Create Account' : 'Sign In'}
           </Text>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={TOUCH_TARGET.hitSlop}
-            style={styles.closeButton}
-          >
-            <Ionicons name="close" size={24} color={COLORS.textSecondary} />
-          </TouchableOpacity>
+          {!needsUsername && (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              hitSlop={TOUCH_TARGET.hitSlop}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView
@@ -123,6 +175,42 @@ export default function AuthScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {needsUsername ? (
+            <>
+              <Text style={styles.subtitle}>
+                You're signed in with Google — pick a username before you continue.
+              </Text>
+
+              <View style={styles.inputBlock}>
+                <Text style={styles.inputLabel}>Username</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={pendingUsername}
+                  onChangeText={setPendingUsername}
+                  placeholderTextColor={COLORS.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoFocus
+                />
+              </View>
+
+              {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                activeOpacity={0.85}
+                onPress={handleSetUsername}
+                disabled={usernameLoading}
+              >
+                {usernameLoading ? (
+                  <ActivityIndicator color={COLORS.textDark} />
+                ) : (
+                  <Text style={styles.submitButtonText}>Continue</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+          <>
           <Text style={styles.subtitle}>
             {mode === 'signUp'
               ? 'Sync your session history across devices and unlock Insights.'
@@ -158,7 +246,6 @@ export default function AuthScreen({ navigation }) {
                 style={styles.textInput}
                 value={username}
                 onChangeText={setUsername}
-                placeholder="Ante Highroller"
                 placeholderTextColor={COLORS.textMuted}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -213,19 +300,22 @@ export default function AuthScreen({ navigation }) {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => {
-              resetFeedback();
-              setMode(mode === 'signUp' ? 'signIn' : 'signUp');
-            }}
-            style={styles.switchModeButton}
-          >
+          <View style={styles.switchModeButton}>
             <Text style={styles.switchModeText}>
-              {mode === 'signUp'
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Create one"}
+              {mode === 'signUp' ? 'Already have an account? ' : "Don't have an account? "}
+              <Text
+                style={styles.switchModeLink}
+                onPress={() => {
+                  resetFeedback();
+                  setMode(mode === 'signUp' ? 'signIn' : 'signUp');
+                }}
+              >
+                {mode === 'signUp' ? 'Sign in' : 'Create account'}
+              </Text>
             </Text>
-          </TouchableOpacity>
+          </View>
+          </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -357,5 +447,10 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: fluidFont(13),
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  switchModeLink: {
+    color: COLORS.accentCyan,
+    fontWeight: '700',
   },
 });
