@@ -31,12 +31,42 @@ const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
   return <MaterialCommunityIcons name="cards" size={size} color={color} />;
 };
 
+const TIPS = [
+  "In Blackjack, always split Aces and 8s.",
+  "Never play slots if you want to protect your bankroll.",
+  "In Poker, position is just as important as your cards.",
+  "Bankroll management is the key to surviving variance.",
+  "Don't chase your losses. Take a break if you're tilting.",
+  "In Sports Betting, always shop for the best lines.",
+  "Double down on 11, unless the dealer is showing an Ace.",
+  "Know when to walk away. Set a stop-loss before you play."
+];
+
 export default function HomeScreen({ navigation, onOpenAddModal }) {
   const { activeSession, endActiveSession } = useActiveSession();
   const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const insets = useSafeAreaInsets();
+
+  const hour = new Date().getHours();
+  let greetingTime = 'Good Evening';
+  if (hour < 12) greetingTime = 'Good Morning';
+  else if (hour < 18) greetingTime = 'Good Afternoon';
+
+  const firstName = user ? (profile?.username || user?.email?.split('@')[0] || 'Player') : 'Guest';
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const recentSessions = sessionHistory.filter(s => new Date(s.date) > oneWeekAgo);
+  const recentNet = recentSessions.reduce((sum, s) => sum + (s.netProfit || 0), 0);
+
+  const summaryText = recentSessions.length > 0
+    ? `You've played ${recentSessions.length} session${recentSessions.length === 1 ? '' : 's'} in the last 7 days, and you're ${recentNet >= 0 ? 'up' : 'down'} ${currencySymbol}${Math.abs(recentNet).toFixed(2)}.`
+    : "You haven't played any sessions in the last 7 days. Time to get back in the game!";
+
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const dailyTip = TIPS[dayOfYear % TIPS.length];
 
   // Dynamic calculations from real session history
   const totalSessions = sessionHistory.length;
@@ -103,6 +133,21 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
               <Text style={styles.headerSubtitle}>Session & Bankroll Tracker</Text>
             </View>
           </View>
+        </View>
+
+        {/* Greeting & Summary */}
+        <View style={styles.greetingContainer}>
+          <Text style={styles.greetingText}>{greetingTime}, {firstName}!</Text>
+          <Text style={styles.greetingSubtext}>{summaryText}</Text>
+        </View>
+
+        {/* Quick Tip Widget */}
+        <View style={[styles.tipCard, SHADOWS.card]}>
+          <View style={styles.tipHeader}>
+            <Ionicons name="bulb" size={moderateScale(18)} color={COLORS.primary} />
+            <Text style={styles.tipTitle}>Quick Tip</Text>
+          </View>
+          <Text style={styles.tipText}>{dailyTip}</Text>
         </View>
 
         {!user && <GuestModeBanner />}
@@ -356,6 +401,48 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 2,
+  },
+
+  // Greeting & Tips
+  greetingContainer: {
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.xs,
+  },
+  greetingText: {
+    fontSize: fluidFont(20),
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  greetingSubtext: {
+    fontSize: fluidFont(13),
+    color: COLORS.textSecondary,
+    lineHeight: fluidFont(18),
+  },
+  tipCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.cardPadding,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    marginBottom: SPACING.lg,
+  },
+  tipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+    gap: moderateScale(6),
+  },
+  tipTitle: {
+    fontSize: fluidFont(14),
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  tipText: {
+    fontSize: fluidFont(13),
+    color: COLORS.textSecondary,
+    lineHeight: fluidFont(18),
+    fontStyle: 'italic',
   },
 
   // Active Session Card
