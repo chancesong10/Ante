@@ -126,7 +126,7 @@ function MainTabNavigator({ onOpenAddModal }) {
             borderRadius: tabBarHeight / 2,
           },
         ],
-        tabBarActiveTintColor: COLORS.primary,
+        tabBarActiveTintColor: COLORS.accentCyan,
         tabBarInactiveTintColor: COLORS.tabBarInactive,
         tabBarLabelStyle: [
           styles.tabBarLabel,

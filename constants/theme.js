@@ -18,7 +18,7 @@ export const COLORS = {
   // High contrast text
   textPrimary: '#FAFAFA', // Zinc 50
   textSecondary: '#A1A1AA', // Zinc 400
-  textMuted: '#71717A', // Zinc 500
+  textMuted: '#8B8B94', // Lightened from Zinc 500 for AA contrast at small sizes
   textDark: '#09090B', // Used when text is ON a white primary background
   
   // Status & Utility Colors (Soft Mid-tone Pastels)
@@ -44,6 +44,25 @@ export const COLORS = {
   divider: '#27272A',
   overlay: 'rgba(0, 0, 0, 0.7)',
 };
+
+// Per-game accent colors, distinct from status colors (success/danger/warning/info)
+// so a session's game type reads at a glance in lists without relying on the icon glyph.
+export const GAME_COLORS = {
+  Poker: '#C084FC', // Violet 400
+  Blackjack: '#60A5FA', // Blue 400
+  'Sports Betting': '#38BDF8', // Sky 400 (matches existing accentCyan usage in that screen)
+  General: '#FB923C', // Orange 400
+};
+
+export const GAME_COLORS_MUTED = {
+  Poker: 'rgba(192, 132, 252, 0.12)',
+  Blackjack: 'rgba(96, 165, 250, 0.12)',
+  'Sports Betting': 'rgba(56, 189, 248, 0.12)',
+  General: 'rgba(251, 146, 60, 0.12)',
+};
+
+export const getGameColor = (gameType) => GAME_COLORS[gameType] || COLORS.primary;
+export const getGameColorMuted = (gameType) => GAME_COLORS_MUTED[gameType] || COLORS.primaryMuted;
 
 export const SHADOWS = {
   card: {

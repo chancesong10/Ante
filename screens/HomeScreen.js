@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
+  Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, getGameColor, getGameColorMuted } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import { useVisibleSessionHistory } from '../context/SyncContext';
@@ -18,7 +19,7 @@ import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 
-const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
+const renderGameIcon = (gameType, size = 18, color = getGameColor(gameType)) => {
   if (gameType === 'Poker') {
     return <Ionicons name="cash-outline" size={size} color={color} />;
   }
@@ -29,6 +30,31 @@ const renderGameIcon = (gameType, size = 18, color = COLORS.primary) => {
     return <Ionicons name="dice-outline" size={size} color={color} />;
   }
   return <MaterialCommunityIcons name="cards" size={size} color={color} />;
+};
+
+const LiveDot = () => {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 0.35,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  return <Animated.View style={[styles.liveDot, { opacity: pulse }]} />;
 };
 
 const TIPS = [
@@ -149,7 +175,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
           <View style={[styles.activeCard, SHADOWS.card]}>
             <View style={styles.activeHeader}>
               <View style={styles.liveBadge}>
-                <View style={styles.liveDot} />
+                <LiveDot />
                 <Text style={styles.liveBadgeText}>ACTIVE SESSION</Text>
               </View>
               <Text style={styles.activeGameName}>{activeSession.gameType}</Text>
@@ -317,8 +343,13 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                 activeOpacity={0.7}
                 onPress={() => navigation.navigate('History')}
               >
-                <View style={styles.sessionIconBox}>
-                  {renderGameIcon(session.gameType, moderateScale(18), COLORS.primary)}
+                <View
+                  style={[
+                    styles.sessionIconBox,
+                    { backgroundColor: getGameColorMuted(session.gameType) },
+                  ]}
+                >
+                  {renderGameIcon(session.gameType, moderateScale(18))}
                 </View>
                 <View style={styles.sessionInfo}>
                   <Text style={styles.sessionTitle}>{session.gameType} Session</Text>
@@ -386,7 +417,8 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     fontSize: fluidFont(24),
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 1.5,
     color: COLORS.textPrimary,
   },
   headerSubtitle: {
@@ -455,7 +487,7 @@ const styles = StyleSheet.create({
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primaryMuted,
+    backgroundColor: COLORS.accentCyanMuted,
     paddingHorizontal: moderateScale(8),
     paddingVertical: moderateScale(4),
     borderRadius: RADIUS.xs,
@@ -465,10 +497,10 @@ const styles = StyleSheet.create({
     width: moderateScale(6),
     height: moderateScale(6),
     borderRadius: moderateScale(3),
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentCyan,
   },
   liveBadgeText: {
-    color: COLORS.primary,
+    color: COLORS.accentCyan,
     fontSize: fluidFont(11),
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -494,8 +526,7 @@ const styles = StyleSheet.create({
   activeNetAmount: {
     fontSize: fluidFont(30),
     fontWeight: '700',
-    
-    
+    fontVariant: ['tabular-nums'],
   },
   activeHandsBadge: {
     alignItems: 'flex-end',
@@ -569,13 +600,12 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(38),
     fontWeight: '700',
     textAlign: 'center',
-    
-    
+    fontVariant: ['tabular-nums'],
     marginVertical: 4,
   },
   metricsRow: {
     flexDirection: 'row',
-    backgroundColor: COLORS.backgroundSecondary,
+    backgroundColor: COLORS.background,
     borderRadius: RADIUS.md,
     paddingVertical: moderateScale(12),
     paddingHorizontal: moderateScale(8),
@@ -601,8 +631,7 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(16),
     fontWeight: '700',
     color: COLORS.textPrimary,
-    
-    
+    fontVariant: ['tabular-nums'],
   },
   startSessionCta: {
     flexDirection: 'row',
@@ -703,8 +732,7 @@ const styles = StyleSheet.create({
   sessionNet: {
     fontSize: fluidFont(15),
     fontWeight: '700',
-    
-    
+    fontVariant: ['tabular-nums'],
   },
   sessionDuration: {
     fontSize: fluidFont(11),
