@@ -56,15 +56,6 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 
   const firstName = user ? (profile?.username || user?.email?.split('@')[0] || 'Player') : 'Guest';
 
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  const recentSessions = sessionHistory.filter(s => new Date(s.date) > oneWeekAgo);
-  const recentNet = recentSessions.reduce((sum, s) => sum + (s.netProfit || 0), 0);
-
-  const summaryText = recentSessions.length > 0
-    ? `You've played ${recentSessions.length} session${recentSessions.length === 1 ? '' : 's'} in the last 7 days, and you're ${recentNet >= 0 ? 'up' : 'down'} ${currencySymbol}${Math.abs(recentNet).toFixed(2)}.`
-    : "You haven't played any sessions in the last 7 days. Time to get back in the game!";
-
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
   const dailyTip = TIPS[dayOfYear % TIPS.length];
 
@@ -135,11 +126,14 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
           </View>
         </View>
 
-        {/* Greeting & Summary */}
-        <View style={styles.greetingContainer}>
-          <Text style={styles.greetingText}>{greetingTime}, {firstName}!</Text>
-          <Text style={styles.greetingSubtext}>{summaryText}</Text>
-        </View>
+        {!user && <GuestModeBanner />}
+
+        {/* Greeting */}
+        {!!user && (
+          <View style={styles.greetingContainer}>
+            <Text style={styles.greetingText}>{greetingTime}, {firstName}!</Text>
+          </View>
+        )}
 
         {/* Quick Tip Widget */}
         <View style={[styles.tipCard, SHADOWS.card]}>
@@ -149,8 +143,6 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
           </View>
           <Text style={styles.tipText}>{dailyTip}</Text>
         </View>
-
-        {!user && <GuestModeBanner />}
 
         {/* ACTIVE SESSION CARD (Rendered whenever a session is active) */}
         {activeSession && (
