@@ -202,14 +202,16 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={styles.profileMeta}>
             <View style={styles.userNameRow}>
-              <Text style={styles.userName}>{profile?.username || 'Ante Highroller'}</Text>
+              <Text style={styles.userName}>{user ? (profile?.username || 'Ante Highroller') : 'Guest'}</Text>
               {!!user && (
                 <Ionicons name="checkmark-circle" size={16} color={COLORS.accentCyan} style={{ marginLeft: 5 }} />
               )}
             </View>
-            <Text style={styles.userHandle} numberOfLines={1}>
-              {user ? profile?.email || user.email : `@ante_vault_${deviceId.slice(-4)}`}
-            </Text>
+            {!!user && (
+              <Text style={styles.userHandle} numberOfLines={1}>
+                @{profile?.username || user?.email?.split('@')[0]}
+              </Text>
+            )}
             <View style={styles.rankBadgeRow}>
               <View style={styles.tierBadge}>
                 <Ionicons

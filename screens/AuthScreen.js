@@ -172,8 +172,6 @@ export default function AuthScreen({ navigation }) {
               style={styles.textInput}
               value={email}
               onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={COLORS.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
@@ -186,8 +184,6 @@ export default function AuthScreen({ navigation }) {
               style={styles.textInput}
               value={password}
               onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={COLORS.textMuted}
               secureTextEntry
               autoCapitalize="none"
             />
