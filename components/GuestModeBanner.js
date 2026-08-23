@@ -13,7 +13,7 @@ export default function GuestModeBanner() {
   return (
     <View style={styles.banner}>
       <Ionicons name="warning" size={moderateScale(15)} color={COLORS.danger} style={styles.icon} />
-      <Text style={styles.text}>Not signed in — this data stays on this device only</Text>
+      <Text style={styles.text}>Not signed in — data stored locally until you sign in</Text>
     </View>
   );
 }
