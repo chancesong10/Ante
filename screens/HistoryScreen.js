@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated, Easing, Dimensions } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, getGameColor, getGameColorMuted } from '../constants/theme';
@@ -24,15 +25,102 @@ const renderFilterIcon = (gameType, size = 18, color = COLORS.primary) => {
   return renderGameIcon(gameType, size, color);
 };
 
+const AnimatedSessionItem = ({ children, isNew, gameType, isFocused }) => {
+  const animatedValue = useRef(new Animated.Value(isNew ? 0 : 1)).current;
+  const [isMeasured, setIsMeasured] = useState(!isNew);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    if (isNew && contentHeight > 0 && isFocused) {
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 0.5,
+          duration: 350,
+          useNativeDriver: false,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 650,
+          easing: Easing.out(Easing.back(1.2)),
+          useNativeDriver: false,
+        })
+      ]).start();
+    }
+  }, [isNew, contentHeight, isFocused]);
+
+  if (!isNew) {
+    return <View>{children}</View>;
+  }
+
+  const height = animatedValue.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, contentHeight, contentHeight]
+  });
+
+  const translateX = animatedValue.interpolate({
+    inputRange: [0.5, 1],
+    outputRange: [Dimensions.get('window').width, 0],
+    extrapolate: 'clamp'
+  });
+
+  return (
+    <Animated.View style={{ height, overflow: 'hidden', marginVertical: isMeasured ? undefined : 0 }}>
+      <View 
+        style={{ position: 'absolute', opacity: 0, width: '100%' }}
+        onLayout={(e) => {
+          if (!isMeasured) {
+            setContentHeight(e.nativeEvent.layout.height);
+            setIsMeasured(true);
+          }
+        }}
+      >
+        {children}
+      </View>
+
+      {isMeasured && (
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Animated.View style={{ transform: [{ translateX }] }}>
+            {children}
+          </Animated.View>
+        </View>
+      )}
+    </Animated.View>
+  );
+};
+
 export default function HistoryScreen({ navigation }) {
   const { sessionHistory, deleteSession } = useVisibleSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const [gameFilter, setGameFilter] = useState('All');
   const [outcomeFilter, setOutcomeFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
   const [gameFilterModalVisible, setGameFilterModalVisible] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
+  
+  const historyCount = useRef(
+    sessionHistory.length > 0 && (Date.now() - (sessionHistory[0]?.endTime || 0)) < 5000
+      ? sessionHistory.length - 1
+      : sessionHistory.length
+  );
+  const newlyAddedId = useRef(null);
+
+  if (sessionHistory.length > historyCount.current) {
+    newlyAddedId.current = sessionHistory[0]?.id;
+    historyCount.current = sessionHistory.length;
+  } else if (sessionHistory.length < historyCount.current) {
+    historyCount.current = sessionHistory.length;
+  }
+
+  useEffect(() => {
+    if (newlyAddedId.current && isFocused) {
+      const timer = setTimeout(() => {
+        newlyAddedId.current = null;
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isFocused]);
 
   useEffect(() => {
     setVisibleCount(10);
@@ -70,13 +158,16 @@ export default function HistoryScreen({ navigation }) {
     const isLoss = item.netProfit < 0;
     const isBuyInMode = item.mode === 'buyInCashOut';
 
+    const isNew = item.id === newlyAddedId.current;
+
     return (
-      <SwipeableRow
-        onDelete={() => deleteSession(item.id)}
-        confirmTitle="Delete this session?"
-        confirmMessage="This will permanently remove this session and its history. This cannot be undone."
-      >
-        <View style={[styles.card, SHADOWS.card]}>
+      <AnimatedSessionItem isNew={isNew} gameType={item.gameType} isFocused={isFocused}>
+        <SwipeableRow
+          onDelete={() => deleteSession(item.id)}
+          confirmTitle="Delete this session?"
+          confirmMessage="This will permanently remove this session and its history. This cannot be undone."
+        >
+          <View style={[styles.card, SHADOWS.card]}>
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => toggleExpand(item.id)}
@@ -312,8 +403,9 @@ export default function HistoryScreen({ navigation }) {
           )}
         </View>
       </SwipeableRow>
-    );
-  };
+    </AnimatedSessionItem>
+  );
+};
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -454,6 +546,20 @@ export default function HistoryScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  animCoin: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.warning,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
