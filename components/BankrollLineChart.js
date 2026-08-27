@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path, Line, Circle, ClipPath, Rect, Defs, Text as SvgText } from 'react-native-svg';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import Svg, { Path, Line, Circle, ClipPath, Rect, Defs, Text as SvgText, G } from 'react-native-svg';
 import { COLORS } from '../constants/theme';
 import { fluidFont } from '../constants/layout';
+
+const AnimatedG = Animated.createAnimatedComponent(G);
 
 const CHART_HEIGHT = 170;
 const TOP_PADDING = 22;
@@ -21,6 +23,29 @@ const fmtDate = (ts) => new Date(ts).toLocaleDateString('en-US', { month: 'short
 // that actually matter without having to read pixel heights.
 function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false }) {
   const [containerWidth, setContainerWidth] = useState(0);
+
+  const animReveal = useRef(new Animated.Value(0)).current;
+  const animIndicators = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (containerWidth > 0 && sessions.length >= 2) {
+      animReveal.setValue(0);
+      animIndicators.setValue(0);
+      Animated.sequence([
+        Animated.timing(animReveal, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(animIndicators, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [containerWidth, sessions]);
 
   // The geometry pass (cumulative series, SVG path strings, peak/trough
   // scan) only needs to redo when the sessions themselves or the measured
@@ -148,58 +173,76 @@ function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false
         </View>
       </View>
 
-      <Svg width={width} height={CHART_HEIGHT}>
-        <Defs>
-          <ClipPath id="aboveZero">
-            <Rect x={0} y={0} width={width} height={Math.max(0, zeroY)} />
-          </ClipPath>
-          <ClipPath id="belowZero">
-            <Rect x={0} y={Math.max(0, zeroY)} width={width} height={CHART_HEIGHT} />
-          </ClipPath>
-        </Defs>
+      <View style={{ position: 'relative', overflow: 'hidden' }}>
+        <Svg width={width} height={CHART_HEIGHT}>
+          <Defs>
+            <ClipPath id="aboveZero">
+              <Rect x={0} y={0} width={width} height={Math.max(0, zeroY)} />
+            </ClipPath>
+            <ClipPath id="belowZero">
+              <Rect x={0} y={Math.max(0, zeroY)} width={width} height={CHART_HEIGHT} />
+            </ClipPath>
+          </Defs>
 
-        <Path d={areaPath} fill={COLORS.success} fillOpacity={0.16} clipPath="url(#aboveZero)" />
-        <Path d={areaPath} fill={COLORS.danger} fillOpacity={0.16} clipPath="url(#belowZero)" />
+          <Path d={areaPath} fill={COLORS.success} fillOpacity={0.16} clipPath="url(#aboveZero)" />
+          <Path d={areaPath} fill={COLORS.danger} fillOpacity={0.16} clipPath="url(#belowZero)" />
 
-        <Line x1={0} y1={zeroY} x2={width} y2={zeroY} stroke={COLORS.cardBorder} strokeWidth={1} strokeDasharray="4,4" />
-        <SvgText x={4} y={zeroY - 4} fontSize={9} fontWeight="600" fill={COLORS.textMuted}>
-          {privacyMode ? '••' : `${currencySymbol}0`}
-        </SvgText>
+          <Line x1={0} y1={zeroY} x2={width} y2={zeroY} stroke={COLORS.cardBorder} strokeWidth={1} strokeDasharray="4,4" />
+          <SvgText x={4} y={zeroY - 4} fontSize={9} fontWeight="600" fill={COLORS.textMuted}>
+            {privacyMode ? '••' : `${currencySymbol}0`}
+          </SvgText>
 
-        <Path d={linePath} fill="none" stroke={trendColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d={linePath} fill="none" stroke={trendColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
 
-        {showPeak && (
-          <>
-            <Circle cx={points[peakIndex][0]} cy={points[peakIndex][1]} r={3.5} fill={COLORS.success} stroke={COLORS.background} strokeWidth={1.5} />
-            <SvgText
-              x={Math.min(Math.max(points[peakIndex][0], 26), width - 8)}
-              y={Math.max(points[peakIndex][1] - 8, 10)}
-              fontSize={9}
-              fontWeight="700"
-              fill={COLORS.success}
-              textAnchor="middle"
-            >
-              {fmt(series[peakIndex])}
-            </SvgText>
-          </>
-        )}
+          {showPeak && (
+            <AnimatedG opacity={animIndicators}>
+              <Circle cx={points[peakIndex][0]} cy={points[peakIndex][1]} r={3.5} fill={COLORS.success} stroke={COLORS.background} strokeWidth={1.5} />
+              <SvgText
+                x={Math.min(Math.max(points[peakIndex][0], 26), width - 8)}
+                y={Math.max(points[peakIndex][1] - 8, 10)}
+                fontSize={9}
+                fontWeight="700"
+                fill={COLORS.success}
+                textAnchor="middle"
+              >
+                {fmt(series[peakIndex])}
+              </SvgText>
+            </AnimatedG>
+          )}
 
-        {showTrough && (
-          <>
-            <Circle cx={points[troughIndex][0]} cy={points[troughIndex][1]} r={3.5} fill={COLORS.danger} stroke={COLORS.background} strokeWidth={1.5} />
-            <SvgText
-              x={Math.min(Math.max(points[troughIndex][0], 26), width - 8)}
-              y={Math.min(points[troughIndex][1] + 15, CHART_HEIGHT - 6)}
-              fontSize={9}
-              fontWeight="700"
-              fill={COLORS.danger}
-              textAnchor="middle"
-            >
-              {fmt(series[troughIndex])}
-            </SvgText>
-          </>
-        )}
-      </Svg>
+          {showTrough && (
+            <AnimatedG opacity={animIndicators}>
+              <Circle cx={points[troughIndex][0]} cy={points[troughIndex][1]} r={3.5} fill={COLORS.danger} stroke={COLORS.background} strokeWidth={1.5} />
+              <SvgText
+                x={Math.min(Math.max(points[troughIndex][0], 26), width - 8)}
+                y={Math.min(points[troughIndex][1] + 15, CHART_HEIGHT - 6)}
+                fontSize={9}
+                fontWeight="700"
+                fill={COLORS.danger}
+                textAnchor="middle"
+              >
+                {fmt(series[troughIndex])}
+              </SvgText>
+            </AnimatedG>
+          )}
+        </Svg>
+        <Animated.View style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: 0,
+          width: width,
+          backgroundColor: COLORS.card,
+          transform: [
+            {
+              translateX: animReveal.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, width]
+              })
+            }
+          ]
+        }} />
+      </View>
 
       <View style={styles.labelRow}>
         <Text style={styles.axisLabel}>{firstDate}</Text>
