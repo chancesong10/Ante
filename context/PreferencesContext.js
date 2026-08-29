@@ -12,12 +12,6 @@ const DEFAULT_PREFERENCES = {
   hapticsEnabled: true,
   stopLossAlert: false,
   stopLossAmount: 250,
-  // Dev-only stand-in for real subscription entitlement. Every behavioral
-  // insights screen checks this one flag to decide whether to show the
-  // paywall blur. When real subscriptions ship, this becomes the result
-  // of a RevenueCat/App Store entitlement check instead of a manual
-  // switch — nothing else in the app should need to change.
-  proUnlocked: false,
 };
 
 export function PreferencesProvider({ children }) {

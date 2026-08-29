@@ -9,6 +9,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PreferencesProvider, usePreferences } from './context/PreferencesContext';
 import { AuthProvider } from './context/AuthContext';
+import { PurchasesProvider } from './context/PurchasesContext';
 import { useSyncEngine } from './context/SyncContext';
 
 import PokerScreen from './screens/PokerScreen';
@@ -24,6 +25,7 @@ import PokerInsightsScreen from './screens/PokerInsightsScreen';
 import SportsBettingInsightsScreen from './screens/SportsBettingInsightsScreen';
 import LifetimeInsightsScreen from './screens/LifetimeInsightsScreen';
 import LegalScreen from './screens/LegalScreen';
+import ManageSubscriptionScreen from './screens/ManageSubscriptionScreen';
 import AuthScreen from './screens/AuthScreen';
 
 import StartSessionModal from './components/StartSessionModal';
@@ -384,6 +386,7 @@ function AppContent() {
           <Stack.Screen name="SportsBettingInsights" component={SportsBettingInsightsScreen} />
           <Stack.Screen name="LifetimeInsights" component={LifetimeInsightsScreen} />
           <Stack.Screen name="Legal" component={LegalScreen} />
+          <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
           <Stack.Screen name="Auth" component={AuthScreen} options={{ presentation: 'modal' }} />
         </Stack.Navigator>
       </NavigationContainer>
@@ -431,11 +434,13 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <PreferencesProvider>
-            <SessionProvider>
-              <AppContent />
-            </SessionProvider>
-          </PreferencesProvider>
+          <PurchasesProvider>
+            <PreferencesProvider>
+              <SessionProvider>
+                <AppContent />
+              </SessionProvider>
+            </PreferencesProvider>
+          </PurchasesProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

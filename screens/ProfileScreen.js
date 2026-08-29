@@ -12,6 +12,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,6 +22,8 @@ import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../cons
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
+import { usePurchases } from '../context/PurchasesContext';
+import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { getOrCreateDeviceId } from '../services/storageService';
 
 const CURRENCY_OPTIONS = [
@@ -33,6 +36,12 @@ const CURRENCY_OPTIONS = [
 export default function ProfileScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
   const { user, profile, signOut } = useAuth();
+  const {
+    isPro,
+    isLoading: purchasesLoading,
+    customerInfo,
+    presentPaywall,
+  } = usePurchases();
   const insets = useSafeAreaInsets();
   const {
     quickChipsEnabled = true,
@@ -42,7 +51,6 @@ export default function ProfileScreen({ navigation }) {
     privacyMode = false,
     stopLossAlert = false,
     stopLossAmount = 250,
-    proUnlocked = false,
     updatePreferences,
   } = usePreferences();
 
@@ -56,6 +64,19 @@ export default function ProfileScreen({ navigation }) {
   const [tempLossLimit, setTempLossLimit] = useState(String(stopLossAmount));
   const [copiedSeed, setCopiedSeed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  const activeProEntitlement = customerInfo?.entitlements?.active?.[ANTE_PRO_ENTITLEMENT_ID];
+  const proPlanLabel = activeProEntitlement
+    ? activeProEntitlement.expirationDate
+      ? activeProEntitlement.willRenew
+        ? `Renews ${new Date(activeProEntitlement.expirationDate).toLocaleDateString()}`
+        : `Expires ${new Date(activeProEntitlement.expirationDate).toLocaleDateString()}`
+      : 'Lifetime access'
+    : null;
+
+  const handleUpgradePress = async () => {
+    await presentPaywall();
+  };
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -467,33 +488,46 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         {/* Section 0: Ante Pro */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>ANTE PRO</Text>
-          <View style={styles.devBadge}>
-            <Text style={styles.devBadgeText}>DEV PREVIEW</Text>
-          </View>
-        </View>
+        <Text style={styles.sectionTitle}>ANTE PRO</Text>
         <View style={[styles.menuCard, styles.proMenuCard, SHADOWS.card]}>
           <View style={styles.menuRow}>
             <View style={styles.proIconCircle}>
-              <Ionicons name="sparkles" size={moderateScale(18)} color={COLORS.primary} />
+              <Ionicons
+                name={isPro ? 'checkmark-circle' : 'sparkles'}
+                size={moderateScale(18)}
+                color={COLORS.primary}
+              />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Pro Insights</Text>
+              <Text style={styles.menuTitle}>{isPro ? 'Ante Pro Active' : 'Unlock Ante Pro'}</Text>
               <Text style={styles.menuSubtitle}>
-                Unlocks every behavioral insights page — leak detection, streaks, and more
+                {isPro
+                  ? proPlanLabel || 'Every behavioral insights page is unlocked'
+                  : 'Leak detection, streaks, and every insights page — unlocked with Pro'}
               </Text>
             </View>
-            <Switch
-              value={proUnlocked}
-              onValueChange={(val) => updatePreferences && updatePreferences({ proUnlocked: val })}
-              trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-              thumbColor={proUnlocked ? COLORS.primary : '#8E9BAE'}
-            />
+            {purchasesLoading && <ActivityIndicator size="small" color={COLORS.primary} />}
           </View>
-          <Text style={styles.proFootnote}>
-            Standing in for a real subscription for now — flip this on to preview what Pro unlocks. This will be replaced by an actual purchase before launch.
-          </Text>
+
+          {isPro ? (
+            <TouchableOpacity
+              style={styles.proActionBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('ManageSubscription')}
+            >
+              <Ionicons name="settings-outline" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
+              <Text style={styles.proActionBtnText}>Manage Subscription</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.proActionBtn}
+              activeOpacity={0.85}
+              onPress={handleUpgradePress}
+            >
+              <Ionicons name="sparkles" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
+              <Text style={styles.proActionBtnText}>See Plans</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Section 1: Gameplay Preferences */}
@@ -1137,20 +1171,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
     marginBottom: SPACING.lg,
   },
-  devBadge: {
-    backgroundColor: COLORS.warningMuted,
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: moderateScale(3),
-    borderRadius: RADIUS.xs,
-    borderWidth: 1,
-    borderColor: COLORS.warningBorder,
-  },
-  devBadgeText: {
-    fontSize: fluidFont(9),
-    fontWeight: '700',
-    color: COLORS.warning,
-    letterSpacing: 0.5,
-  },
   proMenuCard: {
     borderColor: COLORS.primaryGlow,
     paddingBottom: SPACING.sm,
@@ -1166,11 +1186,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.primaryGlow,
   },
-  proFootnote: {
-    fontSize: fluidFont(11),
-    color: COLORS.textMuted,
-    lineHeight: fluidFont(15),
-    paddingBottom: SPACING.sm,
+  proActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(12),
+    marginBottom: SPACING.sm,
+  },
+  proActionBtnText: {
+    color: COLORS.textDark,
+    fontWeight: '700',
+    fontSize: fluidFont(14),
   },
   menuRow: {
     flexDirection: 'row',

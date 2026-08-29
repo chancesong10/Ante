@@ -8,6 +8,7 @@ import { moderateScale } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
+import { usePurchases } from '../context/PurchasesContext';
 import { computeInsights } from '../utils/statsEngine';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
 import AuthGateScreen from '../components/AuthGateScreen';
@@ -60,10 +61,11 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
 export default function InsightsScreen({ route, navigation }) {
   const { gameType } = route.params;
   const { sessionHistory } = useVisibleSessionHistory();
-  const { currencySymbol = '$', proUnlocked } = usePreferences();
+  const { currencySymbol = '$' } = usePreferences();
   const { user } = useAuth();
+  const { isPro, presentPaywallIfNeeded } = usePurchases();
   const insets = useSafeAreaInsets();
-  const isLocked = !proUnlocked;
+  const isLocked = !isPro;
 
   // Without this, Android hardware back on this screen falls through to
   // whatever BackHandler listener is still registered on a screen mounted
@@ -634,7 +636,7 @@ export default function InsightsScreen({ route, navigation }) {
       {isLocked && (
         <InsightsUnlockCta
           subtitle="Conditional win rates, doubling performance, and leak detection — unlocked with Ante Pro."
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' })}
+          onPress={() => presentPaywallIfNeeded()}
         />
       )}
       </View>
