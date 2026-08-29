@@ -8,6 +8,7 @@ import { moderateScale } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
+import { usePurchases } from '../context/PurchasesContext';
 import { computePokerInsights } from '../utils/pokerStatsEngine';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
 import AuthGateScreen from '../components/AuthGateScreen';
@@ -58,9 +59,10 @@ function getLeakCopy(leak, { fmtMoney, fmtPct }) {
 
 export default function PokerInsightsScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
-  const { currencySymbol = '$', proUnlocked } = usePreferences();
+  const { currencySymbol = '$' } = usePreferences();
   const { user } = useAuth();
-  const isLocked = !proUnlocked;
+  const { isPro, presentPaywallIfNeeded } = usePurchases();
+  const isLocked = !isPro;
   const insets = useSafeAreaInsets();
 
   // Without this, Android hardware back on this screen falls through to
@@ -217,7 +219,7 @@ export default function PokerInsightsScreen({ navigation }) {
 
   const handleCopyReport = async () => {
     if (isLocked) {
-      navigation.navigate('MainTabs', { screen: 'Profile' });
+      presentPaywallIfNeeded();
       return;
     }
     await Clipboard.setStringAsync(buildReportText());
@@ -662,7 +664,7 @@ export default function PokerInsightsScreen({ navigation }) {
       {isLocked && (
         <InsightsUnlockCta
           subtitle="Your bluff-catcher score, tilt index, and leak detection — unlocked with Ante Pro."
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' })}
+          onPress={() => presentPaywallIfNeeded()}
         />
       )}
       </View>

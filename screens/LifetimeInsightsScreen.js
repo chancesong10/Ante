@@ -8,6 +8,7 @@ import { moderateScale } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
+import { usePurchases } from '../context/PurchasesContext';
 import { computeLifetimeInsights } from '../utils/lifetimeInsightsEngine';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
 import AuthGateScreen from '../components/AuthGateScreen';
@@ -55,9 +56,10 @@ const GAME_ICONS = {
 
 export default function LifetimeInsightsScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
-  const { currencySymbol = '$', proUnlocked } = usePreferences();
+  const { currencySymbol = '$' } = usePreferences();
   const { user } = useAuth();
-  const isLocked = !proUnlocked;
+  const { isPro, presentPaywallIfNeeded } = usePurchases();
+  const isLocked = !isPro;
   const insets = useSafeAreaInsets();
 
   // Without this, Android hardware back on this screen falls through to
@@ -412,7 +414,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
       {isLocked && (
         <InsightsUnlockCta
           subtitle="Cross-game patterns, session streaks, and leak detection — unlocked with Ante Pro."
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' })}
+          onPress={() => presentPaywallIfNeeded()}
         />
       )}
       </View>
