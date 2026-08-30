@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
@@ -96,13 +97,19 @@ export default function GeneralTrackerScreen({ navigation }) {
     });
   };
 
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleDiscardPress();
-      return true;
-    });
-    return () => sub.remove();
-  }, [hasValidNumbers, parsedBuyIn, parsedCashOut]);
+  // useFocusEffect (not useEffect) so this handler is removed while the screen
+  // is blurred — otherwise a paused session left in the stack keeps grabbing
+  // the Android back gesture from other screens and pops its discard modal.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleDiscardPress();
+        return true;
+      });
+      return () => sub.remove();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasValidNumbers, parsedBuyIn, parsedCashOut])
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

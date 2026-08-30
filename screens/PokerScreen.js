@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,6 +11,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
@@ -516,40 +517,46 @@ export default function PokerScreen({ navigation }) {
 
   // Mirrors whichever on-screen back button is showing for the current
   // viewMode/setupStep, so the Android hardware back button behaves the same
-  // as the on-screen back arrow.
-  useEffect(() => {
-    const handleHardwareBack = () => {
-      if (viewMode === 'hand') {
-        setAlertModal({
-          variant: 'danger',
-          icon: 'close-circle-outline',
-          title: 'Cancel This Hand?',
-          message: 'Progress for this hand will be lost.',
-          confirmText: 'Cancel Hand',
-          cancelText: 'Keep Tracking',
-          onConfirm: () => {
-            closeAlertModal();
-            setViewMode('dashboard');
-          },
-          onCancel: closeAlertModal,
-        });
+  // as the on-screen back arrow. Registered via useFocusEffect (not useEffect)
+  // so the listener is torn down whenever this screen is blurred — otherwise a
+  // paused session left mounted in the stack keeps intercepting the back
+  // gesture from other screens (Analytics, Insights) and pops its own modal.
+  useFocusEffect(
+    useCallback(() => {
+      const handleHardwareBack = () => {
+        if (viewMode === 'hand') {
+          setAlertModal({
+            variant: 'danger',
+            icon: 'close-circle-outline',
+            title: 'Cancel This Hand?',
+            message: 'Progress for this hand will be lost.',
+            confirmText: 'Cancel Hand',
+            cancelText: 'Keep Tracking',
+            onConfirm: () => {
+              closeAlertModal();
+              setViewMode('dashboard');
+            },
+            onCancel: closeAlertModal,
+          });
+          return true;
+        }
+        if (viewMode === 'setup' && setupStep === 'blinds') {
+          setSetupStep('players');
+          return true;
+        }
+        if (viewMode === 'setup') {
+          navigation.navigate('MainTabs', { screen: 'Home' });
+          return true;
+        }
+        handleLeaveSession();
         return true;
-      }
-      if (viewMode === 'setup' && setupStep === 'blinds') {
-        setSetupStep('players');
-        return true;
-      }
-      if (viewMode === 'setup') {
-        navigation.navigate('MainTabs', { screen: 'Home' });
-        return true;
-      }
-      handleLeaveSession();
-      return true;
-    };
+      };
 
-    const sub = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
-    return () => sub.remove();
-  }, [viewMode, setupStep, activeSession]);
+      const sub = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
+      return () => sub.remove();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewMode, setupStep])
+  );
 
   // --- Session Stats Computation ---
   const sessionHands = activeSession?.hands || [];
