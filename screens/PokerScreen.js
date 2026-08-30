@@ -106,6 +106,10 @@ export default function PokerScreen({ navigation }) {
   // Early Fold Modal & Assessment
   const [foldModalVisible, setFoldModalVisible] = useState(false);
 
+  // Tracks that the user dismissed the "everyone folded" win prompt, so it
+  // doesn't re-fire until someone is back in the hand (undo a misclicked fold).
+  const [foldWinDismissed, setFoldWinDismissed] = useState(false);
+
   // Custom Alert / Confirm Modal (replaces native Alert.alert popups)
   const [alertModal, setAlertModal] = useState(null);
   const closeAlertModal = () => setAlertModal(null);
@@ -158,6 +162,11 @@ export default function PokerScreen({ navigation }) {
     0,
     ...opponents.filter((o) => !o.folded).map((o) => o.streetBets[currentStreetKey] || 0)
   );
+
+  // Hero is the last player standing once every seated opponent has folded.
+  const activeOpponentCount = opponents.filter((o) => !o.folded).length;
+  const everyoneFolded = opponents.length > 0 && activeOpponentCount === 0;
+  const foldWinNet = effectiveTotalPot - heroTotalInvestment;
 
   // --- Handlers: Session Setup ---
   const handleBlindModeSelect = (mode) => {
@@ -219,6 +228,7 @@ export default function PokerScreen({ navigation }) {
     );
     setShowdownResult('win');
     setSplitWay(2);
+    setFoldWinDismissed(false);
 
     setViewMode('hand');
   };
@@ -387,6 +397,54 @@ export default function PokerScreen({ navigation }) {
     setViewMode('dashboard');
   };
 
+  // --- Handlers: Win Because Everyone Folded ---
+  const handleWinByFold = () => {
+    closeAlertModal();
+
+    const handRecord = {
+      id: Date.now(),
+      gameType: 'Poker',
+      outcome: 'win',
+      wonBy: 'fold', // uncontested — table folded to the hero
+      splitCount: 1,
+      streetFolded: STREETS[currentStreetIdx]?.label || 'Pre-Flop',
+      heroInvestment: heroTotalInvestment,
+      pot: effectiveTotalPot,
+      netChange: foldWinNet,
+      streets: { ...streetBets },
+      timestamp: Date.now(),
+    };
+
+    logHandToActiveSession(handRecord);
+    setViewMode('dashboard');
+  };
+
+  // When the table folds around to the hero mid-hand, offer to end the hand and
+  // take the pot. "Go Back" just dismisses the prompt — each opponent card keeps
+  // its own "Undo Fold" button, and the prompt re-arms once anyone is back in.
+  useEffect(() => {
+    if (viewMode !== 'hand') return;
+
+    if (everyoneFolded && !foldWinDismissed) {
+      setAlertModal({
+        variant: 'primary',
+        icon: 'trophy-outline',
+        title: 'Everyone Folded',
+        message: `The table folded to you. Take the ${currencySymbol}${effectiveTotalPot.toFixed(2)} pot for a ${foldWinNet >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(foldWinNet).toFixed(2)} net. Folded someone by mistake? Go back and hit "Undo Fold" on their card.`,
+        confirmText: 'Take the Pot',
+        cancelText: 'Go Back',
+        onConfirm: handleWinByFold,
+        onCancel: () => {
+          closeAlertModal();
+          setFoldWinDismissed(true);
+        },
+      });
+    } else if (!everyoneFolded && foldWinDismissed) {
+      setFoldWinDismissed(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [everyoneFolded, viewMode]);
+
   // --- Handlers: Save Showdown Hand ---
   const handleSaveShowdownHand = () => {
     let netChange = 0;
@@ -449,46 +507,16 @@ export default function PokerScreen({ navigation }) {
     navigation.navigate('MainTabs', { screen: 'History' });
   };
 
-  const handleDiscardPress = () => {
-    const hands = activeSession?.hands || [];
-
-    if (hands.length > 0) {
-      setAlertModal({
-        variant: 'primary',
-        icon: 'stop-circle-outline',
-        title: 'End This Session?',
-        message: `You've logged ${hands.length} hand${hands.length === 1 ? '' : 's'} this session. Leaving now will end it and save your results to history.`,
-        confirmText: 'End Session',
-        cancelText: 'Keep Playing',
-        onConfirm: () => {
-          closeAlertModal();
-          endActiveSession();
-          navigation.navigate('MainTabs', { screen: 'History' });
-        },
-        onCancel: closeAlertModal,
-      });
-      return;
-    }
-
-    setAlertModal({
-      variant: 'danger',
-      icon: 'trash-outline',
-      title: 'Discard This Session?',
-      message: 'Nothing from this live session will be saved. This cannot be undone.',
-      confirmText: 'Discard',
-      cancelText: 'Cancel',
-      onConfirm: () => {
-        closeAlertModal();
-        discardActiveSession();
-        navigation.navigate('MainTabs', { screen: 'Home' });
-      },
-      onCancel: closeAlertModal,
-    });
+  // Backing out of the dashboard just leaves the session live (like Blackjack
+  // and Sports Betting) — the Home screen shows a "Resume Session" card for it,
+  // and the header "End Session" button is the deliberate way to close it out.
+  const handleLeaveSession = () => {
+    navigation.navigate('MainTabs', { screen: 'Home' });
   };
 
   // Mirrors whichever on-screen back button is showing for the current
-  // viewMode/setupStep, so the Android hardware back button can't bypass
-  // the same discard/cancel confirmations the UI back arrow already shows.
+  // viewMode/setupStep, so the Android hardware back button behaves the same
+  // as the on-screen back arrow.
   useEffect(() => {
     const handleHardwareBack = () => {
       if (viewMode === 'hand') {
@@ -515,7 +543,7 @@ export default function PokerScreen({ navigation }) {
         navigation.navigate('MainTabs', { screen: 'Home' });
         return true;
       }
-      handleDiscardPress();
+      handleLeaveSession();
       return true;
     };
 
@@ -1181,7 +1209,18 @@ export default function PokerScreen({ navigation }) {
             <Text style={styles.handNavBtnText}>Back</Text>
           </TouchableOpacity>
 
-          {!isShowdown ? (
+          {everyoneFolded ? (
+            <TouchableOpacity
+              style={[styles.handPrimaryBtn, SHADOWS.card]}
+              onPress={handleWinByFold}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="trophy" size={18} color={COLORS.textDark} style={{ marginRight: 6 }} />
+              <Text style={styles.handPrimaryBtnText}>
+                Take Pot ({foldWinNet >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(foldWinNet).toFixed(2)})
+              </Text>
+            </TouchableOpacity>
+          ) : !isShowdown ? (
             <TouchableOpacity
               style={[styles.handPrimaryBtn, SHADOWS.card]}
               onPress={() => handleAdvanceStreet(Math.min(STREETS.length - 1, currentStreetIdx + 1))}
@@ -1226,12 +1265,12 @@ export default function PokerScreen({ navigation }) {
 
               <View style={styles.foldOptionList}>
                 <TouchableOpacity
-                  style={[styles.foldOptionItem, { borderColor: COLORS.primaryGlow }]}
+                  style={styles.foldOptionItem}
                   onPress={() => handleConfirmFold('bluffed')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.foldTagBadge, { backgroundColor: COLORS.primaryMuted }]}>
-                    <Text style={[styles.foldTagBadgeText, { color: COLORS.primary }]}>BLUFFED</Text>
+                  <View style={styles.foldTagBadge}>
+                    <Text style={styles.foldTagBadgeText}>BLUFFED</Text>
                   </View>
                   <Text style={styles.foldOptionLabel}>I Got Bluffed</Text>
                   <Text style={styles.foldOptionDesc}>
@@ -1240,11 +1279,11 @@ export default function PokerScreen({ navigation }) {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.foldOptionItem, { borderColor: COLORS.cardBorder }]}
+                  style={styles.foldOptionItem}
                   onPress={() => handleConfirmFold('good_fold')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.foldTagBadge, { backgroundColor: COLORS.backgroundSecondary }]}>
+                  <View style={styles.foldTagBadge}>
                     <Text style={styles.foldTagBadgeText}>GOOD FOLD</Text>
                   </View>
                   <Text style={styles.foldOptionLabel}>Good Discipline Fold</Text>
@@ -1252,11 +1291,11 @@ export default function PokerScreen({ navigation }) {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.foldOptionItem, { borderColor: COLORS.cardBorder }]}
+                  style={styles.foldOptionItem}
                   onPress={() => handleConfirmFold('no_show')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.foldTagBadge, { backgroundColor: COLORS.backgroundSecondary }]}>
+                  <View style={styles.foldTagBadge}>
                     <Text style={styles.foldTagBadgeText}>NO-SHOW</Text>
                   </View>
                   <Text style={styles.foldOptionLabel}>Mucked / Unknown</Text>
@@ -1286,7 +1325,7 @@ export default function PokerScreen({ navigation }) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Top Navigation */}
       <View style={styles.topNav}>
-        <TouchableOpacity style={styles.backBtn} onPress={handleDiscardPress}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleLeaveSession}>
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
 
@@ -2205,6 +2244,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
+    borderColor: COLORS.cardBorderHighlight,
   },
   foldTagBadge: {
     alignSelf: 'flex-start',
@@ -2212,11 +2252,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
     marginBottom: 6,
+    backgroundColor: COLORS.primaryMuted,
   },
   foldTagBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.textSecondary,
+    color: COLORS.primary,
   },
   foldOptionLabel: {
     fontSize: 14,

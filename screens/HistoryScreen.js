@@ -11,6 +11,36 @@ import SwipeableRow from '../components/SwipeableRow';
 
 const GAME_TYPE_ORDER = ['Blackjack', 'Poker', 'Sports Betting', 'General'];
 
+// Per-game vocabulary for the stats strip and expanded list. Blackjack keeps
+// the classic win-loss-push record; poker has folds instead of pushes, and a
+// sports wager isn't a "hand".
+const getSessionTerms = (gameType) => {
+  if (gameType === 'Poker') {
+    return { unit: 'Hands', recordLabel: 'Record (W-L-F)', recordKind: 'poker' };
+  }
+  if (gameType === 'Sports Betting') {
+    return { unit: 'Bets', recordLabel: 'Record (W-L-P)', recordKind: 'wlp' };
+  }
+  if (gameType === 'General') {
+    return { unit: 'Entries', recordLabel: 'Record (W-L)', recordKind: 'wl' };
+  }
+  return { unit: 'Hands', recordLabel: 'Record (W-L-P)', recordKind: 'wlp' };
+};
+
+const buildRecordText = (item) => {
+  const wins = item.wins || 0;
+  const losses = item.losses || 0;
+  const kind = getSessionTerms(item.gameType).recordKind;
+  if (kind === 'poker') {
+    const folds = item.folds || 0;
+    return `${wins}-${Math.max(0, losses - folds)}-${folds}`;
+  }
+  if (kind === 'wl') {
+    return `${wins}-${losses}`;
+  }
+  return `${wins}-${losses}-${item.pushes || 0}`;
+};
+
 const renderGameIcon = (gameType, size = 18, color = getGameColor(gameType)) => {
   if (gameType === 'Poker') return <Ionicons name="cash-outline" size={size} color={color} />;
   if (gameType === 'Sports Betting') return <Ionicons name="basketball-outline" size={size} color={color} />;
@@ -160,6 +190,9 @@ export default function HistoryScreen({ navigation }) {
 
     const isNew = item.id === newlyAddedId.current;
 
+    const terms = getSessionTerms(item.gameType);
+    const recordText = buildRecordText(item);
+
     return (
       <AnimatedSessionItem isNew={isNew} gameType={item.gameType} isFocused={isFocused}>
         <SwipeableRow
@@ -214,15 +247,13 @@ export default function HistoryScreen({ navigation }) {
           {!isBuyInMode && (
             <View style={styles.statsStrip}>
               <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Hands</Text>
+                <Text style={styles.statLabel}>{terms.unit}</Text>
                 <Text style={styles.statVal}>{item.totalHands}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Record (W-L-P)</Text>
-                <Text style={styles.statVal}>
-                  {item.wins}-{item.losses}-{item.pushes}
-                </Text>
+                <Text style={styles.statLabel}>{terms.recordLabel}</Text>
+                <Text style={styles.statVal}>{recordText}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statCol}>
@@ -293,7 +324,7 @@ export default function HistoryScreen({ navigation }) {
                 </View>
               ) : (
                 <>
-                  <Text style={styles.expandedTitle}>Logged Hands ({item.hands.length})</Text>
+                  <Text style={styles.expandedTitle}>Logged {terms.unit} ({item.hands.length})</Text>
                   {item.hands.map((h, idx) => {
                     if (h.type === 'split') {
                       return (
@@ -377,7 +408,7 @@ export default function HistoryScreen({ navigation }) {
                         <Text style={styles.handDetail}>
                           {h.matchup
                             ? `${h.matchup} (${h.betType}): ${currencySymbol}${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${h.outcome.toUpperCase()}`
-                            : `Hand ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${h.outcome.toUpperCase()}`}
+                            : `${item.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${h.outcome.toUpperCase()}`}
                         </Text>
                         <Text
                           style={[
