@@ -5,6 +5,7 @@ const SCHEMA_VERSION = 1;
 
 const KEYS = {
   SESSION_HISTORY: 'ante:sessionHistory',
+  ACTIVE_SESSION: 'ante:activeSession',
   PREFERENCES: 'ante:preferences',
   DEVICE_ID: 'ante:deviceId',
   SCHEMA_VERSION: 'ante:schemaVersion',
@@ -45,6 +46,32 @@ export async function saveSessionHistory(sessionHistory) {
     return true;
   } catch (err) {
     console.error('storageService: failed to save session history', err);
+    return false;
+  }
+}
+
+// --- Active session ---
+export async function loadActiveSession() {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.ACTIVE_SESSION);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('storageService: failed to load active session', err);
+    return null;
+  }
+}
+
+export async function saveActiveSession(activeSession) {
+  try {
+    if (!activeSession) {
+      await AsyncStorage.removeItem(KEYS.ACTIVE_SESSION);
+    } else {
+      await AsyncStorage.setItem(KEYS.ACTIVE_SESSION, JSON.stringify(activeSession));
+    }
+    return true;
+  } catch (err) {
+    console.error('storageService: failed to save active session', err);
     return false;
   }
 }
