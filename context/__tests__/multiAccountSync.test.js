@@ -25,6 +25,8 @@ jest.mock('expo-crypto', () => {
 jest.mock('../../services/storageService', () => ({
   loadSessionHistory: jest.fn(async () => []),
   saveSessionHistory: jest.fn(async () => true),
+  loadActiveSession: jest.fn(async () => null),
+  saveActiveSession: jest.fn(async () => true),
 }));
 
 jest.mock('../../services/syncService', () => ({
@@ -41,7 +43,7 @@ const { SessionProvider, useSessionHistory, useActiveSession } = require('../Ses
 const { useSyncEngine, TRANSIENT_RETRY_DELAY_MS } = require('../SyncContext');
 const { useAuth } = require('../AuthContext');
 const { pushSessions, pullSessions } = require('../../services/syncService');
-const { loadSessionHistory } = require('../../services/storageService');
+const { loadSessionHistory, loadActiveSession } = require('../../services/storageService');
 
 let latestApi = null;
 
@@ -107,6 +109,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   loadSessionHistory.mockResolvedValue([]);
+  loadActiveSession.mockResolvedValue(null);
   pushSessions.mockResolvedValue({ error: null });
   pullSessions.mockResolvedValue({ sessions: [], error: null });
   useAuth.mockReturnValue({ user: null });
