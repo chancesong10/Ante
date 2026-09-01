@@ -41,7 +41,10 @@ yarn-error.*
 /ios
 /android
 
-# agent skills (installed via `npx skills add`, kept local)
+# agent skills / tooling (installed via npx skills / skillfish / impeccable, kept local)
 .agents/
+.codex/
 .claude/skills/
+.claude/settings.local.json
+.claude/agents/impeccable-*.md
 skills-lock.json
