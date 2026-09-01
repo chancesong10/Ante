@@ -3,6 +3,8 @@ import * as Crypto from 'expo-crypto';
 import {
   loadSessionHistory,
   saveSessionHistory,
+  loadActiveSession,
+  saveActiveSession,
 } from '../services/storageService';
 
 // Split into two contexts by update frequency:
@@ -65,6 +67,90 @@ export function formatDuration(startTime, endTime) {
   }
 }
 
+export function finalizeSession(activeSession, overrideBuyIn = null, overrideCashOut = null) {
+  if (!activeSession) return null;
+
+  const endTime = Date.now();
+  const startTime = activeSession.startTime;
+
+  const finalBuyIn = overrideBuyIn !== null ? overrideBuyIn : activeSession.buyIn;
+  const finalCashOut = overrideCashOut !== null ? overrideCashOut : activeSession.cashOut;
+  const isBuyInMode = finalBuyIn !== null && finalCashOut !== null;
+
+  let completedRecord;
+
+  if (isBuyInMode) {
+    const netProfit = finalCashOut - finalBuyIn;
+
+    completedRecord = {
+      id: activeSession.id,
+      gameType: activeSession.gameType,
+      startTime,
+      endTime,
+      formattedDate: formatSessionDateTime(startTime),
+      rawDate: new Date(startTime).toISOString(),
+      durationFormatted: formatDuration(startTime, endTime),
+      mode: 'buyInCashOut',
+      buyIn: finalBuyIn,
+      cashOut: finalCashOut,
+      hands: [],
+      totalHands: 0,
+      wins: 0,
+      losses: 0,
+      pushes: 0,
+      netProfit,
+      grossWins: netProfit > 0 ? netProfit : 0,
+      grossLosses: netProfit < 0 ? Math.abs(netProfit) : 0,
+      winRate: netProfit > 0 ? 100 : 0,
+    };
+  } else {
+    const hands = activeSession.hands;
+    const allHands = hands.flatMap((r) => (r.type === 'split' ? r.hands : [r]));
+    const totalHands = allHands.length;
+    const wins = allHands.filter((h) => h.outcome === 'win').length;
+    const losses = allHands.filter((h) => h.outcome === 'loss' || h.outcome === 'fold').length;
+    const pushes = allHands.filter((h) => h.outcome === 'push' || h.outcome === 'split').length;
+    const folds = allHands.filter((h) => h.outcome === 'fold').length;
+    const bluffedFolds = allHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'bluffed').length;
+    const goodFolds = allHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'good_fold').length;
+    const netProfit = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
+
+    let grossWins = 0;
+    let grossLosses = 0;
+    allHands.forEach((h) => {
+      if (h.netChange > 0) grossWins += h.netChange;
+      if (h.netChange < 0) grossLosses += Math.abs(h.netChange);
+    });
+
+    completedRecord = {
+      id: activeSession.id,
+      gameType: activeSession.gameType,
+      startTime,
+      endTime,
+      formattedDate: formatSessionDateTime(startTime),
+      rawDate: new Date(startTime).toISOString(),
+      durationFormatted: formatDuration(startTime, endTime),
+      mode: 'hands',
+      hands,
+      totalHands,
+      wins,
+      losses,
+      pushes,
+      folds,
+      bluffedFolds,
+      goodFolds,
+      netProfit,
+      grossWins,
+      grossLosses,
+      winRate: (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0,
+      smallBlind: activeSession.smallBlind,
+      bigBlind: activeSession.bigBlind,
+      chipDenominations: activeSession.chipDenominations,
+    };
+  }
+  return completedRecord;
+}
+
 export function SessionProvider({ children }) {
   const [activeSession, setActiveSession] = useState(null);
   const [sessionHistory, setSessionHistory] = useState([]);
@@ -81,17 +167,26 @@ export function SessionProvider({ children }) {
     activeSessionRef.current = activeSession;
   }, [activeSession]);
 
-  // Load persisted history once on app start.
-  // Note: activeSession is intentionally NOT persisted — an in-progress
-  // session left mid-entry is safer to discard on force-close than to
-  // silently resume in a possibly-stale state.
+  // Load persisted history and any interrupted active session once on app start.
   useEffect(() => {
     if (hasLoadedOnce.current) return;
     hasLoadedOnce.current = true;
 
     (async () => {
-      const stored = await loadSessionHistory();
-      setSessionHistory(stored);
+      const storedHistory = await loadSessionHistory();
+      const storedActive = await loadActiveSession();
+      
+      let finalHistory = storedHistory;
+      if (storedActive) {
+        // App was closed while a session was live. End it and save to history.
+        const finalized = finalizeSession(storedActive);
+        if (finalized) {
+          finalHistory = [finalized, ...finalHistory];
+        }
+        await saveActiveSession(null);
+      }
+      
+      setSessionHistory(finalHistory);
       setIsLoaded(true);
     })();
   }, []);
@@ -101,6 +196,12 @@ export function SessionProvider({ children }) {
     if (!isLoaded) return;
     saveSessionHistory(sessionHistory);
   }, [sessionHistory, isLoaded]);
+
+  // Persist activeSession so we can recover it if the app is closed.
+  useEffect(() => {
+    if (!isLoaded) return;
+    saveActiveSession(activeSession);
+  }, [activeSession, isLoaded]);
 
   const startSession = useCallback((gameType = 'Blackjack') => {
     const newSession = {
@@ -160,84 +261,7 @@ export function SessionProvider({ children }) {
     const activeSession = activeSessionRef.current;
     if (!activeSession) return null;
 
-    const endTime = Date.now();
-    const startTime = activeSession.startTime;
-
-    const finalBuyIn = overrideBuyIn !== null ? overrideBuyIn : activeSession.buyIn;
-    const finalCashOut = overrideCashOut !== null ? overrideCashOut : activeSession.cashOut;
-    const isBuyInMode = finalBuyIn !== null && finalCashOut !== null;
-
-    let completedRecord;
-
-    if (isBuyInMode) {
-      const netProfit = finalCashOut - finalBuyIn;
-
-      completedRecord = {
-        id: activeSession.id,
-        gameType: activeSession.gameType,
-        startTime,
-        endTime,
-        formattedDate: formatSessionDateTime(startTime),
-        rawDate: new Date(startTime).toISOString(),
-        durationFormatted: formatDuration(startTime, endTime),
-        mode: 'buyInCashOut',
-        buyIn: finalBuyIn,
-        cashOut: finalCashOut,
-        hands: [],
-        totalHands: 0,
-        wins: 0,
-        losses: 0,
-        pushes: 0,
-        netProfit,
-        grossWins: netProfit > 0 ? netProfit : 0,
-        grossLosses: netProfit < 0 ? Math.abs(netProfit) : 0,
-        winRate: netProfit > 0 ? 100 : 0,
-      };
-    } else {
-      const hands = activeSession.hands;
-      const allHands = hands.flatMap((r) => (r.type === 'split' ? r.hands : [r]));
-      const totalHands = allHands.length;
-      const wins = allHands.filter((h) => h.outcome === 'win').length;
-      const losses = allHands.filter((h) => h.outcome === 'loss' || h.outcome === 'fold').length;
-      const pushes = allHands.filter((h) => h.outcome === 'push' || h.outcome === 'split').length;
-      const folds = allHands.filter((h) => h.outcome === 'fold').length;
-      const bluffedFolds = allHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'bluffed').length;
-      const goodFolds = allHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'good_fold').length;
-      const netProfit = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
-
-      let grossWins = 0;
-      let grossLosses = 0;
-      allHands.forEach((h) => {
-        if (h.netChange > 0) grossWins += h.netChange;
-        if (h.netChange < 0) grossLosses += Math.abs(h.netChange);
-      });
-
-      completedRecord = {
-        id: activeSession.id,
-        gameType: activeSession.gameType,
-        startTime,
-        endTime,
-        formattedDate: formatSessionDateTime(startTime),
-        rawDate: new Date(startTime).toISOString(),
-        durationFormatted: formatDuration(startTime, endTime),
-        mode: 'hands',
-        hands,
-        totalHands,
-        wins,
-        losses,
-        pushes,
-        folds,
-        bluffedFolds,
-        goodFolds,
-        netProfit,
-        grossWins,
-        grossLosses,
-        winRate: (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0,
-        smallBlind: activeSession.smallBlind,
-        bigBlind: activeSession.bigBlind,
-        chipDenominations: activeSession.chipDenominations,
-      };
-    }
+    const completedRecord = finalizeSession(activeSession, overrideBuyIn, overrideCashOut);
 
     setSessionHistory((prev) => [completedRecord, ...prev]);
     setActiveSession(null);
