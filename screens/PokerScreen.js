@@ -38,7 +38,12 @@ const BLIND_MODES = [
 
 export default function PokerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { currencySymbol = '$' } = usePreferences();
+  const {
+    currencySymbol = '$',
+    quickChipPresets,
+    setQuickChipPreset,
+    isLoaded: prefsLoaded,
+  } = usePreferences();
   const { user } = useAuth();
   const {
     activeSession,
@@ -60,6 +65,10 @@ export default function PokerScreen({ navigation }) {
   const [bigBlind, setBigBlind] = useState('2');
   const [blindMode, setBlindMode] = useState('both'); // 'none' | 'big' | 'both'
   const [chipDenominations, setChipDenominations] = useState(['1', '5', '25', '50', '100', '500']);
+  // Seeds the setup form from the player's saved poker chip preset once
+  // preferences have hydrated, unless an in-progress session already carries
+  // its own denominations.
+  const chipsHydratedRef = useRef(false);
   const [playerNames, setPlayerNames] = useState({}); // { '1': 'Alice', '2': 'Bob', ... }
 
   const hasBlinds = blindMode !== 'none';
@@ -89,6 +98,24 @@ export default function PokerScreen({ navigation }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Pre-fill the setup form with the last poker chip set the player saved, so a
+  // new session with the same denominations doesn't have to be re-typed.
+  useEffect(() => {
+    if (chipsHydratedRef.current || !prefsLoaded) return;
+    chipsHydratedRef.current = true;
+
+    const restoredFromSession =
+      activeSession?.gameType === 'Poker' &&
+      Array.isArray(activeSession.chipDenominations) &&
+      activeSession.chipDenominations.length > 0;
+    if (restoredFromSession) return;
+
+    const preset = quickChipPresets?.poker;
+    if (Array.isArray(preset) && preset.length > 0) {
+      setChipDenominations(preset.map(String));
+    }
+  }, [prefsLoaded, quickChipPresets, activeSession]);
 
   // --- Active Hand Tracking State ---
   const [currentStreetIdx, setCurrentStreetIdx] = useState(0);
@@ -211,6 +238,9 @@ export default function PokerScreen({ navigation }) {
       blindMode,
       chipDenominations: chips,
     });
+
+    // Remember this chip set as the default for the next poker session.
+    setQuickChipPreset?.('poker', chips.map(String));
 
     setViewMode('dashboard');
   };

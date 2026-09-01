@@ -47,7 +47,11 @@ export default function BlackjackScreen({ navigation }) {
   const [splitHand1, setSplitHand1] = useState(emptyHand());
   const [splitHand2, setSplitHand2] = useState(emptyHand());
 
-  const { quickChipsEnabled, currencySymbol = '$' } = usePreferences();
+  const { quickChipsEnabled, currencySymbol = '$', quickChipPresets } = usePreferences();
+  const chipPreset =
+    Array.isArray(quickChipPresets?.blackjack) && quickChipPresets.blackjack.length > 0
+      ? quickChipPresets.blackjack
+      : ['10', '25', '50', '100', '250'];
 
   const handleChipPress = (chipValue) => {
     const current = parseFloat(betAmount) || 0;
@@ -213,7 +217,7 @@ export default function BlackjackScreen({ navigation }) {
 
         {quickChipsEnabled && (
           <View style={styles.chipRow}>
-            {['10', '25', '50', '100', '250'].map((chip) => (
+            {chipPreset.map((chip) => (
               <TouchableOpacity
                 key={chip}
                 style={styles.chipButton}
@@ -373,7 +377,7 @@ export default function BlackjackScreen({ navigation }) {
 
               {quickChipsEnabled && (
                 <View style={styles.chipRow}>
-                  {['10', '25', '50', '100', '250'].map((chip) => (
+                  {chipPreset.map((chip) => (
                     <TouchableOpacity
                       key={chip}
                       style={styles.chipButton}
