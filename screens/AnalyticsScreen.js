@@ -9,7 +9,7 @@ import {
 
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
@@ -43,6 +43,7 @@ export default function AnalyticsScreen({ navigation }) {
     winPercent,
     lossPercent,
     pushPercent,
+    games,
   } = useMemo(() => {
     const totalSessions = sessionHistory.length;
     const totalHands = sessionHistory.reduce((sum, s) => sum + (s.totalHands || 0), 0);
@@ -85,6 +86,27 @@ export default function AnalyticsScreen({ navigation }) {
     const lossPercent = totalHands > 0 ? (totalLosses / totalHands) * 100 : 0;
     const pushPercent = totalHands > 0 ? (totalPushes / totalHands) * 100 : 0;
 
+    // Per-game portfolio breakdown
+    const games = {
+      Blackjack: { sessions: 0, net: 0, totalBets: 0 },
+      Poker: { sessions: 0, net: 0, totalBets: 0 },
+      'Sports Betting': { sessions: 0, net: 0, totalBets: 0 },
+      General: { sessions: 0, net: 0, totalBets: 0 },
+    };
+
+    sessionHistory.forEach((session) => {
+      const gameType = games[session.gameType] ? session.gameType : 'General';
+      games[gameType].sessions += 1;
+      games[gameType].net += session.netProfit || 0;
+
+      if (session.mode === 'hands' && Array.isArray(session.hands)) {
+        const hands = session.hands.flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]));
+        games[gameType].totalBets += hands.length;
+      } else {
+        games[gameType].totalBets += 1;
+      }
+    });
+
     return {
       totalSessions,
       totalHands,
@@ -103,8 +125,21 @@ export default function AnalyticsScreen({ navigation }) {
       winPercent,
       lossPercent,
       pushPercent,
+      games,
     };
   }, [sessionHistory]);
+
+  const formatNet = (val) => {
+    if (privacyMode) return '••••••';
+    const sign = val > 0 ? '+' : val < 0 ? '-' : '';
+    return `${sign}${currencySymbol}${Math.abs(val).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const netColor = (val) =>
+    val > 0 ? COLORS.success : val < 0 ? COLORS.danger : COLORS.textPrimary;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -353,6 +388,76 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={[styles.gridCard, SHADOWS.card]}>
             <Text style={styles.gridLabel}>Total Hands Logged</Text>
             <Text style={styles.gridValue}>{totalHands}</Text>
+          </View>
+        </View>
+
+        {/* Game Portfolio Breakdown */}
+        <Text style={styles.sectionTitle}>Game Portfolio Breakdown</Text>
+        <View style={[styles.portfolioCard, SHADOWS.card]}>
+          {/* Blackjack */}
+          <View style={styles.portfolioRow}>
+            <View style={styles.portfolioIconBox}>
+              <MaterialCommunityIcons name="cards" size={moderateScale(18)} color={COLORS.primary} />
+            </View>
+            <View style={styles.portfolioInfo}>
+              <Text style={styles.portfolioName}>Blackjack</Text>
+              <Text style={styles.portfolioSub}>
+                {games.Blackjack.sessions} sessions • {games.Blackjack.totalBets} hands
+              </Text>
+            </View>
+            <Text style={[styles.portfolioNet, { color: netColor(games.Blackjack.net) }]}>
+              {formatNet(games.Blackjack.net)}
+            </Text>
+          </View>
+
+          <View style={styles.portfolioDivider} />
+
+          {/* Poker */}
+          <View style={styles.portfolioRow}>
+            <View style={styles.portfolioIconBox}>
+              <Ionicons name="cash-outline" size={moderateScale(18)} color={COLORS.primary} />
+            </View>
+            <View style={styles.portfolioInfo}>
+              <Text style={styles.portfolioName}>Poker</Text>
+              <Text style={styles.portfolioSub}>{games.Poker.sessions} sessions logged</Text>
+            </View>
+            <Text style={[styles.portfolioNet, { color: netColor(games.Poker.net) }]}>
+              {formatNet(games.Poker.net)}
+            </Text>
+          </View>
+
+          <View style={styles.portfolioDivider} />
+
+          {/* Sports Betting */}
+          <View style={styles.portfolioRow}>
+            <View style={styles.portfolioIconBox}>
+              <Ionicons name="basketball-outline" size={moderateScale(18)} color={COLORS.primary} />
+            </View>
+            <View style={styles.portfolioInfo}>
+              <Text style={styles.portfolioName}>Sports Betting</Text>
+              <Text style={styles.portfolioSub}>
+                {games['Sports Betting'].sessions} slips logged
+              </Text>
+            </View>
+            <Text style={[styles.portfolioNet, { color: netColor(games['Sports Betting'].net) }]}>
+              {formatNet(games['Sports Betting'].net)}
+            </Text>
+          </View>
+
+          <View style={styles.portfolioDivider} />
+
+          {/* General */}
+          <View style={styles.portfolioRow}>
+            <View style={styles.portfolioIconBox}>
+              <Ionicons name="dice-outline" size={moderateScale(18)} color={COLORS.primary} />
+            </View>
+            <View style={styles.portfolioInfo}>
+              <Text style={styles.portfolioName}>General Tracker</Text>
+              <Text style={styles.portfolioSub}>{games.General.sessions} sessions logged</Text>
+            </View>
+            <Text style={[styles.portfolioNet, { color: netColor(games.General.net) }]}>
+              {formatNet(games.General.net)}
+            </Text>
           </View>
         </View>
 
@@ -616,4 +721,52 @@ const styles = StyleSheet.create({
 },
 insightLinkTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
 insightLinkSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+
+  // Game Portfolio Breakdown
+  portfolioCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md,
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: SPACING.cardPadding,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    marginBottom: SPACING.lg,
+  },
+  portfolioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: moderateScale(10),
+  },
+  portfolioIconBox: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: RADIUS.xs,
+    backgroundColor: COLORS.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+  },
+  portfolioInfo: {
+    flex: 1,
+  },
+  portfolioName: {
+    fontSize: fluidFont(14),
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  portfolioSub: {
+    fontSize: fluidFont(11),
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  portfolioNet: {
+    fontSize: fluidFont(14),
+    fontWeight: '700',
+    marginLeft: SPACING.sm,
+  },
+  portfolioDivider: {
+    height: 1,
+    backgroundColor: COLORS.cardBorder,
+    marginHorizontal: -SPACING.cardPadding + moderateScale(12),
+  },
 });

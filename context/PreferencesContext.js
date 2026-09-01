@@ -3,6 +3,12 @@ import { loadPreferences, savePreferences } from '../services/storageService';
 
 const PreferencesContext = createContext();
 
+export const DEFAULT_QUICK_CHIP_PRESETS = {
+  blackjack: ['10', '25', '50', '100', '250'],
+  sports: ['10', '25', '50', '100', '250'],
+  poker: ['1', '5', '25', '50', '100', '500'],
+};
+
 const DEFAULT_PREFERENCES = {
   quickChipsEnabled: true,
   username: 'Ante Highroller',
@@ -12,6 +18,7 @@ const DEFAULT_PREFERENCES = {
   hapticsEnabled: true,
   stopLossAlert: false,
   stopLossAmount: 250,
+  quickChipPresets: DEFAULT_QUICK_CHIP_PRESETS,
 };
 
 export function PreferencesProvider({ children }) {
@@ -40,6 +47,12 @@ export function PreferencesProvider({ children }) {
           ...stored,
           ...(symbol ? { currencySymbol: symbol } : {}),
           ...(curr ? { currency: curr } : {}),
+          // Ensure every game key exists even if the stored blob predates a game
+          // or was written before this preference was introduced.
+          quickChipPresets: {
+            ...DEFAULT_QUICK_CHIP_PRESETS,
+            ...(stored.quickChipPresets || {}),
+          },
         }));
       }
       setIsLoaded(true);
@@ -62,6 +75,19 @@ export function PreferencesProvider({ children }) {
     updatePreferences({ quickChipsEnabled: value });
   }, [updatePreferences]);
 
+  // Persist the quick-chip denominations for a single game ('blackjack' |
+  // 'poker' | 'sports') without disturbing the others.
+  const setQuickChipPreset = useCallback((game, chips) => {
+    setPreferences((prev) => ({
+      ...prev,
+      quickChipPresets: {
+        ...DEFAULT_QUICK_CHIP_PRESETS,
+        ...prev.quickChipPresets,
+        [game]: chips,
+      },
+    }));
+  }, []);
+
   const resetPreferences = useCallback(() => {
     setPreferences(DEFAULT_PREFERENCES);
   }, []);
@@ -76,9 +102,10 @@ export function PreferencesProvider({ children }) {
       isLoaded,
       updatePreferences,
       setQuickChipsEnabled,
+      setQuickChipPreset,
       resetPreferences,
     }),
-    [preferences, isLoaded, updatePreferences, setQuickChipsEnabled, resetPreferences]
+    [preferences, isLoaded, updatePreferences, setQuickChipsEnabled, setQuickChipPreset, resetPreferences]
   );
 
   return (

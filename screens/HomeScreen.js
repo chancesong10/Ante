@@ -57,17 +57,6 @@ const LiveDot = () => {
   return <Animated.View style={[styles.liveDot, { opacity: pulse }]} />;
 };
 
-const TIPS = [
-  "In Blackjack, always split Aces and 8s.",
-  "Never play slots if you want to protect your bankroll.",
-  "In Poker, position is just as important as your cards.",
-  "Bankroll management is the key to surviving variance.",
-  "Don't chase your losses. Take a break if you're tilting.",
-  "In Sports Betting, always shop for the best lines.",
-  "Double down on 11, unless the dealer is showing an Ace.",
-  "Know when to walk away. Set a stop-loss before you play."
-];
-
 export default function HomeScreen({ navigation, onOpenAddModal }) {
   const { activeSession, endActiveSession } = useActiveSession();
   const { sessionHistory } = useVisibleSessionHistory();
@@ -81,9 +70,6 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
   else if (hour < 18) greetingTime = 'Good Afternoon';
 
   const firstName = user ? (profile?.username || user?.email?.split('@')[0] || 'Player') : 'Guest';
-
-  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-  const dailyTip = TIPS[dayOfYear % TIPS.length];
 
   // Dynamic calculations from real session history
   const totalSessions = sessionHistory.length;
@@ -160,15 +146,6 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
             <Text style={styles.greetingText}>{greetingTime}, {firstName}!</Text>
           </View>
         )}
-
-        {/* Quick Tip Widget */}
-        <View style={[styles.tipCard, SHADOWS.card]}>
-          <View style={styles.tipHeader}>
-            <Ionicons name="bulb" size={moderateScale(18)} color={COLORS.primary} />
-            <Text style={styles.tipTitle}>Quick Tip</Text>
-          </View>
-          <Text style={styles.tipText}>{dailyTip}</Text>
-        </View>
 
         {/* ACTIVE SESSION CARD (Rendered whenever a session is active) */}
         {activeSession && (
@@ -427,7 +404,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Greeting & Tips
+  // Greeting
   greetingContainer: {
     marginBottom: SPACING.md,
     paddingHorizontal: SPACING.xs,
@@ -443,32 +420,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: fluidFont(18),
   },
-  tipCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.cardPadding,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    marginBottom: SPACING.lg,
-  },
-  tipHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-    gap: moderateScale(6),
-  },
-  tipTitle: {
-    fontSize: fluidFont(14),
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  tipText: {
-    fontSize: fluidFont(13),
-    color: COLORS.textSecondary,
-    lineHeight: fluidFont(18),
-    fontStyle: 'italic',
-  },
-
   // Active Session Card
   activeCard: {
     backgroundColor: COLORS.card,

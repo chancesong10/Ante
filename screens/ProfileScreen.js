@@ -20,7 +20,7 @@ import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
-import { usePreferences } from '../context/PreferencesContext';
+import { usePreferences, DEFAULT_QUICK_CHIP_PRESETS } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
@@ -31,6 +31,12 @@ const CURRENCY_OPTIONS = [
   { id: 'EUR', name: 'Euro', symbol: '€' },
   { id: 'GBP', name: 'British Pound', symbol: '£' },
   { id: 'CAD', name: 'Canadian Dollar', symbol: '$' },
+];
+
+const CHIP_PRESET_GAMES = [
+  { id: 'blackjack', label: 'Blackjack', count: 5 },
+  { id: 'poker', label: 'Poker', count: 6 },
+  { id: 'sports', label: 'Sports', count: 5 },
 ];
 
 export default function ProfileScreen({ navigation }) {
@@ -52,12 +58,17 @@ export default function ProfileScreen({ navigation }) {
     stopLossAlert = false,
     stopLossAmount = 250,
     updatePreferences,
+    quickChipPresets = DEFAULT_QUICK_CHIP_PRESETS,
+    setQuickChipPreset,
   } = usePreferences();
 
   const [deviceId, setDeviceId] = useState('ante_vault_seed');
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
   const [limitsModalVisible, setLimitsModalVisible] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
+  const [chipPresetModalVisible, setChipPresetModalVisible] = useState(false);
+  const [chipPresetGame, setChipPresetGame] = useState('blackjack');
+  const [tempChips, setTempChips] = useState([]);
 
   // Temporary local state for modal controls
   const [tempStopLossAlert, setTempStopLossAlert] = useState(stopLossAlert);
@@ -107,33 +118,16 @@ export default function ProfileScreen({ navigation }) {
     let totalWagered = 0;
     let totalBetsCount = 0;
 
-    const games = {
-      Blackjack: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
-      Poker: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
-      'Sports Betting': { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
-      General: { sessions: 0, net: 0, wins: 0, losses: 0, totalBets: 0 },
-    };
-
     sessionHistory.forEach((session) => {
-      const gameType = games[session.gameType] ? session.gameType : 'General';
-      games[gameType].sessions += 1;
-      games[gameType].net += session.netProfit || 0;
-
       if (session.mode === 'hands' && Array.isArray(session.hands)) {
         const hands = session.hands.flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]));
         const handBets = hands.reduce((sum, h) => sum + (h.bet || 0) * (h.doubled ? 2 : 1), 0);
         totalWagered += handBets;
         totalBetsCount += hands.length;
-        games[gameType].totalBets += hands.length;
-        games[gameType].wins += session.wins || hands.filter((h) => h.outcome === 'win').length;
-        games[gameType].losses += session.losses || hands.filter((h) => h.outcome === 'loss').length;
       } else {
         const stake = session.buyIn || Math.abs(session.netProfit || 0);
         totalWagered += stake;
         totalBetsCount += 1;
-        games[gameType].totalBets += 1;
-        if (session.netProfit > 0) games[gameType].wins += 1;
-        else if (session.netProfit < 0) games[gameType].losses += 1;
       }
     });
 
@@ -148,7 +142,6 @@ export default function ProfileScreen({ navigation }) {
       totalWagered,
       winRate,
       totalHands: totalBetsCount,
-      games,
     };
   }, [sessionHistory]);
 
@@ -185,6 +178,39 @@ export default function ProfileScreen({ navigation }) {
     setLimitsModalVisible(false);
   };
 
+  const loadChipDraft = (game) => {
+    const cfg = CHIP_PRESET_GAMES.find((g) => g.id === game) || CHIP_PRESET_GAMES[0];
+    const existing = (quickChipPresets?.[game] || DEFAULT_QUICK_CHIP_PRESETS[game] || []).map(String);
+    setChipPresetGame(game);
+    setTempChips(Array.from({ length: cfg.count }, (_, i) => existing[i] ?? ''));
+  };
+
+  const handleOpenChipPresetModal = () => {
+    loadChipDraft('blackjack');
+    setChipPresetModalVisible(true);
+  };
+
+  const handleSaveChipPreset = () => {
+    let cleaned = tempChips
+      .map((c) => parseFloat(c))
+      .filter((n) => !isNaN(n) && n > 0)
+      .map(String);
+
+    if (cleaned.length === 0) {
+      cleaned = [...DEFAULT_QUICK_CHIP_PRESETS[chipPresetGame]];
+    }
+
+    // Poker's setup grid is fixed at six slots — keep the saved set that length.
+    if (chipPresetGame === 'poker') {
+      const base = DEFAULT_QUICK_CHIP_PRESETS.poker;
+      while (cleaned.length < 6) cleaned.push(base[cleaned.length] || base[base.length - 1]);
+      cleaned = cleaned.slice(0, 6);
+    }
+
+    setQuickChipPreset?.(chipPresetGame, cleaned);
+    setChipPresetModalVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
@@ -201,10 +227,6 @@ export default function ProfileScreen({ navigation }) {
           <View>
             <Text style={styles.title}>VAULT PROFILE</Text>
             <Text style={styles.subtitle}>Secured on-device bankroll identity</Text>
-          </View>
-          <View style={styles.verifiedTag}>
-            <Ionicons name="shield-checkmark" size={12} color={COLORS.accentCyan} />
-            <Text style={styles.verifiedTagText}>PROVABLY SECURE</Text>
           </View>
         </View>
 
@@ -233,17 +255,6 @@ export default function ProfileScreen({ navigation }) {
                 {user?.email}
               </Text>
             )}
-            <View style={styles.rankBadgeRow}>
-              <View style={styles.tierBadge}>
-                <Ionicons
-                  name={user ? 'sparkles' : 'person-outline'}
-                  size={11}
-                  color={COLORS.primary}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.tierBadgeText}>{user ? 'VERIFIED HIGH ROLLER' : 'NOT SIGNED IN'}</Text>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -322,7 +333,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
               <Text style={styles.gridCardLabel}>TOTAL WAGERED</Text>
-              <Ionicons name="flame" size={moderateScale(15)} color={COLORS.primary} />
+              <Ionicons name="flame" size={moderateScale(15)} color="#FF5A1F" />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
               {privacyMode ? '••••••' : `${currencySymbol}${stats.totalWagered.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -354,136 +365,6 @@ export default function ProfileScreen({ navigation }) {
               {stats.totalHands}
             </Text>
             <Text style={styles.gridCardFoot}>Hands & tickets</Text>
-          </View>
-        </View>
-
-        {/* Game Breakdown Matrix */}
-        <Text style={styles.sectionTitle}>GAME PORTFOLIO BREAKDOWN</Text>
-        <View style={[styles.portfolioCard, SHADOWS.card]}>
-          {/* Blackjack */}
-          <View style={styles.portfolioRow}>
-            <View style={styles.portfolioIconBox}>
-              <MaterialCommunityIcons name="cards" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
-            <View style={styles.portfolioInfo}>
-              <Text style={styles.portfolioName}>Blackjack</Text>
-              <Text style={styles.portfolioSub}>
-                {stats.games.Blackjack.sessions} sessions • {stats.games.Blackjack.totalBets} hands
-              </Text>
-            </View>
-            <View style={styles.portfolioOutcome}>
-              <Text
-                style={[
-                  styles.portfolioNet,
-                  {
-                    color:
-                      stats.games.Blackjack.net > 0
-                        ? COLORS.success
-                        : stats.games.Blackjack.net < 0
-                        ? COLORS.danger
-                        : COLORS.textPrimary,
-                  },
-                ]}
-              >
-                {formatAmount(stats.games.Blackjack.net, true)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.portfolioDivider} />
-
-          {/* Poker */}
-          <View style={styles.portfolioRow}>
-            <View style={styles.portfolioIconBox}>
-              <Ionicons name="cash-outline" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
-            <View style={styles.portfolioInfo}>
-              <Text style={styles.portfolioName}>Poker</Text>
-              <Text style={styles.portfolioSub}>
-                {stats.games.Poker.sessions} sessions logged
-              </Text>
-            </View>
-            <View style={styles.portfolioOutcome}>
-              <Text
-                style={[
-                  styles.portfolioNet,
-                  {
-                    color:
-                      stats.games.Poker.net > 0
-                        ? COLORS.success
-                        : stats.games.Poker.net < 0
-                        ? COLORS.danger
-                        : COLORS.textPrimary,
-                  },
-                ]}
-              >
-                {formatAmount(stats.games.Poker.net, true)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.portfolioDivider} />
-
-          {/* Sports Betting */}
-          <View style={styles.portfolioRow}>
-            <View style={styles.portfolioIconBox}>
-              <Ionicons name="basketball-outline" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
-            <View style={styles.portfolioInfo}>
-              <Text style={styles.portfolioName}>Sports Betting</Text>
-              <Text style={styles.portfolioSub}>
-                {stats.games['Sports Betting'].sessions} slips logged
-              </Text>
-            </View>
-            <View style={styles.portfolioOutcome}>
-              <Text
-                style={[
-                  styles.portfolioNet,
-                  {
-                    color:
-                      stats.games['Sports Betting'].net > 0
-                        ? COLORS.success
-                        : stats.games['Sports Betting'].net < 0
-                        ? COLORS.danger
-                        : COLORS.textPrimary,
-                  },
-                ]}
-              >
-                {formatAmount(stats.games['Sports Betting'].net, true)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.portfolioDivider} />
-
-          {/* General */}
-          <View style={styles.portfolioRow}>
-            <View style={styles.portfolioIconBox}>
-              <Ionicons name="dice-outline" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
-            <View style={styles.portfolioInfo}>
-              <Text style={styles.portfolioName}>General Tracker</Text>
-              <Text style={styles.portfolioSub}>
-                {stats.games.General.sessions} sessions logged
-              </Text>
-            </View>
-            <View style={styles.portfolioOutcome}>
-              <Text
-                style={[
-                  styles.portfolioNet,
-                  {
-                    color:
-                      stats.games.General.net > 0
-                        ? COLORS.success
-                        : stats.games.General.net < 0
-                        ? COLORS.danger
-                        : COLORS.textPrimary,
-                  },
-                ]}
-              >
-                {formatAmount(stats.games.General.net, true)}
-              </Text>
-            </View>
           </View>
         </View>
 
@@ -549,6 +430,26 @@ export default function ProfileScreen({ navigation }) {
               thumbColor={quickChipsEnabled ? COLORS.primary : '#8E9BAE'}
             />
           </View>
+
+          <View style={styles.menuDivider} />
+
+          {/* Quick Chip Presets */}
+          <TouchableOpacity
+            style={styles.menuRow}
+            activeOpacity={0.7}
+            onPress={handleOpenChipPresetModal}
+          >
+            <View style={styles.menuIconCircle}>
+              <MaterialCommunityIcons name="poker-chip" size={moderateScale(18)} color={COLORS.primary} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Quick Chip Presets</Text>
+              <Text style={styles.menuSubtitle}>
+                Set the chip amounts for Blackjack, Poker & Sports
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+          </TouchableOpacity>
 
           <View style={styles.menuDivider} />
 
@@ -879,6 +780,97 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* QUICK CHIP PRESET MODAL */}
+      <Modal
+        visible={chipPresetModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setChipPresetModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <TouchableWithoutFeedback onPress={() => setChipPresetModalVisible(false)}>
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
+                style={[styles.modalSheet, SHADOWS.card]}
+              >
+                <View style={styles.modalHeaderRow}>
+                  <Text style={styles.modalTitle}>Quick Chip Presets</Text>
+                  <TouchableOpacity
+                    onPress={() => setChipPresetModalVisible(false)}
+                    hitSlop={TOUCH_TARGET.hitSlop}
+                  >
+                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.chipGameRow}>
+                  {CHIP_PRESET_GAMES.map((g) => {
+                    const isSelected = chipPresetGame === g.id;
+                    return (
+                      <TouchableOpacity
+                        key={g.id}
+                        style={[styles.chipGameBtn, isSelected && styles.chipGameBtnActive]}
+                        activeOpacity={0.7}
+                        onPress={() => loadChipDraft(g.id)}
+                      >
+                        <Text style={[styles.chipGameBtnText, isSelected && styles.chipGameBtnTextActive]}>
+                          {g.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.limitSub}>
+                  These amounts appear as tap-to-add chip buttons while you log bets.
+                  {chipPresetGame === 'poker'
+                    ? ' Poker also pre-fills these at session setup.'
+                    : ''}
+                </Text>
+
+                <View style={styles.chipPresetGrid}>
+                  {tempChips.map((chip, idx) => (
+                    <View key={idx} style={styles.chipPresetBox}>
+                      <Text style={styles.chipPresetLabel}>Chip {idx + 1}</Text>
+                      <View style={styles.chipPresetInputWrap}>
+                        <Text style={styles.chipPresetPrefix}>{currencySymbol}</Text>
+                        <TextInput
+                          style={styles.chipPresetInput}
+                          keyboardType="numeric"
+                          value={chip}
+                          placeholder="0"
+                          placeholderTextColor={COLORS.textMuted}
+                          onChangeText={(val) => {
+                            setTempChips((prev) => {
+                              const next = [...prev];
+                              next[idx] = val;
+                              return next;
+                            });
+                          }}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.saveModalBtn}
+                  activeOpacity={0.85}
+                  onPress={handleSaveChipPreset}
+                >
+                  <Text style={styles.saveModalBtnText}>Save Preset</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -914,24 +906,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
   },
-  verifiedTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.accentCyanMuted,
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: moderateScale(4),
-    borderRadius: RADIUS.xs,
-    borderWidth: 1,
-    borderColor: 'rgba(6, 182, 212, 0.3)',
-    gap: 4,
-  },
-  verifiedTagText: {
-    color: COLORS.accentCyan,
-    fontSize: fluidFont(10),
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-
   // Stake-Style Profile Card
   profileCard: {
     flexDirection: 'row',
@@ -992,27 +966,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 1,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  rankBadgeRow: {
-    marginTop: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tierBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryMuted,
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: moderateScale(3),
-    borderRadius: RADIUS.xs,
-    borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
-  },
-  tierBadgeText: {
-    color: COLORS.primary,
-    fontSize: fluidFont(10),
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
   signInButton: {
     flexDirection: 'row',
@@ -1110,56 +1063,6 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(11),
     color: COLORS.textMuted,
     marginTop: 4,
-  },
-
-  // Game Portfolio Breakdown
-  portfolioCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
-    paddingVertical: moderateScale(8),
-    paddingHorizontal: SPACING.cardPadding,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    marginBottom: SPACING.lg,
-  },
-  portfolioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: moderateScale(10),
-  },
-  portfolioIconBox: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: RADIUS.xs,
-    backgroundColor: COLORS.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
-  },
-  portfolioInfo: {
-    flex: 1,
-  },
-  portfolioName: {
-    fontSize: fluidFont(14),
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  portfolioSub: {
-    fontSize: fluidFont(11),
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
-  portfolioOutcome: {
-    alignItems: 'flex-end',
-  },
-  portfolioNet: {
-    fontSize: fluidFont(14),
-    fontWeight: '700',
-  },
-  portfolioDivider: {
-    height: 1,
-    backgroundColor: COLORS.cardBorder,
-    marginHorizontal: -SPACING.cardPadding + moderateScale(12),
   },
 
   // Menu Settings Cards
@@ -1435,5 +1338,74 @@ const styles = StyleSheet.create({
     color: COLORS.accentCyan,
     marginTop: 6,
     letterSpacing: 0.5,
+  },
+
+  // Quick Chip Preset modal
+  chipGameRow: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  chipGameBtn: {
+    flex: 1,
+    paddingVertical: moderateScale(9),
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipGameBtnActive: {
+    backgroundColor: COLORS.primaryMuted,
+    borderColor: COLORS.primary,
+  },
+  chipGameBtnText: {
+    fontSize: fluidFont(12),
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  chipGameBtnTextActive: {
+    color: COLORS.primary,
+  },
+  chipPresetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  chipPresetBox: {
+    width: '31%',
+  },
+  chipPresetLabel: {
+    fontSize: fluidFont(10),
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  chipPresetInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    paddingHorizontal: moderateScale(8),
+    height: moderateScale(42),
+  },
+  chipPresetPrefix: {
+    fontSize: fluidFont(13),
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginRight: 3,
+  },
+  chipPresetInput: {
+    flex: 1,
+    color: COLORS.textPrimary,
+    fontSize: fluidFont(14),
+    fontWeight: '700',
+    padding: 0,
   },
 });

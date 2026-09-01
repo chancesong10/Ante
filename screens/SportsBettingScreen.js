@@ -20,7 +20,7 @@ import GuestModeBanner from '../components/GuestModeBanner';
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
 const BET_TYPES = ['Moneyline', 'Spread', 'Total', 'Parlay', 'Prop'];
 const SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'Soccer', 'MMA', 'Tennis', 'Other'];
-const STAKE_CHIPS = ['10', '25', '50', '100', '250'];
+const DEFAULT_STAKE_CHIPS = ['10', '25', '50', '100', '250'];
 
 const calcPayout = (stake, americanOdds) => {
   const odds = parseFloat(americanOdds);
@@ -33,7 +33,11 @@ const calcPayout = (stake, americanOdds) => {
 
 export default function SportsBettingScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { currencySymbol = '$', quickChipsEnabled } = usePreferences();
+  const { currencySymbol = '$', quickChipsEnabled, quickChipPresets } = usePreferences();
+  const stakeChips =
+    Array.isArray(quickChipPresets?.sports) && quickChipPresets.sports.length > 0
+      ? quickChipPresets.sports
+      : DEFAULT_STAKE_CHIPS;
   const { user } = useAuth();
   const {
     activeSession,
@@ -299,7 +303,7 @@ export default function SportsBettingScreen({ navigation }) {
 
           {quickChipsEnabled && (
             <View style={styles.chipWrapRow}>
-              {STAKE_CHIPS.map((chip) => (
+              {stakeChips.map((chip) => (
                 <TouchableOpacity
                   key={chip}
                   style={styles.stakeChip}
