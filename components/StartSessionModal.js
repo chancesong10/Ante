@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -6,62 +6,251 @@ import {
   TouchableOpacity,
   StyleSheet,
   TouchableWithoutFeedback,
+  Animated,
+  Easing,
+  AccessibilityInfo,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
-import { Dimensions } from 'react-native';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 
-export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker, onNavigateToSportsBetting, onNavigateToGeneral,}) {
+// Reports the OS "reduce motion" setting and keeps it live. Inlined rather
+// than shared so this modal stays self-contained.
+function useReduceMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
+      if (mounted) setReduced(v);
+    });
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
+    return () => {
+      mounted = false;
+      sub?.remove?.();
+    };
+  }, []);
+  return reduced;
+}
+
+// The four live trackers, in display order. `key` is the exact string
+// startSession() expects; `renderIcon` takes the glyph colour.
+const GAME_CARDS = [
+  {
+    key: 'Blackjack',
+    nav: 'onNavigateToBlackjack',
+    title: 'Blackjack Live Tracker',
+    description: 'Track bets, doubles, splits, and calculate real-time net profit',
+    renderIcon: (c) => <MaterialCommunityIcons name="cards" size={24} color={c} />,
+  },
+  {
+    key: 'Poker',
+    nav: 'onNavigateToPoker',
+    title: 'Poker Session Tracker',
+    description: 'Log your buy-in and cash-out to track your net result',
+    renderIcon: (c) => <Ionicons name="cash-outline" size={24} color={c} />,
+  },
+  {
+    key: 'Sports Betting',
+    nav: 'onNavigateToSportsBetting',
+    title: 'Sports Betting Tracker',
+    description: 'Log stake, odds, and outcome — payout calculated automatically',
+    renderIcon: (c) => <Ionicons name="basketball-outline" size={24} color={c} />,
+  },
+  {
+    key: 'General',
+    nav: 'onNavigateToGeneral',
+    title: 'General Tracker',
+    description: 'Simple buy-in / cash-out for anything else',
+    renderIcon: (c) => <Ionicons name="dice-outline" size={24} color={c} />,
+  },
+];
+
+// One game row. Owns its entrance stagger and its "commit" beat: press-in,
+// the icon tile flooding with the game's colour, and a ring rippling out
+// from it — a chip landing on the felt — before it hands off to the tracker.
+function GameOptionCard({
+  card,
+  index,
+  visible,
+  reduced,
+  committing,
+  otherCommitting,
+  onSelect,
+  onCommit,
+}) {
+  const enter = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  const press = useRef(new Animated.Value(0)).current;
+  const flood = useRef(new Animated.Value(0)).current;
+  const ring = useRef(new Animated.Value(0)).current;
+  const dim = useRef(new Animated.Value(0)).current;
+  const commitTimer = useRef(null);
+
+  const gameColor = getGameColor(card.key);
+
+  // Never let a scheduled hand-off outlive the card (e.g. the user taps a
+  // game, then dismisses the sheet before the commit beat finishes).
+  useEffect(() => () => clearTimeout(commitTimer.current), []);
+
+  // Entrance / reset when the sheet opens and closes.
+  useEffect(() => {
+    if (!visible) {
+      clearTimeout(commitTimer.current);
+      enter.setValue(reduced ? 1 : 0);
+      press.setValue(0);
+      flood.setValue(0);
+      ring.setValue(0);
+      dim.setValue(0);
+      return undefined;
+    }
+    if (reduced) {
+      enter.setValue(1);
+      return undefined;
+    }
+    enter.setValue(0);
+    const anim = Animated.timing(enter, {
+      toValue: 1,
+      duration: 260,
+      delay: index * 45,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [visible, reduced, index, enter, press, flood, ring, dim]);
+
+  // Step back while another card is the one being committed.
+  useEffect(() => {
+    Animated.timing(dim, {
+      toValue: otherCommitting ? 1 : 0,
+      duration: 200,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [otherCommitting, dim]);
+
+  const handlePress = () => {
+    hapticLight();
+    onSelect();
+    if (reduced) {
+      Animated.timing(flood, { toValue: 1, duration: 140, useNativeDriver: true }).start();
+      commitTimer.current = setTimeout(onCommit, 140);
+      return;
+    }
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(press, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(press, {
+          toValue: 0,
+          duration: 160,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(flood, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(ring, {
+        toValue: 1,
+        duration: 460,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+    commitTimer.current = setTimeout(onCommit, 250);
+  };
+
+  const cardScale = press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.97] });
+  const enterTranslate = enter.interpolate({ inputRange: [0, 1], outputRange: [14, 0] });
+  const dimTranslate = dim.interpolate({ inputRange: [0, 1], outputRange: [0, 6] });
+  const dimOpacity = dim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.35] });
+  const ringScale = ring.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.4] });
+  const ringOpacity = ring.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.55, 0.28, 0] });
+
+  return (
+    <Animated.View
+      style={{
+        opacity: Animated.multiply(enter, dimOpacity),
+        transform: [{ translateY: Animated.add(enterTranslate, dimTranslate) }, { scale: cardScale }],
+      }}
+    >
+      <TouchableOpacity
+        style={styles.gameOptionCard}
+        activeOpacity={0.9}
+        disabled={committing || otherCommitting}
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={`Start ${card.title}`}
+      >
+        <View style={styles.gameIconBox}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: gameColor, opacity: flood, borderRadius: RADIUS.sm },
+            ]}
+          />
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.commitRing,
+              { borderColor: gameColor, opacity: ringOpacity, transform: [{ scale: ringScale }] },
+            ]}
+          />
+          {card.renderIcon(COLORS.primary)}
+        </View>
+        <View style={styles.gameInfo}>
+          <View style={styles.gameTitleRow}>
+            <Text style={styles.gameTitle}>{card.title}</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Ready</Text>
+            </View>
+          </View>
+          <Text style={styles.gameDescription}>{card.description}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+export default function StartSessionModal({
+  visible,
+  onClose,
+  onNavigateToBlackjack,
+  onNavigateToPoker,
+  onNavigateToSportsBetting,
+  onNavigateToGeneral,
+}) {
   const { activeSession, startSession, endActiveSession } = useActiveSession();
   const insets = useSafeAreaInsets();
+  const reduced = useReduceMotion();
+  const [committingGame, setCommittingGame] = useState(null);
 
-  const handleStartBlackjack = () => {
-    hapticLight();
-    if (!activeSession) {
-      startSession('Blackjack');
-    }
-    onClose();
-    if (onNavigateToBlackjack) {
-      onNavigateToBlackjack();
-    }
+  // Clear the commit lock whenever the sheet closes so the next open is fresh.
+  useEffect(() => {
+    if (!visible) setCommittingGame(null);
+  }, [visible]);
+
+  const navByKey = {
+    onNavigateToBlackjack,
+    onNavigateToPoker,
+    onNavigateToSportsBetting,
+    onNavigateToGeneral,
   };
 
-  const handleStartPoker = () => {
-    hapticLight();
-    if (!activeSession) {
-      startSession('Poker');
-    }
-    onClose();
-    if (onNavigateToPoker) {
-      onNavigateToPoker();
-    }
-  };
-
-  const handleStartSportsBetting = () => {
-    hapticLight();
-    if (!activeSession) {
-      startSession('Sports Betting');
-    }
-    onClose();
-    if (onNavigateToSportsBetting) {
-      onNavigateToSportsBetting();
-    }
-  };
-
-  const handleStartGeneral = () => {
-    hapticLight();
-    if (!activeSession) {
-      startSession('General');
-    }
-    onClose();
-    if (onNavigateToGeneral) {
-      onNavigateToGeneral();
-    }
-  };
+  // Same order the per-game handlers used before: start, close, navigate.
+  const commitAndStart = useCallback(
+    (gameKey, navFn) => {
+      if (!activeSession) {
+        startSession(gameKey);
+      }
+      onClose();
+      if (navFn) navFn();
+    },
+    [activeSession, startSession, onClose]
+  );
 
   const handleEndSession = () => {
     hapticSuccess();
@@ -177,93 +366,19 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
               ) : (
                 /* Start New Session Options */
                 <View style={styles.newContent}>
-                  <TouchableOpacity
-                    style={styles.gameOptionCard}
-                    activeOpacity={0.8}
-                    onPress={handleStartBlackjack}
-                  >
-                    <View style={styles.gameIconBox}>
-                      <MaterialCommunityIcons name="cards" size={24} color={COLORS.primary} />
-                    </View>
-                    <View style={styles.gameInfo}>
-                      <View style={styles.gameTitleRow}>
-                        <Text style={styles.gameTitle}>Blackjack Live Tracker</Text>
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>Ready</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.gameDescription}>
-                        Track bets, doubles, splits, and calculate real-time net profit
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.gameOptionCard}
-                    activeOpacity={0.8}
-                    onPress={handleStartPoker}
-                  >
-                    <View style={styles.gameIconBox}>
-                      <Ionicons name="cash-outline" size={24} color={COLORS.primary} />
-                    </View>
-                    <View style={styles.gameInfo}>
-                      <View style={styles.gameTitleRow}>
-                        <Text style={styles.gameTitle}>Poker Session Tracker</Text>
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>Ready</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.gameDescription}>
-                        Log your buy-in and cash-out to track your net result
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.gameOptionCard}
-                    activeOpacity={0.8}
-                    onPress={handleStartSportsBetting}
-                  >
-                    <View style={styles.gameIconBox}>
-                      <Ionicons name="basketball-outline" size={24} color={COLORS.primary} />
-                    </View>
-                    <View style={styles.gameInfo}>
-                      <View style={styles.gameTitleRow}>
-                        <Text style={styles.gameTitle}>Sports Betting Tracker</Text>
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>Ready</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.gameDescription}>
-                        Log stake, odds, and outcome — payout calculated automatically
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.gameOptionCard}
-                    activeOpacity={0.8}
-                    onPress={handleStartGeneral}
-                  >
-                    <View style={styles.gameIconBox}>
-                      <Ionicons name="dice-outline" size={24} color={COLORS.primary} />
-                    </View>
-                    <View style={styles.gameInfo}>
-                      <View style={styles.gameTitleRow}>
-                        <Text style={styles.gameTitle}>General Tracker</Text>
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>Ready</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.gameDescription}>
-                        Simple buy-in / cash-out for anything else
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-                  </TouchableOpacity>
+                  {GAME_CARDS.map((card, i) => (
+                    <GameOptionCard
+                      key={card.key}
+                      card={card}
+                      index={i}
+                      visible={visible}
+                      reduced={reduced}
+                      committing={committingGame === card.key}
+                      otherCommitting={!!committingGame && committingGame !== card.key}
+                      onSelect={() => setCommittingGame(card.key)}
+                      onCommit={() => commitAndStart(card.key, navByKey[card.nav])}
+                    />
+                  ))}
 
                   {/* Future games go here as additional cards — greyed out until built */}
                   <View style={[styles.gameOptionCard, styles.gameOptionCardDisabled]}>
@@ -364,6 +479,14 @@ const styles = StyleSheet.create({
     marginRight: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.primaryGlow,
+    overflow: 'visible',
+  },
+  commitRing: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: RADIUS.md,
+    borderWidth: 2,
   },
   gameInfo: {
     flex: 1,

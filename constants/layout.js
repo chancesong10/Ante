@@ -97,3 +97,52 @@ export const TOUCH_TARGET = {
   minSize: Platform.OS === 'ios' ? 44 : 48,
   hitSlop: { top: 10, bottom: 10, left: 10, right: 10 },
 };
+
+// One rhythm for the space between a screen's major blocks, and the scroll
+// tail every screen leaves for the floating tab bar.
+export const LAYOUT = {
+  sectionGap: moderateScale(28, 0.3),
+  scrollTail: moderateScale(112),
+};
+
+// Shared type scale. Spread into a StyleSheet entry and override per use
+// (colour, alignment). `figure`/`display` carry tabular numerals so money
+// columns stay aligned. Replaces the per-screen habit of hand-rolling
+// fluidFont(38)/fluidFont(11)-with-letterSpacing eyebrows.
+export const TYPE = {
+  display: {
+    fontSize: fluidFont(40),
+    fontWeight: '700',
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
+  },
+  figure: {
+    fontSize: fluidFont(30),
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    fontVariant: ['tabular-nums'],
+  },
+  title: {
+    fontSize: fluidFont(22),
+    fontWeight: '700',
+    letterSpacing: -0.4,
+  },
+  heading: {
+    fontSize: fluidFont(15),
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  body: {
+    fontSize: fluidFont(14),
+    fontWeight: '500',
+  },
+  caption: {
+    fontSize: fluidFont(12),
+    fontWeight: '500',
+  },
+  label: {
+    fontSize: fluidFont(11),
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+};

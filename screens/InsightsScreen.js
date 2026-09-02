@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, BackHandler } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
-import { moderateScale } from '../constants/layout';
+import { moderateScale, fluidFont, SPACING, RADIUS, LAYOUT } from '../constants/layout';
+import { netTone } from '../utils/format';
+import { NavBar, Tappable } from '../components/ui';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
@@ -112,7 +114,7 @@ export default function InsightsScreen({ route, navigation }) {
     vol.riskLabel === 'Low' ? COLORS.success : vol.riskLabel === 'High' ? COLORS.danger : COLORS.warning;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
+  const fmtMoney = (v) => `${v >= 0 ? '+' : '−'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
   const fmtDollar = (v) => `${currencySymbol}${v.toFixed(2)}`;
 
   const topLeak = stats.topLeak;
@@ -230,415 +232,423 @@ export default function InsightsScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.topNav}>
-        <Ionicons
-          name="chevron-back"
-          size={22}
-          color={COLORS.textPrimary}
-          onPress={() => navigation.goBack()}
-          style={styles.backIcon}
-        />
-        <Text style={styles.navTitle}>{gameType} Insights</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      <NavBar title={`${gameType} insights`} onBack={() => navigation.goBack()} />
 
       <View style={styles.contentArea}>
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + moderateScale(60) }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {!hasEnoughData && !isLocked ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="analytics-outline" size={28} color={COLORS.textMuted} />
-            <Text style={styles.emptyTitle}>Not Enough Data Yet</Text>
-            <Text style={styles.emptyText}>
-              Log at least 5 {gameType} hands to unlock behavioral insights. Right now you have {stats.totalHands}.
-            </Text>
-          </View>
-        ) : (
-          <>
-            {/* Leak Spotlight */}
-            {isLocked ? (
-              <LockedLeakTeaser />
-            ) : topLeak ? (
-              <View style={[styles.leakCard, SHADOWS.card]}>
-                <View style={styles.leakEyebrowRow}>
-                  <Ionicons name="warning" size={14} color={COLORS.warning} />
-                  <Text style={styles.leakEyebrow}>BIGGEST LEAK DETECTED</Text>
-                </View>
-                <Text style={styles.leakTitle}>{getLeakCopy(topLeak, { fmtDollar, fmtPct }).title}</Text>
-                <Text style={styles.leakDetail}>{getLeakCopy(topLeak, { fmtDollar, fmtPct }).detail}</Text>
-                {stats.leaks.length > 1 && (
-                  <Text style={styles.leakMoreText}>+{stats.leaks.length - 1} more pattern{stats.leaks.length - 1 !== 1 ? 's' : ''} flagged below</Text>
-                )}
-              </View>
-            ) : (
-              <View style={[styles.card, SHADOWS.card, styles.noLeakCard]}>
-                <Ionicons name="shield-checkmark" size={20} color={COLORS.success} />
-                <Text style={styles.noLeakTitle}>No Major Leaks Detected</Text>
-                <Text style={styles.noLeakText}>
-                  Your bet sizing, doubling decisions, and volatility all look within a healthy range across {outcomes.sample} hands.
-                </Text>
-              </View>
-            )}
-
-            {/* Performance Overview — the baseline everything below is relative to */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>PERFORMANCE OVERVIEW</Text>
-              <Text style={styles.cardHint}>Your actual results across {outcomes.sample} hands</Text>
-
-              {isLocked ? (
-                <>
-                  <View style={styles.outcomeBarRow}>
-                    <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
-                  </View>
-                  <View style={styles.outcomeLegendRow}>
-                    <SkeletonBar width={80} height={12} />
-                    <SkeletonBar width={80} height={12} />
-                    <SkeletonBar width={80} height={12} />
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.outcomeBarRow}>
-                    {outcomes.winRate > 0 && (
-                      <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />
-                    )}
-                    {outcomes.pushRate > 0 && (
-                      <View style={[styles.outcomeBarSeg, { flex: outcomes.pushRate, backgroundColor: COLORS.textMuted }]} />
-                    )}
-                    {outcomes.lossRate > 0 && (
-                      <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />
-                    )}
-                  </View>
-
-                  <View style={styles.outcomeLegendRow}>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                      <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)} ({outcomes.wins})</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                      <Text style={styles.outcomeLegendText}>Push {fmtPct(outcomes.pushRate)} ({outcomes.pushes})</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                      <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)} ({outcomes.losses})</Text>
-                    </View>
-                  </View>
-                </>
-              )}
-
-              <View style={styles.overviewDivider} />
-
-              <View style={styles.compareRow}>
-                <CompareStat
-                  label="Net Result"
-                  value={fmtMoney(returns.netProfit)}
-                  valueColor={returns.netProfit > 0 ? COLORS.success : returns.netProfit < 0 ? COLORS.danger : COLORS.textPrimary}
-                  locked={isLocked}
-                />
-                <CompareStat
-                  label="Return on Wagered"
-                  value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
-                  valueColor={(returns.roi || 0) > 0 ? COLORS.success : (returns.roi || 0) < 0 ? COLORS.danger : COLORS.textPrimary}
-                  locked={isLocked}
-                />
-                <CompareStat
-                  label="Avg / Hand"
-                  value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'}
-                  locked={isLocked}
-                />
-              </View>
-              <Text style={styles.cardFootnote}>
-                {isBlackjack
-                  ? "Return on wagered accounts for bet size, doubles, and blackjack's 3:2 payout — a more honest read on how you're actually doing than win rate alone."
-                  : 'Return on wagered accounts for bet size — a more honest read on how you\'re actually doing than win rate alone.'}
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: insets.bottom + LAYOUT.scrollTail },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {!hasEnoughData && !isLocked ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="analytics-outline" size={moderateScale(28)} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>Not enough data yet</Text>
+              <Text style={styles.emptyText}>
+                Log at least 5 {gameType} hands to unlock behavioral insights. Right now you have {stats.totalHands}.
               </Text>
             </View>
-
-            {/* Current Streak */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>CURRENT STREAK</Text>
+          ) : (
+            <>
+              {/* Leak spotlight */}
               {isLocked ? (
-                <SkeletonBar width={110} height={26} style={{ marginTop: 4 }} />
-              ) : (
-                <Text style={[styles.streakValue, { color: streakColor }]}>
-                  {stats.currentStreakType
-                    ? `${stats.currentStreakLength} ${stats.currentStreakType === 'win' ? 'Win' : 'Loss'}${stats.currentStreakLength !== 1 ? 's' : ''}`
-                    : 'None'}
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.rowCards}>
-              <View style={[styles.halfCard, SHADOWS.card]}>
-                <View style={styles.halfCardHeader}>
-                  <Text style={styles.cardLabel}>LONGEST WIN STREAK</Text>
-                </View>
-                {isLocked ? (
-                  <SkeletonBar width={40} height={22} />
-                ) : (
-                  <Text style={[styles.halfValue, { color: COLORS.success }]}>{stats.longestWinStreak}</Text>
-                )}
-              </View>
-              <View style={[styles.halfCard, SHADOWS.card]}>
-                <View style={styles.halfCardHeader}>
-                  <Text style={styles.cardLabel}>LONGEST LOSS STREAK</Text>
-                </View>
-                {isLocked ? (
-                  <SkeletonBar width={40} height={22} />
-                ) : (
-                  <Text style={[styles.halfValue, { color: COLORS.danger }]}>{stats.longestLossStreak}</Text>
-                )}
-              </View>
-            </View>
-
-            {/* Conditional Win Rates */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>CONDITIONAL WIN RATE</Text>
-              <Text style={styles.cardHint}>Your win rate depending on what just happened</Text>
-              <StatLine label={`After a Win (n=${cwr.afterWin.sample})`} value={fmtPct(cwr.afterWin.rate)} locked={isLocked} />
-              <StatLine label={`After a Loss (n=${cwr.afterLoss.sample})`} value={fmtPct(cwr.afterLoss.rate)} locked={isLocked} />
-              <StatLine label={`After 2 Wins (n=${cwr.afterTwoWins.sample})`} value={fmtPct(cwr.afterTwoWins.rate)} locked={isLocked} />
-              <StatLine label={`After 2 Losses (n=${cwr.afterTwoLosses.sample})`} value={fmtPct(cwr.afterTwoLosses.rate)} locked={isLocked} />
-              {!isLocked && cwr.afterWin.rate !== null && cwr.afterLoss.rate !== null && (
-                <View style={styles.insightNote}>
-                  <Ionicons name="information-circle-outline" size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.insightNoteText}>
-                    {Math.abs(cwr.afterWin.rate - cwr.afterLoss.rate) < 5
-                      ? "Your results don't show a meaningful streak pattern — each hand appears close to independent, as expected."
-                      : `Your win rate shifts by ${Math.abs(cwr.afterWin.rate - cwr.afterLoss.rate).toFixed(1)} points depending on the previous outcome.`}
-                  </Text>
-                </View>
-              )}
-              <Text style={styles.cardFootnote}>Pushes aren't counted as wins or losses in these rates.</Text>
-            </View>
-
-            {isBlackjack && (
-              <>
-                {/* Doubling Performance */}
-                <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>DOUBLING PERFORMANCE</Text>
-                  <View style={styles.compareRow}>
-                    <CompareStat
-                      label={`Doubled (n=${dbl.doubled.sample})`}
-                      value={fmtPct(dbl.doubled.winRate)}
-                      sub={`ROI: ${dbl.doubled.roi !== null ? `${dbl.doubled.roi.toFixed(1)}%` : '—'}`}
-                      locked={isLocked}
-                    />
-                    <CompareStat
-                      label={`Not Doubled (n=${dbl.notDoubled.sample})`}
-                      value={fmtPct(dbl.notDoubled.winRate)}
-                      sub={`ROI: ${dbl.notDoubled.roi !== null ? `${dbl.notDoubled.roi.toFixed(1)}%` : '—'}`}
-                      locked={isLocked}
-                    />
+                <LockedLeakTeaser />
+              ) : topLeak ? (
+                <View style={styles.leakCard}>
+                  <View style={styles.leakEyebrowRow}>
+                    <Ionicons name="warning" size={moderateScale(14)} color={COLORS.warning} />
+                    <Text style={styles.leakEyebrow}>Biggest leak detected</Text>
                   </View>
-                  <Text style={styles.cardFootnote}>
-                    ROI here is return on the units risked in that bucket — a positive doubled ROI means doubling has paid off for you so far, not just that you won those hands more often.
+                  <Text style={styles.leakTitle}>{getLeakCopy(topLeak, { fmtDollar, fmtPct }).title}</Text>
+                  <Text style={styles.leakDetail}>{getLeakCopy(topLeak, { fmtDollar, fmtPct }).detail}</Text>
+                  {stats.leaks.length > 1 && (
+                    <Text style={styles.leakMoreText}>
+                      +{stats.leaks.length - 1} more pattern{stats.leaks.length - 1 !== 1 ? 's' : ''} flagged below
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <View style={[styles.card, styles.noLeakCard]}>
+                  <Ionicons name="shield-checkmark" size={moderateScale(20)} color={COLORS.success} />
+                  <Text style={styles.noLeakTitle}>No major leaks detected</Text>
+                  <Text style={styles.noLeakText}>
+                    Your bet sizing, doubling decisions, and volatility all look within a healthy range across{' '}
+                    {outcomes.sample} hands.
                   </Text>
                 </View>
+              )}
 
-                {/* Double-Down Rate vs. basic strategy benchmark */}
-                {ddr && (
-                  <View style={[styles.card, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>DOUBLE-DOWN FREQUENCY</Text>
-                    <Text style={styles.cardHint}>How often you double, vs. roughly how often basic strategy calls for it</Text>
-                    <View style={styles.compareRow}>
-                      <CompareStat label={`You (n=${ddr.sample})`} value={`${ddr.rate.toFixed(1)}%`} locked={isLocked} />
-                      <CompareStat label="Reference" value={`~${ddr.benchmarkRate}%`} />
+              {/* Performance overview — the baseline everything below is relative to */}
+              <View style={styles.card}>
+                <Text style={styles.cardLabel}>Performance overview</Text>
+                <Text style={styles.cardHint}>Your actual results across {outcomes.sample} hands</Text>
+
+                {isLocked ? (
+                  <>
+                    <View style={styles.outcomeBarRow}>
+                      <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.background }]} />
                     </View>
-                    <Text style={styles.cardFootnote}>
-                      {isLocked
-                        ? 'Unlock Pro to see how your doubling frequency compares to basic strategy.'
-                        : ddr.rate < ddr.benchmarkRate - 2
-                        ? "You're doubling less often than basic strategy suggests — you may be leaving profitable doubles on the table."
-                        : ddr.rate > ddr.benchmarkRate + 4
-                        ? "You're doubling noticeably more than basic strategy suggests — worth checking you're only doubling hard 9–11 and strong soft hands."
-                        : "That's roughly in the range basic strategy would suggest."}
+                    <View style={styles.outcomeLegendRow}>
+                      <SkeletonBar width={80} height={12} />
+                      <SkeletonBar width={80} height={12} />
+                      <SkeletonBar width={80} height={12} />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.outcomeBarRow}>
+                      {outcomes.winRate > 0 && (
+                        <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />
+                      )}
+                      {outcomes.pushRate > 0 && (
+                        <View style={[styles.outcomeBarSeg, { flex: outcomes.pushRate, backgroundColor: COLORS.textMuted }]} />
+                      )}
+                      {outcomes.lossRate > 0 && (
+                        <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />
+                      )}
+                    </View>
+
+                    <View style={styles.outcomeLegendRow}>
+                      <View style={styles.outcomeLegendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
+                        <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)} ({outcomes.wins})</Text>
+                      </View>
+                      <View style={styles.outcomeLegendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
+                        <Text style={styles.outcomeLegendText}>Push {fmtPct(outcomes.pushRate)} ({outcomes.pushes})</Text>
+                      </View>
+                      <View style={styles.outcomeLegendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
+                        <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)} ({outcomes.losses})</Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+
+                <View style={styles.overviewDivider} />
+
+                <View style={styles.compareRow}>
+                  <CompareStat
+                    label="Net result"
+                    value={fmtMoney(returns.netProfit)}
+                    valueColor={netTone(returns.netProfit)}
+                    locked={isLocked}
+                  />
+                  <CompareStat
+                    label="Return on wagered"
+                    value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
+                    valueColor={netTone(returns.roi || 0)}
+                    locked={isLocked}
+                  />
+                  <CompareStat
+                    label="Avg / hand"
+                    value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'}
+                    locked={isLocked}
+                  />
+                </View>
+                <Text style={styles.cardFootnote}>
+                  {isBlackjack
+                    ? "Return on wagered accounts for bet size, doubles, and blackjack's 3:2 payout — a more honest read on how you're actually doing than win rate alone."
+                    : "Return on wagered accounts for bet size — a more honest read on how you're actually doing than win rate alone."}
+                </Text>
+              </View>
+
+              {/* Current streak */}
+              <View style={styles.card}>
+                <Text style={styles.cardLabel}>Current streak</Text>
+                {isLocked ? (
+                  <SkeletonBar width={110} height={26} style={{ marginTop: 4 }} />
+                ) : (
+                  <Text style={[styles.streakValue, { color: streakColor }]}>
+                    {stats.currentStreakType
+                      ? `${stats.currentStreakLength} ${stats.currentStreakType === 'win' ? 'Win' : 'Loss'}${stats.currentStreakLength !== 1 ? 's' : ''}`
+                      : 'None'}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.rowCards}>
+                <View style={styles.halfCard}>
+                  <View style={styles.halfCardHeader}>
+                    <Text style={styles.cardLabel}>Longest win streak</Text>
+                  </View>
+                  {isLocked ? (
+                    <SkeletonBar width={40} height={22} />
+                  ) : (
+                    <Text style={[styles.halfValue, { color: COLORS.success }]}>{stats.longestWinStreak}</Text>
+                  )}
+                </View>
+                <View style={styles.halfCard}>
+                  <View style={styles.halfCardHeader}>
+                    <Text style={styles.cardLabel}>Longest loss streak</Text>
+                  </View>
+                  {isLocked ? (
+                    <SkeletonBar width={40} height={22} />
+                  ) : (
+                    <Text style={[styles.halfValue, { color: COLORS.danger }]}>{stats.longestLossStreak}</Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Conditional win rates */}
+              <View style={styles.card}>
+                <Text style={styles.cardLabel}>Conditional win rate</Text>
+                <Text style={styles.cardHint}>Your win rate depending on what just happened</Text>
+                <StatLine label={`After a win (n=${cwr.afterWin.sample})`} value={fmtPct(cwr.afterWin.rate)} locked={isLocked} />
+                <StatLine label={`After a loss (n=${cwr.afterLoss.sample})`} value={fmtPct(cwr.afterLoss.rate)} locked={isLocked} />
+                <StatLine label={`After 2 wins (n=${cwr.afterTwoWins.sample})`} value={fmtPct(cwr.afterTwoWins.rate)} locked={isLocked} />
+                <StatLine label={`After 2 losses (n=${cwr.afterTwoLosses.sample})`} value={fmtPct(cwr.afterTwoLosses.rate)} locked={isLocked} />
+                {!isLocked && cwr.afterWin.rate !== null && cwr.afterLoss.rate !== null && (
+                  <View style={styles.insightNote}>
+                    <Ionicons name="information-circle-outline" size={moderateScale(16)} color={COLORS.textSecondary} />
+                    <Text style={styles.insightNoteText}>
+                      {Math.abs(cwr.afterWin.rate - cwr.afterLoss.rate) < 5
+                        ? "Your results don't show a meaningful streak pattern — each hand appears close to independent, as expected."
+                        : `Your win rate shifts by ${Math.abs(cwr.afterWin.rate - cwr.afterLoss.rate).toFixed(1)} points depending on the previous outcome.`}
                     </Text>
                   </View>
                 )}
-
-                {/* Blackjack Frequency */}
-                <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>NATURAL BLACKJACK RATE</Text>
-                  <View style={styles.compareRow}>
-                    <CompareStat label="Your Rate" value={`${bj.actualRate.toFixed(1)}%`} locked={isLocked} />
-                    <CompareStat label="Expected" value={`~${bj.expectedRate}%`} />
-                  </View>
-                  <Text style={styles.cardFootnote}>
-                    {isLocked
-                      ? 'Unlock Pro to see whether you\'re running hot or cold on naturals compared to the baseline.'
-                      : bj.sample < 30
-                      ? `${bj.count} blackjacks out of ${bj.sample} hands — still a small sample, so don't read much into the gap yet.`
-                      : Math.abs(bjRateDelta) < 1.5
-                      ? `${bj.count} blackjacks out of ${bj.sample} hands — right in line with the expected rate.`
-                      : bjRateDelta > 0
-                      ? `${bj.count} blackjacks out of ${bj.sample} hands — you're running hot on naturals compared to the baseline.`
-                      : `${bj.count} blackjacks out of ${bj.sample} hands — you're running cold on naturals compared to the baseline.`}
-                  </Text>
-                </View>
-              </>
-            )}
-
-            {/* Bet-Size Tier Win Rates */}
-            {tiers && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>WIN RATE BY BET SIZE</Text>
-                <Text style={styles.cardHint}>Based on your own small / medium / large bet ranges</Text>
-                <StatLine
-                  label={`Small (avg ${currencySymbol}${tiers.small.avgBet.toFixed(0)}, n=${tiers.small.sample})`}
-                  value={fmtPct(tiers.small.winRate)}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Medium (avg ${currencySymbol}${tiers.medium.avgBet.toFixed(0)}, n=${tiers.medium.sample})`}
-                  value={fmtPct(tiers.medium.winRate)}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Large (avg ${currencySymbol}${tiers.large.avgBet.toFixed(0)}, n=${tiers.large.sample})`}
-                  value={fmtPct(tiers.large.winRate)}
-                  locked={isLocked}
-                />
                 <Text style={styles.cardFootnote}>Pushes aren't counted as wins or losses in these rates.</Text>
               </View>
-            )}
 
-            {/* Volatility */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <View style={styles.riskHeaderRow}>
-                <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-                {isLocked ? (
-                  <SkeletonBar width={56} height={18} />
-                ) : (
-                  vol.riskLabel && (
-                    <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel.toUpperCase()}</Text>
+              {isBlackjack && (
+                <>
+                  {/* Doubling performance */}
+                  <View style={styles.card}>
+                    <Text style={styles.cardLabel}>Doubling performance</Text>
+                    <View style={styles.compareRow}>
+                      <CompareStat
+                        label={`Doubled (n=${dbl.doubled.sample})`}
+                        value={fmtPct(dbl.doubled.winRate)}
+                        sub={`ROI: ${dbl.doubled.roi !== null ? `${dbl.doubled.roi.toFixed(1)}%` : '—'}`}
+                        locked={isLocked}
+                      />
+                      <CompareStat
+                        label={`Not doubled (n=${dbl.notDoubled.sample})`}
+                        value={fmtPct(dbl.notDoubled.winRate)}
+                        sub={`ROI: ${dbl.notDoubled.roi !== null ? `${dbl.notDoubled.roi.toFixed(1)}%` : '—'}`}
+                        locked={isLocked}
+                      />
                     </View>
-                  )
+                    <Text style={styles.cardFootnote}>
+                      ROI here is return on the units risked in that bucket — a positive doubled ROI means doubling has
+                      paid off for you so far, not just that you won those hands more often.
+                    </Text>
+                  </View>
+
+                  {/* Double-down rate vs. basic strategy benchmark */}
+                  {ddr && (
+                    <View style={styles.card}>
+                      <Text style={styles.cardLabel}>Double-down frequency</Text>
+                      <Text style={styles.cardHint}>
+                        How often you double, vs. roughly how often basic strategy calls for it
+                      </Text>
+                      <View style={styles.compareRow}>
+                        <CompareStat label={`You (n=${ddr.sample})`} value={`${ddr.rate.toFixed(1)}%`} locked={isLocked} />
+                        <CompareStat label="Reference" value={`~${ddr.benchmarkRate}%`} />
+                      </View>
+                      <Text style={styles.cardFootnote}>
+                        {isLocked
+                          ? 'Unlock Pro to see how your doubling frequency compares to basic strategy.'
+                          : ddr.rate < ddr.benchmarkRate - 2
+                          ? "You're doubling less often than basic strategy suggests — you may be leaving profitable doubles on the table."
+                          : ddr.rate > ddr.benchmarkRate + 4
+                          ? "You're doubling noticeably more than basic strategy suggests — worth checking you're only doubling hard 9–11 and strong soft hands."
+                          : "That's roughly in the range basic strategy would suggest."}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Blackjack frequency */}
+                  <View style={styles.card}>
+                    <Text style={styles.cardLabel}>Natural blackjack rate</Text>
+                    <View style={styles.compareRow}>
+                      <CompareStat label="Your rate" value={`${bj.actualRate.toFixed(1)}%`} locked={isLocked} />
+                      <CompareStat label="Expected" value={`~${bj.expectedRate}%`} />
+                    </View>
+                    <Text style={styles.cardFootnote}>
+                      {isLocked
+                        ? "Unlock Pro to see whether you're running hot or cold on naturals compared to the baseline."
+                        : bj.sample < 30
+                        ? `${bj.count} blackjacks out of ${bj.sample} hands — still a small sample, so don't read much into the gap yet.`
+                        : Math.abs(bjRateDelta) < 1.5
+                        ? `${bj.count} blackjacks out of ${bj.sample} hands — right in line with the expected rate.`
+                        : bjRateDelta > 0
+                        ? `${bj.count} blackjacks out of ${bj.sample} hands — you're running hot on naturals compared to the baseline.`
+                        : `${bj.count} blackjacks out of ${bj.sample} hands — you're running cold on naturals compared to the baseline.`}
+                    </Text>
+                  </View>
+                </>
+              )}
+
+              {/* Bet-size tier win rates */}
+              {tiers && (
+                <View style={styles.card}>
+                  <Text style={styles.cardLabel}>Win rate by bet size</Text>
+                  <Text style={styles.cardHint}>Based on your own small / medium / large bet ranges</Text>
+                  <StatLine
+                    label={`Small (avg ${currencySymbol}${tiers.small.avgBet.toFixed(0)}, n=${tiers.small.sample})`}
+                    value={fmtPct(tiers.small.winRate)}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Medium (avg ${currencySymbol}${tiers.medium.avgBet.toFixed(0)}, n=${tiers.medium.sample})`}
+                    value={fmtPct(tiers.medium.winRate)}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Large (avg ${currencySymbol}${tiers.large.avgBet.toFixed(0)}, n=${tiers.large.sample})`}
+                    value={fmtPct(tiers.large.winRate)}
+                    locked={isLocked}
+                  />
+                  <Text style={styles.cardFootnote}>Pushes aren't counted as wins or losses in these rates.</Text>
+                </View>
+              )}
+
+              {/* Volatility */}
+              <View style={styles.card}>
+                <View style={styles.riskHeaderRow}>
+                  <Text style={styles.cardLabel}>Risk &amp; volatility</Text>
+                  {isLocked ? (
+                    <SkeletonBar width={56} height={18} />
+                  ) : (
+                    vol.riskLabel && (
+                      <View
+                        style={[
+                          styles.riskBadge,
+                          { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor },
+                        ]}
+                      >
+                        <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
+                      </View>
+                    )
+                  )}
+                </View>
+                <Text style={styles.cardHint}>
+                  {isLocked
+                    ? 'See how consistent your bet sizing and results really are.'
+                    : vol.riskLabel
+                    ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average bet, hand to hand.`
+                    : 'Not enough bet variation yet to score this.'}
+                </Text>
+                <StatLine label="Net result std. deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} locked={isLocked} />
+                <StatLine label="Bet size std. deviation" value={`${currencySymbol}${vol.betSizeStdDev.toFixed(2)}`} locked={isLocked} />
+                <StatLine
+                  label="Bet sizing consistency"
+                  value={vol.betSizeConsistency !== null ? `${vol.betSizeConsistency.toFixed(0)}/100` : '—'}
+                  locked={isLocked}
+                />
+                <Text style={styles.cardFootnote}>
+                  Higher net result deviation means bigger swings hand to hand; a higher consistency score means steadier
+                  bet sizing.
+                </Text>
+              </View>
+
+              {/* Bet size after outcome */}
+              <View style={styles.card}>
+                <Text style={styles.cardLabel}>Bet size after outcome</Text>
+                <StatLine label="After a win" value={`${currencySymbol}${stats.avgBetAfterWin.toFixed(2)}`} locked={isLocked} />
+                <StatLine label="After a loss" value={`${currencySymbol}${stats.avgBetAfterLoss.toFixed(2)}`} locked={isLocked} />
+                {!isLocked && chasesLosses && (
+                  <View style={styles.insightNote}>
+                    <Ionicons name="alert-circle-outline" size={moderateScale(16)} color={COLORS.warning} />
+                    <Text style={styles.insightNoteText}>
+                      You tend to bet {((betSizeDelta / (stats.avgBetAfterWin || 1)) * 100).toFixed(0)}% more after a loss
+                      than after a win — a common loss-chasing pattern worth watching.
+                    </Text>
+                  </View>
+                )}
+                {!isLocked && disciplinedSizing && (
+                  <View style={styles.insightNote}>
+                    <Ionicons name="shield-checkmark-outline" size={moderateScale(16)} color={COLORS.success} />
+                    <Text style={styles.insightNoteText}>
+                      You don't bet bigger after a loss to try to win it back — that's disciplined bet sizing.
+                    </Text>
+                  </View>
                 )}
               </View>
-              <Text style={styles.cardHint}>
-                {isLocked
-                  ? 'See how consistent your bet sizing and results really are.'
-                  : vol.riskLabel
-                  ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average bet, hand to hand.`
-                  : 'Not enough bet variation yet to score this.'}
-              </Text>
-              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} locked={isLocked} />
-              <StatLine label="Bet Size Std. Deviation" value={`${currencySymbol}${vol.betSizeStdDev.toFixed(2)}`} locked={isLocked} />
-              <StatLine
-                label="Bet Sizing Consistency"
-                value={vol.betSizeConsistency !== null ? `${vol.betSizeConsistency.toFixed(0)}/100` : '—'}
-                locked={isLocked}
-              />
-              <Text style={styles.cardFootnote}>
-                Higher net result deviation means bigger swings hand to hand; a higher consistency score means steadier bet sizing.
-              </Text>
-            </View>
 
-            {/* Bet Size After Outcome */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>BET SIZE AFTER OUTCOME</Text>
-              <StatLine label="After a Win" value={`${currencySymbol}${stats.avgBetAfterWin.toFixed(2)}`} locked={isLocked} />
-              <StatLine label="After a Loss" value={`${currencySymbol}${stats.avgBetAfterLoss.toFixed(2)}`} locked={isLocked} />
-              {!isLocked && chasesLosses && (
-                <View style={styles.insightNote}>
-                  <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
-                  <Text style={styles.insightNoteText}>
-                    You tend to bet {((betSizeDelta / (stats.avgBetAfterWin || 1)) * 100).toFixed(0)}% more after a loss than after a win — a common loss-chasing pattern worth watching.
+              {/* Day of week */}
+              {dow && (
+                <View style={styles.card}>
+                  <Text style={styles.cardLabel}>Best &amp; worst days</Text>
+                  <StatLine
+                    label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
+                    value={fmtMoney(dow.best.avgNet)}
+                    valueColor={COLORS.success}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
+                    value={fmtMoney(dow.worst.avgNet)}
+                    valueColor={COLORS.danger}
+                    locked={isLocked}
+                  />
+                  <Text style={styles.cardFootnote}>
+                    {dow.best.sessions < 3 || dow.worst.sessions < 3
+                      ? 'Average net profit per session on each day — based on very few sessions per day so far, so treat this as a first read, not a rule.'
+                      : 'Average net profit per session on each day.'}
                   </Text>
                 </View>
               )}
-              {!isLocked && disciplinedSizing && (
-                <View style={styles.insightNote}>
-                  <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
-                  <Text style={styles.insightNoteText}>
-                    You don't bet bigger after a loss to try to win it back — that's disciplined bet sizing.
+
+              {/* Session length performance */}
+              {lenPerf && (
+                <View style={styles.card}>
+                  <Text style={styles.cardLabel}>Performance by session length</Text>
+                  <StatLine
+                    label={`Short: ≤10 hands (n=${lenPerf.short.sample})`}
+                    value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Medium: 11–25 hands (n=${lenPerf.medium.sample})`}
+                    value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
+                    value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                  <Text style={styles.cardFootnote}>
+                    If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.
                   </Text>
                 </View>
               )}
-            </View>
 
-            {/* Day of Week */}
-            {dow && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                <StatLine
-                  label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
-                  value={fmtMoney(dow.best.avgNet)}
-                  valueColor={COLORS.success}
-                  locked={isLocked}
+              {/* Copy report */}
+              <Tappable
+                style={[styles.copyReportBtn, isLocked && styles.copyReportBtnLocked]}
+                onPress={handleCopyReport}
+                accessibilityRole="button"
+                accessibilityLabel="Copy full report"
+              >
+                <Ionicons
+                  name={isLocked ? 'lock-closed' : copied ? 'checkmark-circle' : 'clipboard-outline'}
+                  size={moderateScale(18)}
+                  color={COLORS.textDark}
+                  style={{ marginRight: 8 }}
                 />
-                <StatLine
-                  label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
-                  value={fmtMoney(dow.worst.avgNet)}
-                  valueColor={COLORS.danger}
-                  locked={isLocked}
-                />
-                <Text style={styles.cardFootnote}>
-                  {dow.best.sessions < 3 || dow.worst.sessions < 3
-                    ? 'Average net profit per session on each day — based on very few sessions per day so far, so treat this as a first read, not a rule.'
-                    : 'Average net profit per session on each day.'}
+                <Text style={styles.copyReportBtnText}>
+                  {isLocked ? 'Unlock Pro to copy report' : copied ? 'Copied to clipboard' : 'Copy full report'}
                 </Text>
-              </View>
-            )}
-
-            {/* Session Length Performance */}
-            {lenPerf && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
-                <StatLine
-                  label={`Short: ≤10 hands (n=${lenPerf.short.sample})`}
-                  value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Medium: 11–25 hands (n=${lenPerf.medium.sample})`}
-                  value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
-                  value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <Text style={styles.cardFootnote}>
-                  If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.
-                </Text>
-              </View>
-            )}
-
-            {/* Copy Report */}
-            <TouchableOpacity
-              style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]}
-              activeOpacity={0.85}
-              onPress={handleCopyReport}
-            >
-              <Ionicons
-                name={isLocked ? 'lock-closed' : copied ? 'checkmark-circle' : 'clipboard-outline'}
-                size={18}
-                color={COLORS.textDark}
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.copyReportBtnText}>
-                {isLocked ? 'Unlock Pro to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}
+              </Tappable>
+              <Text style={styles.copyReportHint}>
+                Paste this into a doc or an AI chat to dig into your numbers further. It's a plain-text summary of
+                everything on this page — not gambling advice.
               </Text>
-            </TouchableOpacity>
-            <Text style={styles.copyReportHint}>
-              Paste this into a doc or an AI chat to dig into your numbers further. It's a plain-text summary of everything on this page — not gambling advice.
-            </Text>
-          </>
+            </>
+          )}
+        </ScrollView>
+        {isLocked && (
+          <InsightsUnlockCta
+            subtitle="Conditional win rates, doubling performance, and leak detection — unlocked with Ante Pro."
+            onPress={() => presentPaywallIfNeeded()}
+          />
         )}
-      </ScrollView>
-      {isLocked && (
-        <InsightsUnlockCta
-          subtitle="Conditional win rates, doubling performance, and leak detection — unlocked with Ante Pro."
-          onPress={() => presentPaywallIfNeeded()}
-        />
-      )}
       </View>
     </SafeAreaView>
   );
@@ -646,143 +656,121 @@ export default function InsightsScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
-  topNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.cardBorder,
-  },
-  backIcon: { padding: 4 },
-  navTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
   contentArea: { flex: 1 },
-  scroll: { padding: 16 },
+  scroll: { padding: SPACING.pageHorizontal },
+
   emptyCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 28,
+    borderRadius: RADIUS.md,
+    padding: SPACING.xxl,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    marginTop: 20,
+    marginTop: SPACING.lg,
   },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginTop: 10 },
-  emptyText: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', marginTop: 6, lineHeight: 16 },
+  emptyTitle: { fontSize: fluidFont(15), fontWeight: '700', color: COLORS.textPrimary, marginTop: 10 },
+  emptyText: { fontSize: fluidFont(12), color: COLORS.textMuted, textAlign: 'center', marginTop: 6, lineHeight: fluidFont(16) },
+
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: RADIUS.md,
+    padding: SPACING.cardPadding,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    marginBottom: 14,
+    marginBottom: SPACING.md,
   },
   leakCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1.5,
+    borderRadius: RADIUS.md,
+    padding: moderateScale(18),
+    borderWidth: 1,
     borderColor: COLORS.warningBorder,
-    marginBottom: 14,
+    marginBottom: SPACING.md,
   },
   leakEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  leakEyebrow: { fontSize: 11, fontWeight: '700', color: COLORS.warning, letterSpacing: 1 },
-  leakTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 },
-  leakDetail: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
-  leakMoreText: { fontSize: 11, color: COLORS.textMuted, marginTop: 10, fontWeight: '600' },
-  noLeakCard: { alignItems: 'center', paddingVertical: 22 },
-  noLeakTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 },
-  noLeakText: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', marginTop: 6, lineHeight: 16 },
-  cardLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, letterSpacing: 1, marginBottom: 4 },
-  cardHint: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
-  cardFootnote: { fontSize: 11, color: COLORS.textMuted, marginTop: 8, lineHeight: 15 },
-  streakValue: { fontSize: 28, fontWeight: '700' },
-  rowCards: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  leakEyebrow: { fontSize: fluidFont(12), fontWeight: '700', color: COLORS.warning },
+  leakTitle: { fontSize: fluidFont(17), fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6, letterSpacing: -0.3 },
+  leakDetail: { fontSize: fluidFont(13), color: COLORS.textSecondary, lineHeight: fluidFont(19) },
+  leakMoreText: { fontSize: fluidFont(11), color: COLORS.textMuted, marginTop: 10, fontWeight: '600' },
+
+  noLeakCard: { alignItems: 'center', paddingVertical: moderateScale(22) },
+  noLeakTitle: { fontSize: fluidFont(15), fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 },
+  noLeakText: { fontSize: fluidFont(12), color: COLORS.textMuted, textAlign: 'center', marginTop: 6, lineHeight: fluidFont(16) },
+
+  cardLabel: {
+    fontSize: fluidFont(13),
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
+  cardHint: { fontSize: fluidFont(11), color: COLORS.textMuted, marginBottom: 10, lineHeight: fluidFont(15) },
+  cardFootnote: { fontSize: fluidFont(11), color: COLORS.textMuted, marginTop: 8, lineHeight: fluidFont(15) },
+
+  streakValue: { fontSize: fluidFont(28), fontWeight: '700', letterSpacing: -0.5 },
+  rowCards: { flexDirection: 'row', gap: moderateScale(10), marginBottom: SPACING.md },
   halfCard: {
     flex: 1,
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: RADIUS.md,
+    padding: SPACING.cardPadding,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
     justifyContent: 'space-between',
-    minHeight: 100,
+    minHeight: moderateScale(100),
   },
-  halfCardHeader: {
-    minHeight: 34,
-    justifyContent: 'flex-start',
-  },
-  halfValue: { fontSize: 24, fontWeight: '700' },
-  compareRow: { flexDirection: 'row', gap: 10 },
+  halfCardHeader: { minHeight: moderateScale(32), justifyContent: 'flex-start' },
+  halfValue: { fontSize: fluidFont(24), fontWeight: '700' },
+
+  compareRow: { flexDirection: 'row', gap: moderateScale(10) },
   insightNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 10,
-    padding: 10,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    borderRadius: RADIUS.sm,
+    padding: moderateScale(10),
     marginTop: 10,
   },
-  insightNoteText: { flex: 1, fontSize: 12, color: COLORS.textSecondary, lineHeight: 16 },
+  insightNoteText: { flex: 1, fontSize: fluidFont(12), color: COLORS.textSecondary, lineHeight: fluidFont(16) },
+
   outcomeBarRow: {
     flexDirection: 'row',
-    height: 10,
-    borderRadius: 5,
+    height: moderateScale(10),
+    borderRadius: moderateScale(5),
     overflow: 'hidden',
-    backgroundColor: COLORS.backgroundSecondary,
+    backgroundColor: COLORS.background,
     marginTop: 4,
     marginBottom: 12,
   },
   outcomeBarSeg: { height: '100%' },
-  outcomeLegendRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    marginBottom: 4,
-  },
+  outcomeLegendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: moderateScale(14), marginBottom: 4 },
   outcomeLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  outcomeLegendText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
-  overviewDivider: {
-    height: 1,
-    backgroundColor: COLORS.cardBorder,
-    marginVertical: 12,
-  },
-  riskHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  riskBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  riskBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  legendDot: { width: moderateScale(8), height: moderateScale(8), borderRadius: moderateScale(4) },
+  outcomeLegendText: { fontSize: fluidFont(12), color: COLORS.textSecondary, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  overviewDivider: { height: 1, backgroundColor: COLORS.cardBorder, marginVertical: 12 },
+
+  riskHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  riskBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.xs, borderWidth: 1 },
+  riskBadgeText: { fontSize: fluidFont(10), fontWeight: '700', letterSpacing: 0.3 },
+
   copyReportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(14),
     marginTop: 8,
   },
-  copyReportBtnLocked: {
-    backgroundColor: COLORS.textMuted,
-  },
-  copyReportBtnText: {
-    color: COLORS.textDark,
-    fontWeight: '700',
-    fontSize: 15,
-  },
+  copyReportBtnLocked: { backgroundColor: COLORS.textMuted },
+  copyReportBtnText: { color: COLORS.textDark, fontWeight: '700', fontSize: fluidFont(14) },
   copyReportHint: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     color: COLORS.textMuted,
     textAlign: 'center',
-    lineHeight: 15,
+    lineHeight: fluidFont(15),
     marginTop: 8,
     paddingHorizontal: 8,
   },
