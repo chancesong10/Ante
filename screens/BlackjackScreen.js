@@ -16,6 +16,7 @@ import SwipeableRow from '../components/SwipeableRow';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
+import LivePulseDot from '../components/LivePulseDot';
 
 const emptyHand = () => ({ betAmount: '', doubled: false, blackjack: false, outcome: null });
 
@@ -272,7 +273,7 @@ export default function BlackjackScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.navTitleContainer}>
-          <View style={styles.liveIndicatorDot} />
+          <LivePulseDot size={8} color={COLORS.danger} />
           <Text style={styles.navTitle}>Live Blackjack</Text>
         </View>
 

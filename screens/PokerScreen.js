@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import SwipeableRow from '../components/SwipeableRow';
 import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
+import LivePulseDot from '../components/LivePulseDot';
 
 const STREETS = [
   { key: 'preflop', label: 'Pre-Flop', short: 'Pre' },
@@ -896,7 +897,7 @@ export default function PokerScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={styles.navTitleContainer}>
-            <View style={styles.liveIndicatorDot} />
+            <LivePulseDot size={8} color={COLORS.danger} />
             <Text style={styles.navTitle}>
               Hand #{totalHandsCount + 1} • {STREETS[currentStreetIdx]?.label}
             </Text>
@@ -1367,7 +1368,7 @@ export default function PokerScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.navTitleContainer}>
-          <View style={styles.liveIndicatorDot} />
+          <LivePulseDot size={8} color={COLORS.danger} />
           <Text style={styles.navTitle}>Live Poker</Text>
         </View>
 
