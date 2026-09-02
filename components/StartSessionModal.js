@@ -13,12 +13,14 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import { Dimensions } from 'react-native';
+import { hapticLight, hapticSuccess } from '../utils/haptics';
 
 export default function StartSessionModal({ visible, onClose, onNavigateToBlackjack, onNavigateToPoker, onNavigateToSportsBetting, onNavigateToGeneral,}) {
   const { activeSession, startSession, endActiveSession } = useActiveSession();
   const insets = useSafeAreaInsets();
 
   const handleStartBlackjack = () => {
+    hapticLight();
     if (!activeSession) {
       startSession('Blackjack');
     }
@@ -29,6 +31,7 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
   };
 
   const handleStartPoker = () => {
+    hapticLight();
     if (!activeSession) {
       startSession('Poker');
     }
@@ -39,26 +42,29 @@ export default function StartSessionModal({ visible, onClose, onNavigateToBlackj
   };
 
   const handleStartSportsBetting = () => {
-  if (!activeSession) {
-    startSession('Sports Betting');
-  }
-  onClose();
-  if (onNavigateToSportsBetting) {
-    onNavigateToSportsBetting();
-  }
-};
+    hapticLight();
+    if (!activeSession) {
+      startSession('Sports Betting');
+    }
+    onClose();
+    if (onNavigateToSportsBetting) {
+      onNavigateToSportsBetting();
+    }
+  };
 
-const handleStartGeneral = () => {
-  if (!activeSession) {
-    startSession('General');
-  }
-  onClose();
-  if (onNavigateToGeneral) {
-    onNavigateToGeneral();
-  }
-};
+  const handleStartGeneral = () => {
+    hapticLight();
+    if (!activeSession) {
+      startSession('General');
+    }
+    onClose();
+    if (onNavigateToGeneral) {
+      onNavigateToGeneral();
+    }
+  };
 
   const handleEndSession = () => {
+    hapticSuccess();
     endActiveSession();
     onClose();
   };
@@ -128,6 +134,7 @@ const handleStartGeneral = () => {
                     style={[styles.primaryButton, SHADOWS.card]}
                     activeOpacity={0.8}
                     onPress={() => {
+                      hapticLight();
                       onClose();
                       if (activeSession?.gameType === 'Poker') {
                         if (onNavigateToPoker) onNavigateToPoker();

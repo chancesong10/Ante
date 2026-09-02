@@ -34,6 +34,7 @@ import AnimatedLoadingScreen from './components/AnimatedLoadingScreen';
 import { COLORS } from './constants/theme';
 import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useActiveSession, useSessionHistory } from './context/SessionContext';
+import { hapticLight } from './utils/haptics';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -373,7 +374,10 @@ function AppContent() {
           <Stack.Screen name="MainTabs">
             {() => (
               <MainTabNavigator
-                onOpenAddModal={() => setAddModalVisible(true)}
+                onOpenAddModal={() => {
+                  hapticLight();
+                  setAddModalVisible(true);
+                }}
               />
             )}
           </Stack.Screen>

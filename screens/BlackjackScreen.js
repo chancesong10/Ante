@@ -17,6 +17,7 @@ import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
+import { hapticLight, hapticSuccess } from '../utils/haptics';
 
 const emptyHand = () => ({ betAmount: '', doubled: false, blackjack: false, outcome: null });
 
@@ -55,12 +56,14 @@ export default function BlackjackScreen({ navigation }) {
       : ['10', '25', '50', '100', '250'];
 
   const handleChipPress = (chipValue) => {
+    hapticLight();
     const current = parseFloat(betAmount) || 0;
     const next = current + parseFloat(chipValue);
     setBetAmount(String(next));
   };
 
   const handleSplitChipPress = (which, chipValue) => {
+    hapticLight();
     const hand = which === 1 ? splitHand1 : splitHand2;
     const current = parseFloat(hand.betAmount) || 0;
     const next = current + parseFloat(chipValue);
@@ -80,6 +83,7 @@ export default function BlackjackScreen({ navigation }) {
   const canToggleSplit = betAmount && parseFloat(betAmount) > 0;
 
   const toggleSplit = () => {
+    hapticLight();
     if (!split) {
       setSplitHand1({ ...emptyHand(), betAmount });
       setSplitHand2({ ...emptyHand(), betAmount });
@@ -95,6 +99,7 @@ export default function BlackjackScreen({ navigation }) {
   };
 
   const submitHand = () => {
+    hapticLight();
     if (split) {
       const bet1 = parseFloat(splitHand1.betAmount);
       const bet2 = parseFloat(splitHand2.betAmount);
@@ -152,6 +157,7 @@ export default function BlackjackScreen({ navigation }) {
   const pushes = allHands.filter((h) => h.outcome === 'push').length;
 
   const handleEndSessionPress = () => {
+    hapticSuccess();
     if (allHands.length === 0) {
       discardActiveSession();
       navigation.navigate('MainTabs', { screen: 'Home' });
@@ -173,7 +179,10 @@ export default function BlackjackScreen({ navigation }) {
       <TouchableOpacity
         style={[styles.outcomeButton, currentOutcome === 'win' && styles.winActive]}
         activeOpacity={0.7}
-        onPress={() => onSelect('win')}
+        onPress={() => {
+          hapticLight();
+          onSelect('win');
+        }}
       >
         <Text style={[styles.outcomeText, currentOutcome === 'win' && styles.outcomeTextActive]}>
           Win
@@ -182,7 +191,10 @@ export default function BlackjackScreen({ navigation }) {
       <TouchableOpacity
         style={[styles.outcomeButton, currentOutcome === 'loss' && styles.lossActive]}
         activeOpacity={0.7}
-        onPress={() => onSelect('loss')}
+        onPress={() => {
+          hapticLight();
+          onSelect('loss');
+        }}
       >
         <Text style={[styles.outcomeText, currentOutcome === 'loss' && styles.lossTextLossActive]}>
           Loss
@@ -191,7 +203,10 @@ export default function BlackjackScreen({ navigation }) {
       <TouchableOpacity
         style={[styles.outcomeButton, currentOutcome === 'push' && styles.pushActive]}
         activeOpacity={0.7}
-        onPress={() => onSelect('push')}
+        onPress={() => {
+          hapticLight();
+          onSelect('push');
+        }}
       >
         <Text style={[styles.outcomeText, currentOutcome === 'push' && styles.outcomeTextActive]}>
           Push
@@ -234,7 +249,10 @@ export default function BlackjackScreen({ navigation }) {
           <TouchableOpacity
             style={[styles.toggleButton, hand.doubled && styles.toggleActive]}
             activeOpacity={0.7}
-            onPress={() => updateSplitHand(which, 'doubled', !hand.doubled)}
+            onPress={() => {
+              hapticLight();
+              updateSplitHand(which, 'doubled', !hand.doubled);
+            }}
           >
             <Text style={[styles.toggleText, hand.doubled && styles.toggleTextActive]}>
               2x Doubled
@@ -244,7 +262,10 @@ export default function BlackjackScreen({ navigation }) {
           <TouchableOpacity
             style={[styles.toggleButton, hand.blackjack && styles.toggleActive]}
             activeOpacity={0.7}
-            onPress={() => updateSplitHand(which, 'blackjack', !hand.blackjack)}
+            onPress={() => {
+              hapticLight();
+              updateSplitHand(which, 'blackjack', !hand.blackjack);
+            }}
           >
             <Text style={[styles.toggleText, hand.blackjack && styles.toggleTextActive]}>
               Blackjack 3:2
@@ -394,7 +415,10 @@ export default function BlackjackScreen({ navigation }) {
                 <TouchableOpacity
                   style={[styles.toggleButton, doubled && styles.toggleActive]}
                   activeOpacity={0.7}
-                  onPress={() => setDoubled(!doubled)}
+                  onPress={() => {
+                    hapticLight();
+                    setDoubled(!doubled);
+                  }}
                 >
                   <Text style={[styles.toggleText, doubled && styles.toggleTextActive]}>
                     2x Doubled
@@ -404,7 +428,10 @@ export default function BlackjackScreen({ navigation }) {
                 <TouchableOpacity
                   style={[styles.toggleButton, blackjack && styles.toggleActive]}
                   activeOpacity={0.7}
-                  onPress={() => setBlackjack(!blackjack)}
+                  onPress={() => {
+                    hapticLight();
+                    setBlackjack(!blackjack);
+                  }}
                 >
                   <Text style={[styles.toggleText, blackjack && styles.toggleTextActive]}>
                     Blackjack 3:2
