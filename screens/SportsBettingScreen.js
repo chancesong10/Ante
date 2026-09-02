@@ -16,6 +16,7 @@ import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
+import LivePulseDot from '../components/LivePulseDot';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
 const BET_TYPES = ['Moneyline', 'Spread', 'Total', 'Parlay', 'Prop'];
@@ -148,7 +149,7 @@ export default function SportsBettingScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.navTitleContainer}>
-          <View style={styles.liveIndicatorDot} />
+          <LivePulseDot size={8} color={COLORS.danger} />
           <Text style={styles.navTitle}>Sports Betting</Text>
         </View>
 

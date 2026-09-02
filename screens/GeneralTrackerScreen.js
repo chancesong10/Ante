@@ -18,6 +18,7 @@ import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
+import LivePulseDot from '../components/LivePulseDot';
 
 export default function GeneralTrackerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -119,7 +120,7 @@ export default function GeneralTrackerScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.navTitleContainer}>
-          <View style={styles.liveIndicatorDot} />
+          <LivePulseDot size={8} color={COLORS.danger} />
           <Text style={styles.navTitle}>General Tracker</Text>
         </View>
 
