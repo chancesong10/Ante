@@ -22,6 +22,7 @@ import SwipeableRow from '../components/SwipeableRow';
 import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
+import { hapticLight, hapticSuccess } from '../utils/haptics';
 
 const STREETS = [
   { key: 'preflop', label: 'Pre-Flop', short: 'Pre' },
@@ -267,6 +268,7 @@ export default function PokerScreen({ navigation }) {
 
   // --- Handlers: Incremental Quick Chips for Hero Bet ---
   const handleHeroChipPress = (chipValue) => {
+    hapticLight();
     const val = parseFloat(chipValue) || 0;
     const current = streetBets[currentStreetKey] || 0;
     const updated = current + val;
@@ -292,6 +294,7 @@ export default function PokerScreen({ navigation }) {
   };
 
   const handleHeroCall = () => {
+    hapticLight();
     setStreetBets((prev) => ({
       ...prev,
       [currentStreetKey]: currentStreetMaxBet,
@@ -300,6 +303,7 @@ export default function PokerScreen({ navigation }) {
 
   // --- Handlers: Other Players' Bets & Folds ---
   const handleOpponentChipPress = (id, chipValue) => {
+    hapticLight();
     const val = parseFloat(chipValue) || 0;
     setOpponents((prev) =>
       prev.map((o) =>
@@ -342,6 +346,7 @@ export default function PokerScreen({ navigation }) {
   };
 
   const handleOpponentCall = (id) => {
+    hapticLight();
     setOpponents((prev) =>
       prev.map((o) =>
         o.id === id
@@ -528,6 +533,7 @@ export default function PokerScreen({ navigation }) {
 
   // --- Handlers: Session Discard & End ---
   const handleEndSessionPress = () => {
+    hapticSuccess();
     const hands = activeSession?.hands || [];
     if (hands.length === 0) {
       discardActiveSession();

@@ -17,6 +17,7 @@ import SwipeableRow from '../components/SwipeableRow';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
+import { hapticLight, hapticSuccess } from '../utils/haptics';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
 const BET_TYPES = ['Moneyline', 'Spread', 'Total', 'Parlay', 'Prop'];
@@ -78,6 +79,7 @@ export default function SportsBettingScreen({ navigation }) {
   };
 
   const handleStakeChipPress = (chipValue) => {
+    hapticLight();
     const current = parseFloat(stake) || 0;
     setStake(String(current + parseFloat(chipValue)));
   };
@@ -91,6 +93,7 @@ export default function SportsBettingScreen({ navigation }) {
   const projectedPayout = hasValidStake && hasValidOdds ? calcPayout(parsedStake, odds) : 0;
 
   const submitBet = () => {
+    hapticLight();
     if (!hasValidStake || !hasValidOdds || !outcome) return;
 
     let netChange = 0;
@@ -127,6 +130,7 @@ export default function SportsBettingScreen({ navigation }) {
   const pushes = sessionBets.filter((b) => b.outcome === 'push').length;
 
   const handleEndSessionPress = () => {
+    hapticSuccess();
     if (sessionBets.length === 0) {
       discardActiveSession();
       navigation.navigate('MainTabs', { screen: 'Home' });
