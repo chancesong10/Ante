@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
@@ -44,10 +44,10 @@ export function LockedLeakTeaser() {
   return (
     <View style={[styles.leakCard, SHADOWS.card]}>
       <View style={styles.leakEyebrowRow}>
-        <Ionicons name="warning" size={14} color={COLORS.warning} />
-        <Text style={styles.leakEyebrow}>PATTERN DETECTED</Text>
+        <Ionicons name="warning" size={moderateScale(14)} color={COLORS.warning} />
+        <Text style={styles.leakEyebrow}>Pattern detected</Text>
       </View>
-      <Text style={styles.leakTitle}>We Found Something In Your Play</Text>
+      <Text style={styles.leakTitle}>We found something in your play</Text>
       <Text style={styles.leakDetail}>
         Ante's leak detector flagged a specific, costly pattern in your data. Unlock Pro to see exactly what it is — and what it's costing you.
       </Text>
@@ -70,14 +70,19 @@ export function InsightsUnlockCta({ subtitle, onPress }) {
         <View style={styles.ctaIconBadge}>
           <Ionicons name="lock-closed" size={moderateScale(24)} color={COLORS.primary} />
         </View>
-        <Text style={styles.ctaTitle}>Unlock Behavioral Insights</Text>
+        <Text style={styles.ctaTitle}>Unlock behavioral insights</Text>
         <Text style={styles.ctaSubtitle}>
           {subtitle || 'Streaks, leak detection, and everything else on this page — unlocked with Ante Pro.'}
         </Text>
-        <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85} onPress={onPress}>
-          <Ionicons name="sparkles" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
+        <Pressable
+          style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.62 }]}
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel="Unlock in Profile"
+        >
+          <Ionicons name="sparkles" size={moderateScale(16)} color={COLORS.textDark} style={{ marginRight: 6 }} />
           <Text style={styles.ctaButtonText}>Unlock in Profile</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -98,8 +103,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   leakEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  leakEyebrow: { fontSize: 11, fontWeight: '700', color: COLORS.warning, letterSpacing: 1 },
-  leakTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 },
+  leakEyebrow: { fontSize: fluidFont(12), fontWeight: '700', color: COLORS.warning },
+  leakTitle: { fontSize: fluidFont(17), fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6, letterSpacing: -0.3 },
   leakDetail: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
   leakSkeletonLines: { marginTop: 12, gap: 8 },
   ctaFloatWrap: {

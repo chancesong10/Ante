@@ -14,6 +14,7 @@ import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/
 import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
+import { NavBar } from '../components/ui';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers — same split
@@ -181,17 +182,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.topNav}>
-        <Ionicons
-          name="chevron-back"
-          size={22}
-          color={COLORS.textPrimary}
-          onPress={() => navigation.goBack()}
-          style={styles.backIcon}
-        />
-        <Text style={styles.navTitle}>Lifetime Insights</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      <NavBar title="Lifetime insights" onBack={() => navigation.goBack()} />
 
       <View style={styles.contentArea}>
       <ScrollView
@@ -215,7 +206,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
               <View style={[styles.leakCard, SHADOWS.card]}>
                 <View style={styles.leakEyebrowRow}>
                   <Ionicons name="warning" size={14} color={COLORS.warning} />
-                  <Text style={styles.leakEyebrow}>BIGGEST LEAK DETECTED</Text>
+                  <Text style={styles.leakEyebrow}>Biggest leak detected</Text>
                 </View>
                 <Text style={styles.leakTitle}>{getLeakCopy(topLeak, { fmtMoney, fmtPct }).title}</Text>
                 <Text style={styles.leakDetail}>{getLeakCopy(topLeak, { fmtMoney, fmtPct }).detail}</Text>
@@ -386,7 +377,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
                 ) : (
                   vol.riskLabel && (
                     <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel.toUpperCase()}</Text>
+                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
                     </View>
                   )
                 )}
@@ -465,7 +456,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   leakEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  leakEyebrow: { fontSize: 11, fontWeight: '700', color: COLORS.warning, letterSpacing: 1 },
+  leakEyebrow: { fontSize: 12, fontWeight: '700', color: COLORS.warning },
   leakTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 },
   leakDetail: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
   leakMoreText: { fontSize: 11, color: COLORS.textMuted, marginTop: 10, fontWeight: '600' },
@@ -474,7 +465,7 @@ const styles = StyleSheet.create({
   noLeakText: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', marginTop: 6, lineHeight: 16 },
   unlockCard: { opacity: 0.85 },
   unlockText: { fontSize: 12, color: COLORS.textMuted, lineHeight: 17, marginTop: 4 },
-  cardLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, letterSpacing: 1, marginBottom: 4 },
+  cardLabel: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
   cardHint: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
   cardFootnote: { fontSize: 11, color: COLORS.textMuted, marginTop: 8, lineHeight: 15 },
   streakValue: { fontSize: 28, fontWeight: '700' },

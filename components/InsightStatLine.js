@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS } from '../constants/theme';
+import { fluidFont, moderateScale } from '../constants/layout';
 import { SkeletonBar } from './InsightsPaywall';
 
 // Shared across every insights screen. When `locked`, the real value is
@@ -27,7 +28,23 @@ export default function InsightStatLine({ label, value, valueColor, locked }) {
 }
 
 const styles = StyleSheet.create({
-  statRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
-  statRowLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', flex: 1, marginRight: 8 },
-  statRowValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '700' },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: moderateScale(7),
+  },
+  statRowLabel: {
+    fontSize: fluidFont(13),
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+    flex: 1,
+    marginRight: moderateScale(8),
+  },
+  statRowValue: {
+    fontSize: fluidFont(13),
+    color: COLORS.textPrimary,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
 });

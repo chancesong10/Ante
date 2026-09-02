@@ -1,10 +1,22 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated, Easing, Dimensions } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Modal,
+  TouchableWithoutFeedback,
+  Animated,
+  Easing,
+} from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SHADOWS, getGameColor, getGameColorMuted } from '../constants/theme';
-import { moderateScale, TOUCH_TARGET } from '../constants/layout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../constants/theme';
+import { moderateScale, fluidFont, SPACING, RADIUS, LAYOUT, TOUCH_TARGET } from '../constants/layout';
+import { netTone, formatMoney } from '../utils/format';
+import { Screen, ScreenHeader, Tappable, Rise, useReduceMotion } from '../components/ui';
+import { renderGameIcon, GameIconTile } from '../components/GameIcon';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
@@ -41,13 +53,6 @@ const buildRecordText = (item) => {
   return `${wins}-${losses}-${item.pushes || 0}`;
 };
 
-const renderGameIcon = (gameType, size = 18, color = getGameColor(gameType)) => {
-  if (gameType === 'Poker') return <Ionicons name="cash-outline" size={size} color={color} />;
-  if (gameType === 'Sports Betting') return <Ionicons name="basketball-outline" size={size} color={color} />;
-  if (gameType === 'General') return <Ionicons name="dice-outline" size={size} color={color} />;
-  return <MaterialCommunityIcons name="cards" size={size} color={color} />;
-};
-
 // Same icon set as renderGameIcon, plus a generic one for "All Games" —
 // used both on the dropdown trigger and inside its option list.
 const renderFilterIcon = (gameType, size = 18, color = COLORS.primary) => {
@@ -55,82 +60,281 @@ const renderFilterIcon = (gameType, size = 18, color = COLORS.primary) => {
   return renderGameIcon(gameType, size, color);
 };
 
-const AnimatedSessionItem = ({ children, isNew, gameType, isFocused }) => {
-  const animatedValue = useRef(new Animated.Value(isNew ? 0 : 1)).current;
-  const [isMeasured, setIsMeasured] = useState(!isNew);
-  const [contentHeight, setContentHeight] = useState(0);
+const keyExtractor = (item) => String(item.id);
+const NEW_ROW_SLIDE = moderateScale(96);
+
+// Slides a freshly-stored session in from the right with a slight arrival
+// scale. Transform + opacity only, on the native driver — so it runs on the
+// UI thread and can't be stuttered by the JS work of storing the session.
+// (The previous version measured the row with an onLayout pass and animated
+// its `height` on the JS thread, which is exactly what dropped frames.)
+//
+// The entrance is held until `ready` — History focused AND the stack
+// transition into it finished (see entranceReady below). The row is created
+// while you're still leaving the tracker screen, so firing on mount spends
+// the 360ms mid-navigation and the row just appears in place.
+const AnimatedSessionItem = React.memo(function AnimatedSessionItem({ children, isNew, ready }) {
+  const anim = useRef(new Animated.Value(isNew ? 0 : 1)).current;
+  const played = useRef(!isNew);
 
   useEffect(() => {
-    if (isNew && contentHeight > 0 && isFocused) {
-      Animated.sequence([
-        Animated.timing(animatedValue, {
-          toValue: 0.5,
-          duration: 350,
-          useNativeDriver: false,
-        }),
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration: 650,
-          easing: Easing.out(Easing.back(1.2)),
-          useNativeDriver: false,
-        })
-      ]).start();
-    }
-  }, [isNew, contentHeight, isFocused]);
+    if (played.current || !isNew || !ready) return undefined;
+    played.current = true;
+    anim.setValue(0);
+    // one short settle after the transition reports done, then slide
+    const t = setTimeout(() => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 360,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }, 90);
+    return () => clearTimeout(t);
+  }, [isNew, ready, anim]);
 
-  if (!isNew) {
-    return <View>{children}</View>;
-  }
-
-  const height = animatedValue.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, contentHeight, contentHeight]
-  });
-
-  const translateX = animatedValue.interpolate({
-    inputRange: [0.5, 1],
-    outputRange: [Dimensions.get('window').width, 0],
-    extrapolate: 'clamp'
-  });
+  if (!isNew) return children;
 
   return (
-    <Animated.View style={{ height, overflow: 'hidden', marginVertical: isMeasured ? undefined : 0 }}>
-      <View 
-        style={{ position: 'absolute', opacity: 0, width: '100%' }}
-        onLayout={(e) => {
-          if (!isMeasured) {
-            setContentHeight(e.nativeEvent.layout.height);
-            setIsMeasured(true);
-          }
-        }}
-      >
-        {children}
-      </View>
-
-      {isMeasured && (
-        <View style={{ flex: 1, justifyContent: 'center' }}>
-          <Animated.View style={{ transform: [{ translateX }] }}>
-            {children}
-          </Animated.View>
-        </View>
-      )}
+    <Animated.View
+      style={{
+        opacity: anim,
+        transform: [
+          { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [NEW_ROW_SLIDE, 0] }) },
+          { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) },
+        ],
+      }}
+    >
+      {children}
     </Animated.View>
   );
-};
+});
+
+// One history row. Memoised so that toggling one row's expansion, or storing
+// a new session, doesn't re-render every other row in the list.
+const SessionRow = React.memo(function SessionRow({
+  session,
+  isExpanded,
+  onToggle,
+  onDelete,
+  currencySymbol,
+  privacyMode,
+}) {
+  const isWin = session.netProfit > 0;
+  const isBuyInMode = session.mode === 'buyInCashOut';
+  const terms = getSessionTerms(session.gameType);
+  const recordText = buildRecordText(session);
+
+  const handNet = (value) => (
+    <Text style={[styles.handNet, { color: netTone(value) }]}>
+      {formatMoney(value, currencySymbol, false)}
+    </Text>
+  );
+
+  return (
+    <SwipeableRow
+      onDelete={() => onDelete(session.id)}
+      confirmTitle="Delete this session?"
+      confirmMessage="This will permanently remove this session and its history. This cannot be undone."
+    >
+      <View style={styles.card}>
+        <Tappable onPress={() => onToggle(session.id)} style={styles.cardHeader}>
+          <GameIconTile gameType={session.gameType} style={styles.icon} />
+
+          <View style={styles.sessionMeta}>
+            <Text style={styles.gameType}>{session.gameType}</Text>
+            <Text style={styles.sessionDateTime}>{session.formattedDate}</Text>
+          </View>
+
+          <View style={styles.netContainer}>
+            <Text style={[styles.netProfitText, { color: netTone(session.netProfit) }]}>
+              {formatMoney(session.netProfit, currencySymbol, privacyMode)}
+            </Text>
+            <View style={styles.durationRow}>
+              <Ionicons name="time-outline" size={moderateScale(12)} color={COLORS.textMuted} />
+              <Text style={styles.durationText}>{session.durationFormatted}</Text>
+            </View>
+          </View>
+        </Tappable>
+
+        {!isBuyInMode && (
+          <View style={styles.statsStrip}>
+            <View style={styles.statCol}>
+              <Text style={styles.statLabel}>{terms.unit}</Text>
+              <Text style={styles.statVal}>{session.totalHands}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statCol}>
+              <Text style={styles.statLabel}>{terms.recordLabel}</Text>
+              <Text style={styles.statVal}>{recordText}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statCol}>
+              <Text style={styles.statLabel}>Win rate</Text>
+              <Text style={[styles.statVal, isWin && { color: COLORS.success }]}>
+                {session.winRate.toFixed(1)}%
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {isBuyInMode && (
+          <View style={styles.statsStrip}>
+            <View style={styles.statCol}>
+              <Text style={styles.statLabel}>Buy-in</Text>
+              <Text style={styles.statVal}>
+                {privacyMode ? '••••' : `${currencySymbol}${session.buyIn.toFixed(2)}`}
+              </Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statCol}>
+              <Text style={styles.statLabel}>Cash-out</Text>
+              <Text style={styles.statVal}>
+                {privacyMode ? '••••' : `${currencySymbol}${session.cashOut.toFixed(2)}`}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {isExpanded && (
+          <View style={styles.expandedSection}>
+            <View style={styles.expandedDivider} />
+
+            {isBuyInMode ? (
+              <View style={styles.buyInSummary}>
+                <Text style={styles.expandedTitle}>Session summary</Text>
+                <View style={styles.buyInRow}>
+                  <Text style={styles.buyInLabel}>Buy-in</Text>
+                  <Text style={styles.buyInValue}>
+                    {privacyMode ? '••••' : `${currencySymbol}${session.buyIn.toFixed(2)}`}
+                  </Text>
+                </View>
+                <View style={styles.buyInRow}>
+                  <Text style={styles.buyInLabel}>Cash-out</Text>
+                  <Text style={styles.buyInValue}>
+                    {privacyMode ? '••••' : `${currencySymbol}${session.cashOut.toFixed(2)}`}
+                  </Text>
+                </View>
+                <View style={[styles.buyInRow, styles.buyInTotalRow]}>
+                  <Text style={styles.buyInTotalLabel}>Net result</Text>
+                  <Text style={[styles.buyInTotalValue, { color: netTone(session.netProfit) }]}>
+                    {formatMoney(session.netProfit, currencySymbol, privacyMode)}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.expandedTitle}>
+                  Logged {terms.unit.toLowerCase()} ({session.hands.length})
+                </Text>
+                {session.hands.map((h, idx) => {
+                  if (h.type === 'split') {
+                    return (
+                      <View key={idx} style={styles.splitRowBox}>
+                        <Text style={styles.splitRowLabel}>Split pair</Text>
+                        {h.hands.map((subHand, sIdx) => (
+                          <View key={sIdx} style={styles.handRow}>
+                            <Text style={styles.handDetail}>
+                              Hand {sIdx + 1}: {currencySymbol}
+                              {subHand.bet}
+                              {subHand.doubled ? ' (2x)' : ''}
+                              {subHand.blackjack ? ' (BJ)' : ''} — {subHand.outcome.toUpperCase()}
+                            </Text>
+                            {handNet(subHand.netChange)}
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  }
+
+                  if (session.gameType === 'Poker' || h.gameType === 'Poker') {
+                    const posStr = h.position ? ` (${h.position})` : '';
+                    const betVal = h.heroInvestment !== undefined ? h.heroInvestment : h.bet;
+                    let label = `Hand ${idx + 1}${posStr}: Bet ${currencySymbol}${betVal}`;
+                    if (h.outcome === 'win') {
+                      label += ` | Pot ${currencySymbol}${h.pot || 0} — WON`;
+                    } else if (h.outcome === 'fold') {
+                      const foldTag =
+                        h.foldReason === 'bluffed'
+                          ? ' [BLUFFED]'
+                          : h.foldReason === 'good_fold'
+                          ? ' [GOOD FOLD]'
+                          : '';
+                      label += ` (${h.streetFolded || 'Fold'}) — FOLD${foldTag}`;
+                    } else if (h.outcome === 'split') {
+                      label += ` | Pot ${currencySymbol}${h.pot || 0} — SPLIT (${h.splitCount || 2}W)`;
+                    } else {
+                      label += ` | Pot ${currencySymbol}${h.pot || 0} — LOST`;
+                    }
+
+                    return (
+                      <View key={idx} style={styles.handRow}>
+                        <Text style={styles.handDetail}>{label}</Text>
+                        {handNet(h.netChange)}
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <View key={idx} style={styles.handRow}>
+                      <Text style={styles.handDetail}>
+                        {h.matchup
+                          ? `${h.matchup} (${h.betType}): ${currencySymbol}${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${h.outcome.toUpperCase()}`
+                          : `${session.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${h.outcome.toUpperCase()}`}
+                      </Text>
+                      {handNet(h.netChange)}
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </View>
+        )}
+      </View>
+    </SwipeableRow>
+  );
+});
 
 export default function HistoryScreen({ navigation }) {
   const { sessionHistory, deleteSession } = useVisibleSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
+  const reduced = useReduceMotion();
   const [gameFilter, setGameFilter] = useState('All');
   const [outcomeFilter, setOutcomeFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
   const [gameFilterModalVisible, setGameFilterModalVisible] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
-  
+
+  // True once History is focused AND the stack transition that revealed it
+  // has finished — the signal the new-row slide waits on, so it plays with
+  // the list settled on screen instead of behind the navigation animation.
+  const [entranceReady, setEntranceReady] = useState(false);
+  useEffect(() => {
+    if (!isFocused) {
+      setEntranceReady(false);
+      return undefined;
+    }
+    const markReady = () => setEntranceReady(true);
+    const parent = navigation.getParent && navigation.getParent();
+    const unsub =
+      parent && parent.addListener
+        ? parent.addListener('transitionEnd', (e) => {
+            if (!e?.data?.closing) markReady();
+          })
+        : null;
+    // Fallback in case no transitionEnd fires (already-settled, or an
+    // instant tab switch with no stack transition).
+    const safety = setTimeout(markReady, 650);
+    return () => {
+      if (unsub) unsub();
+      clearTimeout(safety);
+    };
+  }, [isFocused, navigation]);
+
   const historyCount = useRef(
-    sessionHistory.length > 0 && (Date.now() - (sessionHistory[0]?.endTime || 0)) < 5000
+    sessionHistory.length > 0 && Date.now() - (sessionHistory[0]?.endTime || 0) < 5000
       ? sessionHistory.length - 1
       : sessionHistory.length
   );
@@ -165,364 +369,128 @@ export default function HistoryScreen({ navigation }) {
     return ['All', ...ordered, ...extras];
   }, [sessionHistory]);
 
-  const filteredHistory = sessionHistory.filter((item) => {
-    if (gameFilter !== 'All' && item.gameType !== gameFilter) return false;
-    if (outcomeFilter === 'Wins') return item.netProfit > 0;
-    if (outcomeFilter === 'Losses') return item.netProfit < 0;
-    return true;
-  });
-
-  const paginatedHistory = filteredHistory.slice(0, visibleCount);
-
-  const loadMore = () => {
-    setVisibleCount((prev) => prev + 10);
-  };
-
-  const toggleExpand = (id) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  };
-
-  const renderSessionItem = ({ item }) => {
-    const isExpanded = expandedId === item.id;
-    const isWin = item.netProfit > 0;
-    const isLoss = item.netProfit < 0;
-    const isBuyInMode = item.mode === 'buyInCashOut';
-
-    const isNew = item.id === newlyAddedId.current;
-
-    const terms = getSessionTerms(item.gameType);
-    const recordText = buildRecordText(item);
-
-    return (
-      <AnimatedSessionItem isNew={isNew} gameType={item.gameType} isFocused={isFocused}>
-        <SwipeableRow
-          onDelete={() => deleteSession(item.id)}
-          confirmTitle="Delete this session?"
-          confirmMessage="This will permanently remove this session and its history. This cannot be undone."
-        >
-          <View style={[styles.card, SHADOWS.card]}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => toggleExpand(item.id)}
-            style={styles.cardHeader}
-          >
-            <View
-              style={[
-                styles.iconCircle,
-                { backgroundColor: getGameColorMuted(item.gameType) },
-              ]}
-            >
-              {renderGameIcon(item.gameType, 18)}
-            </View>
-
-            <View style={styles.sessionMeta}>
-              <Text style={styles.gameType}>{item.gameType} Session</Text>
-              <Text style={styles.sessionDateTime}>{item.formattedDate}</Text>
-            </View>
-
-            <View style={styles.netContainer}>
-              <Text
-                style={[
-                  styles.netProfitText,
-                  {
-                    color: isWin
-                      ? COLORS.success
-                      : isLoss
-                      ? COLORS.danger
-                      : COLORS.textPrimary,
-                  },
-                ]}
-              >
-                {privacyMode
-                  ? '••••••'
-                  : `${isWin ? '+' : isLoss ? '-' : ''}${currencySymbol}${Math.abs(item.netProfit).toFixed(2)}`}
-              </Text>
-              <View style={styles.durationRow}>
-                <Ionicons name="time-outline" size={12} color={COLORS.textMuted} />
-                <Text style={styles.durationText}>{item.durationFormatted}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          {!isBuyInMode && (
-            <View style={styles.statsStrip}>
-              <View style={styles.statCol}>
-                <Text style={styles.statLabel}>{terms.unit}</Text>
-                <Text style={styles.statVal}>{item.totalHands}</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statCol}>
-                <Text style={styles.statLabel}>{terms.recordLabel}</Text>
-                <Text style={styles.statVal}>{recordText}</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Win Rate</Text>
-                <Text style={[styles.statVal, isWin && { color: COLORS.success }]}>
-                  {item.winRate.toFixed(1)}%
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {isBuyInMode && (
-            <View style={styles.statsStrip}>
-              <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Buy-In</Text>
-                <Text style={styles.statVal}>
-                  {privacyMode ? '••••••' : `${currencySymbol}${item.buyIn.toFixed(2)}`}
-                </Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Cash-Out</Text>
-                <Text style={styles.statVal}>
-                  {privacyMode ? '••••••' : `${currencySymbol}${item.cashOut.toFixed(2)}`}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {isExpanded && (
-            <View style={styles.expandedSection}>
-              <View style={styles.expandedDivider} />
-
-              {isBuyInMode ? (
-                <View style={styles.buyInSummary}>
-                  <Text style={styles.expandedTitle}>Session Summary</Text>
-                  <View style={styles.buyInRow}>
-                    <Text style={styles.buyInLabel}>Buy-In</Text>
-                    <Text style={styles.buyInValue}>
-                      {privacyMode ? '••••••' : `${currencySymbol}${item.buyIn.toFixed(2)}`}
-                    </Text>
-                  </View>
-                  <View style={styles.buyInRow}>
-                    <Text style={styles.buyInLabel}>Cash-Out</Text>
-                    <Text style={styles.buyInValue}>
-                      {privacyMode ? '••••••' : `${currencySymbol}${item.cashOut.toFixed(2)}`}
-                    </Text>
-                  </View>
-                  <View style={[styles.buyInRow, styles.buyInTotalRow]}>
-                    <Text style={styles.buyInTotalLabel}>Net Result</Text>
-                    <Text
-                      style={[
-                        styles.buyInTotalValue,
-                        {
-                          color: isWin
-                            ? COLORS.success
-                            : isLoss
-                            ? COLORS.danger
-                            : COLORS.textPrimary,
-                        },
-                      ]}
-                    >
-                      {privacyMode
-                        ? '••••••'
-                        : `${isWin ? '+' : isLoss ? '-' : ''}${currencySymbol}${Math.abs(item.netProfit).toFixed(2)}`}
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <>
-                  <Text style={styles.expandedTitle}>Logged {terms.unit} ({item.hands.length})</Text>
-                  {item.hands.map((h, idx) => {
-                    if (h.type === 'split') {
-                      return (
-                        <View key={idx} style={styles.splitRowBox}>
-                          <Text style={styles.splitRowLabel}>Split Pair</Text>
-                          {h.hands.map((subHand, sIdx) => (
-                            <View key={sIdx} style={styles.handRow}>
-                              <Text style={styles.handDetail}>
-                                Hand {sIdx + 1}: {currencySymbol}{subHand.bet}
-                                {subHand.doubled ? ' (2x)' : ''}
-                                {subHand.blackjack ? ' (BJ)' : ''} —{' '}
-                                {subHand.outcome.toUpperCase()}
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.handNet,
-                                  {
-                                    color:
-                                      subHand.netChange > 0
-                                        ? COLORS.success
-                                        : subHand.netChange < 0
-                                        ? COLORS.danger
-                                        : COLORS.textPrimary,
-                                  },
-                                ]}
-                              >
-                                {subHand.netChange > 0 ? '+' : subHand.netChange < 0 ? '-' : ''}{currencySymbol}
-                                {Math.abs(subHand.netChange).toFixed(2)}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      );
-                    }
-
-                    if (item.gameType === 'Poker' || h.gameType === 'Poker') {
-                      const posStr = h.position ? ` (${h.position})` : '';
-                      const betVal = h.heroInvestment !== undefined ? h.heroInvestment : h.bet;
-                      let label = `Hand ${idx + 1}${posStr}: Bet ${currencySymbol}${betVal}`;
-                      if (h.outcome === 'win') {
-                        label += ` | Pot ${currencySymbol}${h.pot || 0} — WON`;
-                      } else if (h.outcome === 'fold') {
-                        const foldTag =
-                          h.foldReason === 'bluffed'
-                            ? ' [BLUFFED]'
-                            : h.foldReason === 'good_fold'
-                            ? ' [GOOD FOLD]'
-                            : '';
-                        label += ` (${h.streetFolded || 'Fold'}) — FOLD${foldTag}`;
-                      } else if (h.outcome === 'split') {
-                        label += ` | Pot ${currencySymbol}${h.pot || 0} — SPLIT (${h.splitCount || 2}W)`;
-                      } else {
-                        label += ` | Pot ${currencySymbol}${h.pot || 0} — LOST`;
-                      }
-
-                      return (
-                        <View key={idx} style={styles.handRow}>
-                          <Text style={styles.handDetail}>{label}</Text>
-                          <Text
-                            style={[
-                              styles.handNet,
-                              {
-                                color:
-                                  h.netChange > 0
-                                    ? COLORS.success
-                                    : h.netChange < 0
-                                    ? COLORS.danger
-                                    : COLORS.textPrimary,
-                              },
-                            ]}
-                          >
-                            {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}{currencySymbol}
-                            {Math.abs(h.netChange).toFixed(2)}
-                          </Text>
-                        </View>
-                      );
-                    }
-
-                    return (
-                      <View key={idx} style={styles.handRow}>
-                        <Text style={styles.handDetail}>
-                          {h.matchup
-                            ? `${h.matchup} (${h.betType}): ${currencySymbol}${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${h.outcome.toUpperCase()}`
-                            : `${item.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${h.outcome.toUpperCase()}`}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.handNet,
-                            {
-                              color:
-                                h.netChange > 0
-                                  ? COLORS.success
-                                  : h.netChange < 0
-                                  ? COLORS.danger
-                                  : COLORS.textPrimary,
-                            },
-                          ]}
-                        >
-                          {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(h.netChange).toFixed(2)}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </>
-              )}
-            </View>
-          )}
-        </View>
-      </SwipeableRow>
-    </AnimatedSessionItem>
+  const filteredHistory = useMemo(
+    () =>
+      sessionHistory.filter((item) => {
+        if (gameFilter !== 'All' && item.gameType !== gameFilter) return false;
+        if (outcomeFilter === 'Wins') return item.netProfit > 0;
+        if (outcomeFilter === 'Losses') return item.netProfit < 0;
+        return true;
+      }),
+    [sessionHistory, gameFilter, outcomeFilter]
   );
-};
+
+  const paginatedHistory = useMemo(
+    () => filteredHistory.slice(0, visibleCount),
+    [filteredHistory, visibleCount]
+  );
+
+  const loadMore = useCallback(() => setVisibleCount((prev) => prev + 10), []);
+  const handleToggle = useCallback((id) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const renderSessionItem = useCallback(
+    ({ item }) => (
+      <AnimatedSessionItem isNew={item.id === newlyAddedId.current} ready={entranceReady}>
+        <SessionRow
+          session={item}
+          isExpanded={expandedId === item.id}
+          onToggle={handleToggle}
+          onDelete={deleteSession}
+          currencySymbol={currencySymbol}
+          privacyMode={privacyMode}
+        />
+      </AnimatedSessionItem>
+    ),
+    [expandedId, entranceReady, handleToggle, deleteSession, currencySymbol, privacyMode]
+  );
+
+  const hasSessions = sessionHistory.length > 0;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>History</Text>
-            <Text style={styles.subtitle}>Recorded live game sessions</Text>
-          </View>
-        </View>
+    <Screen scroll={false}>
+      <Rise index={0} reduced={reduced}>
+        <ScreenHeader title="History" subtitle="Every session you've recorded" />
+      </Rise>
 
-        {sessionHistory.length > 0 && (
-          <>
-            <TouchableOpacity
-              style={styles.gameFilterButton}
-              activeOpacity={0.8}
-              onPress={() => setGameFilterModalVisible(true)}
-            >
-              <View style={styles.gameFilterButtonLeft}>
-                {renderFilterIcon(gameFilter, 16, COLORS.primary)}
-                <Text style={styles.gameFilterButtonText}>
-                  {gameFilter === 'All' ? 'All Games' : gameFilter}
+      {hasSessions && (
+        <Rise index={1} reduced={reduced}>
+          <Tappable
+            style={styles.gameFilterButton}
+            onPress={() => setGameFilterModalVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Filter by game"
+          >
+            <View style={styles.gameFilterButtonLeft}>
+              {renderFilterIcon(gameFilter, moderateScale(16), COLORS.textSecondary)}
+              <Text style={styles.gameFilterButtonText}>
+                {gameFilter === 'All' ? 'All games' : gameFilter}
+              </Text>
+            </View>
+            <Ionicons name="chevron-down" size={moderateScale(16)} color={COLORS.textMuted} />
+          </Tappable>
+
+          <View style={styles.filterRow}>
+            {['All', 'Wins', 'Losses'].map((f) => (
+              <Tappable
+                key={f}
+                style={[styles.filterPill, outcomeFilter === f && styles.filterPillActive]}
+                onPress={() => setOutcomeFilter(f)}
+                accessibilityRole="button"
+                accessibilityLabel={`${f} filter`}
+              >
+                <Text style={[styles.filterPillText, outcomeFilter === f && styles.filterPillTextActive]}>
+                  {f}
                 </Text>
-              </View>
-              <Ionicons name="chevron-down" size={16} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-
-            <View style={[styles.filterRow, styles.filterRowSecondary]}>
-              {['All', 'Wins', 'Losses'].map((f) => (
-                <TouchableOpacity
-                  key={f}
-                  style={[styles.filterPill, styles.filterPillSecondary, outcomeFilter === f && styles.filterPillActive]}
-                  onPress={() => setOutcomeFilter(f)}
-                >
-                  <Text
-                    style={[
-                      styles.filterPillText,
-                      outcomeFilter === f && styles.filterPillTextActive,
-                    ]}
-                  >
-                    {f}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.swipeHint}>Swipe a session to delete</Text>
-          </>
-        )}
-
-        {sessionHistory.length > 0 && filteredHistory.length === 0 && (
-          <View style={styles.emptyFilterContainer}>
-            <Text style={styles.emptyFilterText}>No sessions match this filter.</Text>
+              </Tappable>
+            ))}
           </View>
-        )}
+          <Text style={styles.swipeHint}>Swipe a session to delete</Text>
+        </Rise>
+      )}
 
-        {sessionHistory.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="time-outline" size={36} color={COLORS.textMuted} />
-            </View>
-            <Text style={styles.emptyTitle}>No Sessions Logged</Text>
-            <Text style={styles.emptySubtitle}>
-              When you complete and end a session, it will automatically appear here with relative timestamps and detailed statistics.
-            </Text>
+      {hasSessions && filteredHistory.length === 0 && (
+        <View style={styles.emptyFilterContainer}>
+          <Text style={styles.emptyFilterText}>No sessions match this filter.</Text>
+        </View>
+      )}
+
+      {!hasSessions ? (
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="time-outline" size={moderateScale(32)} color={COLORS.textMuted} />
           </View>
-        ) : (
-          <FlatList
-            data={paginatedHistory}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderSessionItem}
-            ListFooterComponent={() => {
-              if (visibleCount >= filteredHistory.length) return null;
-              return (
-                <TouchableOpacity style={styles.loadMoreButton} onPress={loadMore}>
-                  <Text style={styles.loadMoreText}>See More</Text>
-                </TouchableOpacity>
-              );
-            }}
-            contentContainerStyle={[
-              styles.listContent,
-              { paddingBottom: insets.bottom + moderateScale(96) },
-            ]}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </View>
+          <Text style={styles.emptyTitle}>No sessions logged</Text>
+          <Text style={styles.emptySubtitle}>
+            When you end a session it appears here with its timestamp and a full breakdown.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          style={styles.flex}
+          data={paginatedHistory}
+          keyExtractor={keyExtractor}
+          renderItem={renderSessionItem}
+          extraData={expandedId}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={9}
+          updateCellsBatchingPeriod={40}
+          ListFooterComponent={
+            visibleCount >= filteredHistory.length ? null : (
+              <Tappable style={styles.loadMoreButton} onPress={loadMore}>
+                <Text style={styles.loadMoreText}>See more</Text>
+              </Tappable>
+            )
+          }
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + LAYOUT.scrollTail },
+          ]}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       <Modal
         visible={gameFilterModalVisible}
@@ -532,173 +500,140 @@ export default function HistoryScreen({ navigation }) {
       >
         <TouchableWithoutFeedback onPress={() => setGameFilterModalVisible(false)}>
           <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
-              style={[styles.modalSheet, SHADOWS.card]}
-            >
-              <View style={styles.modalHeaderRow}>
-                <Text style={styles.modalTitle}>Filter by Game</Text>
-                <TouchableOpacity
-                  onPress={() => setGameFilterModalVisible(false)}
-                  hitSlop={TOUCH_TARGET.hitSlop}
-                >
-                  <Ionicons name="close" size={22} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              {gameTypeOptions.map((g) => {
-                const isSelected = gameFilter === g;
-                return (
-                  <TouchableOpacity
-                    key={g}
-                    style={[styles.gameOptionRow, isSelected && styles.gameOptionRowSelected]}
-                    onPress={() => {
-                      setGameFilter(g);
-                      setGameFilterModalVisible(false);
-                    }}
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalSheet}>
+                <View style={styles.modalHeaderRow}>
+                  <Text style={styles.modalTitle}>Filter by game</Text>
+                  <Tappable
+                    onPress={() => setGameFilterModalVisible(false)}
+                    hitSlop={TOUCH_TARGET.hitSlop}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close"
                   >
-                    <View style={styles.gameOptionIconBox}>
-                      {renderFilterIcon(g, 18, isSelected ? COLORS.primary : COLORS.textSecondary)}
-                    </View>
-                    <Text style={[styles.gameOptionText, isSelected && styles.gameOptionTextSelected]}>
-                      {g === 'All' ? 'All Games' : g}
-                    </Text>
-                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </TouchableOpacity>
+                    <Ionicons name="close" size={moderateScale(22)} color={COLORS.textSecondary} />
+                  </Tappable>
+                </View>
+
+                {gameTypeOptions.map((g) => {
+                  const isSelected = gameFilter === g;
+                  return (
+                    <Tappable
+                      key={g}
+                      style={[styles.gameOptionRow, isSelected && styles.gameOptionRowSelected]}
+                      onPress={() => {
+                        setGameFilter(g);
+                        setGameFilterModalVisible(false);
+                      }}
+                    >
+                      <View style={styles.gameOptionIconBox}>
+                        {renderFilterIcon(
+                          g,
+                          moderateScale(18),
+                          isSelected ? COLORS.primary : COLORS.textSecondary
+                        )}
+                      </View>
+                      <Text style={[styles.gameOptionText, isSelected && styles.gameOptionTextSelected]}>
+                        {g === 'All' ? 'All games' : g}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={moderateScale(20)} color={COLORS.primary} />
+                      )}
+                    </Tappable>
+                  );
+                })}
+              </View>
+            </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  animCoin: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.warning,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 16,
-  },
-  header: {
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
+  flex: { flex: 1 },
+
   gameFilterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: COLORS.card,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    marginBottom: 10,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: moderateScale(11),
+    marginBottom: SPACING.xs,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   gameFilterButtonLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: moderateScale(8),
   },
   gameFilterButtonText: {
-    fontSize: 13,
+    fontSize: fluidFont(13),
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  filterRowSecondary: {
-    marginBottom: 4,
+    gap: moderateScale(8),
+    marginBottom: SPACING.xs,
   },
   filterPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: moderateScale(15),
+    paddingVertical: moderateScale(6),
+    borderRadius: RADIUS.pill,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  filterPillSecondary: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
   filterPillActive: {
     backgroundColor: COLORS.primaryMuted,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.cardBorderHighlight,
   },
   filterPillText: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
   filterPillTextActive: {
-    color: COLORS.primary,
+    color: COLORS.textPrimary,
     fontWeight: '700',
   },
   swipeHint: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     color: COLORS.textMuted,
-    marginBottom: 12,
+    marginTop: moderateScale(4),
+    marginBottom: SPACING.sm,
   },
   emptyFilterContainer: {
-    paddingVertical: 40,
+    paddingVertical: moderateScale(40),
     alignItems: 'center',
   },
   emptyFilterText: {
-    fontSize: 13,
+    fontSize: fluidFont(13),
     color: COLORS.textMuted,
   },
   listContent: {
-    gap: 12,
+    gap: SPACING.sm,
+    paddingTop: moderateScale(2),
   },
   loadMoreButton: {
-    paddingVertical: 16,
+    paddingVertical: SPACING.md,
     alignItems: 'center',
   },
   loadMoreText: {
-    fontSize: 14,
+    fontSize: fluidFont(14),
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
+
+  // Session card
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: RADIUS.md,
+    padding: SPACING.cardPadding,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
@@ -706,36 +641,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+  icon: {
+    marginRight: SPACING.sm,
   },
   sessionMeta: {
     flex: 1,
   },
   gameType: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: fluidFont(14),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   sessionDateTime: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
+    fontSize: fluidFont(12),
+    color: COLORS.textMuted,
     marginTop: 2,
-    fontWeight: '500',
   },
   netContainer: {
     alignItems: 'flex-end',
   },
   netProfitText: {
-    fontSize: 16,
+    fontSize: fluidFont(15),
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
@@ -746,18 +672,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   durationText: {
-    fontSize: 11,
+    fontSize: fluidFont(11),
     color: COLORS.textMuted,
   },
+
+  // Flattened stats strip (hairline, not a nested box)
   statsStrip: {
     flexDirection: 'row',
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.cardBorder,
   },
   statCol: {
     flex: 1,
@@ -765,62 +690,66 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: COLORS.cardBorder,
+    alignSelf: 'stretch',
     marginVertical: 2,
+    backgroundColor: COLORS.cardBorder,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: fluidFont(10),
     color: COLORS.textMuted,
-    textTransform: 'uppercase',
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   statVal: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '700',
     color: COLORS.textPrimary,
-    marginTop: 2,
+    marginTop: 3,
+    fontVariant: ['tabular-nums'],
   },
+
   expandedSection: {
-    marginTop: 12,
+    marginTop: SPACING.sm,
   },
   expandedDivider: {
     height: 1,
     backgroundColor: COLORS.cardBorder,
-    marginBottom: 10,
+    marginBottom: moderateScale(10),
   },
   expandedTitle: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '700',
     color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    marginBottom: SPACING.xs,
   },
   handRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 5,
+    gap: SPACING.sm,
   },
   handDetail: {
-    fontSize: 12,
+    flex: 1,
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
   },
   handNet: {
-    fontSize: 12,
+    fontSize: fluidFont(12),
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   splitRowBox: {
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 8,
-    padding: 8,
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.xs,
+    padding: SPACING.xs,
     marginVertical: 4,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
   splitRowLabel: {
-    fontSize: 10,
+    fontSize: fluidFont(10),
     fontWeight: '700',
-    color: COLORS.primary,
+    color: COLORS.textSecondary,
     marginBottom: 4,
   },
   buyInSummary: {
@@ -832,72 +761,78 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   buyInLabel: {
-    fontSize: 13,
+    fontSize: fluidFont(13),
     color: COLORS.textSecondary,
     fontWeight: '600',
   },
   buyInValue: {
-    fontSize: 13,
+    fontSize: fluidFont(13),
     color: COLORS.textPrimary,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   buyInTotalRow: {
     marginTop: 4,
-    paddingTop: 10,
+    paddingTop: moderateScale(10),
     borderTopWidth: 1,
     borderTopColor: COLORS.cardBorder,
   },
   buyInTotalLabel: {
-    fontSize: 14,
+    fontSize: fluidFont(14),
     color: COLORS.textPrimary,
     fontWeight: '700',
   },
   buyInTotalValue: {
-    fontSize: 16,
+    fontSize: fluidFont(15),
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
+
+  // Empty state
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    marginTop: 60,
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: moderateScale(80),
   },
-  emptyIconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+  emptyIcon: {
+    width: moderateScale(64),
+    height: moderateScale(64),
+    borderRadius: moderateScale(32),
     backgroundColor: COLORS.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: fluidFont(17),
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: fluidFont(13),
     color: COLORS.textMuted,
     textAlign: 'center',
     marginTop: 6,
-    lineHeight: 18,
+    lineHeight: fluidFont(19),
   },
+
+  // Filter modal
   modalOverlay: {
     flex: 1,
     backgroundColor: COLORS.overlay,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: SPACING.md,
   },
   modalSheet: {
     width: '100%',
     backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
@@ -905,20 +840,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: SPACING.sm,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: fluidFont(17),
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
   gameOptionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
     backgroundColor: COLORS.card,
-    marginBottom: 8,
+    marginBottom: SPACING.xs,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
@@ -927,17 +862,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryMuted,
   },
   gameOptionIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: COLORS.backgroundSecondary,
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: RADIUS.xs,
+    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.sm,
   },
   gameOptionText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fluidFont(14),
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
