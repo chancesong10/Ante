@@ -103,6 +103,27 @@ describe('calcOddsEdge — implied probability vs. actual win rate', () => {
   test('returns null when there are no decided (win/loss) bets', () => {
     expect(calcOddsEdge([bet({ stake: 50, odds: -110, outcome: 'push', netChange: 0 })])).toBeNull();
   });
+
+  test('bets with 0 / missing odds are excluded rather than folding a bogus 100% into the average', () => {
+    const hands = [
+      bet({ stake: 50, odds: -200, outcome: 'win' }), // 66.67% implied
+      bet({ stake: 50, odds: 0, outcome: 'loss', netChange: -50 }), // unpriceable — ignored
+      bet({ stake: 50, odds: undefined, outcome: 'win', netChange: 25 }), // unpriceable — ignored
+    ];
+    const edge = calcOddsEdge(hands);
+    expect(edge.sample).toBe(1);
+    expect(edge.avgImpliedProbability).toBeCloseTo((200 / 300) * 100, 1);
+    expect(Number.isNaN(edge.edge)).toBe(false);
+  });
+
+  test('returns null when every decided bet has unusable odds', () => {
+    expect(
+      calcOddsEdge([
+        bet({ stake: 50, odds: 0, outcome: 'win', netChange: 10 }),
+        bet({ stake: 50, odds: NaN, outcome: 'loss', netChange: -50 }),
+      ])
+    ).toBeNull();
+  });
 });
 
 describe('calcFavoriteUnderdogStats', () => {
@@ -125,6 +146,17 @@ describe('calcFavoriteUnderdogStats', () => {
     expect(stats.underdogs.sample).toBe(10);
     expect(stats.underdogs.winRate).toBeCloseTo(20, 2);
     expect(stats.underdogs.roi).toBeCloseTo(-20, 2);
+  });
+
+  test('bets with 0 / non-numeric odds land in neither bucket', () => {
+    const stats = calcFavoriteUnderdogStats([
+      bet({ stake: 50, odds: -150, outcome: 'win' }),
+      bet({ stake: 50, odds: 200, outcome: 'loss' }),
+      bet({ stake: 50, odds: 0, outcome: 'win', netChange: 10 }),
+      bet({ stake: 50, odds: undefined, outcome: 'loss', netChange: -50 }),
+    ]);
+    expect(stats.favorites.sample).toBe(1);
+    expect(stats.underdogs.sample).toBe(1);
   });
 });
 

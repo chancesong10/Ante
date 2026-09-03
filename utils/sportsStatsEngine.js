@@ -34,10 +34,15 @@ export function getChronologicalBets(sessionHistory) {
 }
 
 // --- American odds -> implied probability, the sportsbook's own price on
-// the bet at the moment it was placed. ---
+// the bet at the moment it was placed. Returns null for anything that can't
+// be priced (missing, non-numeric, or 0 — American odds are never 0), so
+// callers exclude the bet instead of folding a bogus 100% / NaN into the
+// average. ---
 function impliedProbability(americanOdds) {
-  if (americanOdds < 0) return -americanOdds / (-americanOdds + 100);
-  return 100 / (americanOdds + 100);
+  const odds = Number(americanOdds);
+  if (!Number.isFinite(odds) || odds === 0) return null;
+  if (odds < 0) return -odds / (-odds + 100);
+  return 100 / (odds + 100);
 }
 
 function summarizeGroup(arr) {
@@ -61,7 +66,12 @@ function summarizeGroup(arr) {
 // meaningless without the price it was bought at. Pushes are excluded —
 // they never resolved a probability either way. ---
 export function calcOddsEdge(hands) {
-  const decided = hands.filter((h) => h.outcome === 'win' || h.outcome === 'loss');
+  // Only bets with a usable price belong in this comparison — a bet logged
+  // with missing or zero odds is dropped from the metric entirely rather
+  // than skewing both the sample and the average.
+  const decided = hands.filter(
+    (h) => (h.outcome === 'win' || h.outcome === 'loss') && impliedProbability(h.odds) !== null
+  );
   if (decided.length === 0) return null;
   const wins = decided.filter((h) => h.outcome === 'win').length;
   const actualWinRate = (wins / decided.length) * 100;
@@ -77,8 +87,9 @@ export function calcOddsEdge(hands) {
 
 // --- Favorite (negative odds) vs. underdog (positive odds) performance. ---
 export function calcFavoriteUnderdogStats(hands) {
-  const favorites = hands.filter((h) => h.odds < 0);
-  const underdogs = hands.filter((h) => h.odds > 0);
+  const oddsOf = (h) => Number(h.odds);
+  const favorites = hands.filter((h) => Number.isFinite(oddsOf(h)) && oddsOf(h) < 0);
+  const underdogs = hands.filter((h) => Number.isFinite(oddsOf(h)) && oddsOf(h) > 0);
   return { favorites: summarizeGroup(favorites), underdogs: summarizeGroup(underdogs) };
 }
 
