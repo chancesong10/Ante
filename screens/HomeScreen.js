@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
+import ConfirmModal from '../components/ConfirmModal';
 
 const renderGameIcon = (gameType, size = 18, color = getGameColor(gameType)) => {
   if (gameType === 'Poker') {
@@ -93,7 +94,21 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
     }
   };
 
+  const [showEndWarning, setShowEndWarning] = useState(false);
+
   const handleEndSession = () => {
+    if (activeSession && activeSession.gameType === 'Sports Betting') {
+      const hasPending = activeSession.hands?.some((b) => b.outcome === 'pending');
+      if (hasPending) {
+        setShowEndWarning(true);
+        return;
+      }
+    }
+    endActiveSession();
+  };
+
+  const executeEndSession = () => {
+    setShowEndWarning(false);
     endActiveSession();
   };
 
@@ -112,6 +127,17 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ConfirmModal
+        visible={showEndWarning}
+        title="Pending Bets Remaining"
+        message="You have unresolved pending bets. If you end the session now, they will be saved as unresolved and cannot be edited later.\n\nEnd session anyway?"
+        confirmText="End Session"
+        cancelText="Cancel"
+        variant="danger"
+        icon="alert-circle-outline"
+        onConfirm={executeEndSession}
+        onCancel={() => setShowEndWarning(false)}
+      />
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <ScrollView
         style={styles.container}
