@@ -418,7 +418,7 @@ export default function HistoryScreen({ navigation }) {
   return (
     <Screen scroll={false}>
       <Rise index={0} reduced={reduced}>
-        <ScreenHeader title="History" subtitle="Every session you've recorded" />
+        <ScreenHeader title="History" />
       </Rise>
 
       {hasSessions && (

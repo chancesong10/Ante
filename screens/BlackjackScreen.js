@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
+import { useSessionEndFx } from '../context/SessionEndFxContext';
 import SwipeableRow from '../components/SwipeableRow';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +33,7 @@ export default function BlackjackScreen({ navigation }) {
     endActiveSession,
     discardActiveSession,
   } = useActiveSession();
+  const { endSessionWithFx } = useSessionEndFx();
 
   useEffect(() => {
     if (!activeSession) {
@@ -164,8 +166,11 @@ export default function BlackjackScreen({ navigation }) {
       return;
     }
 
-    endActiveSession();
-    navigation.navigate('MainTabs', { screen: 'History' });
+    endSessionWithFx({
+      net: totalNet,
+      gameType: 'Blackjack',
+      onCommit: () => endActiveSession(),
+    });
   };
 
   const updateSplitHand = (which, field, value) => {

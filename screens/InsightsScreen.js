@@ -451,7 +451,7 @@ export default function InsightsScreen({ route, navigation }) {
                       </View>
                       <Text style={styles.cardFootnote}>
                         {isLocked
-                          ? 'Unlock Pro to see how your doubling frequency compares to basic strategy.'
+                          ? 'Unlock Ante+ to see how your doubling frequency compares to basic strategy.'
                           : ddr.rate < ddr.benchmarkRate - 2
                           ? "You're doubling less often than basic strategy suggests — you may be leaving profitable doubles on the table."
                           : ddr.rate > ddr.benchmarkRate + 4
@@ -470,7 +470,7 @@ export default function InsightsScreen({ route, navigation }) {
                     </View>
                     <Text style={styles.cardFootnote}>
                       {isLocked
-                        ? "Unlock Pro to see whether you're running hot or cold on naturals compared to the baseline."
+                        ? "Unlock Ante+ to see whether you're running hot or cold on naturals compared to the baseline."
                         : bj.sample < 30
                         ? `${bj.count} blackjacks out of ${bj.sample} hands — still a small sample, so don't read much into the gap yet.`
                         : Math.abs(bjRateDelta) < 1.5
@@ -633,7 +633,7 @@ export default function InsightsScreen({ route, navigation }) {
                   style={{ marginRight: 8 }}
                 />
                 <Text style={styles.copyReportBtnText}>
-                  {isLocked ? 'Unlock Pro to copy report' : copied ? 'Copied to clipboard' : 'Copy full report'}
+                  {isLocked ? 'Unlock Ante+ to copy report' : copied ? 'Copied to clipboard' : 'Copy full report'}
                 </Text>
               </Tappable>
               <Text style={styles.copyReportHint}>
@@ -645,7 +645,7 @@ export default function InsightsScreen({ route, navigation }) {
         </ScrollView>
         {isLocked && (
           <InsightsUnlockCta
-            subtitle="Conditional win rates, doubling performance, and leak detection — unlocked with Ante Pro."
+            subtitle="Conditional win rates, doubling performance, and leak detection — unlocked with Ante+."
             onPress={() => presentPaywallIfNeeded()}
           />
         )}

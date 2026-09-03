@@ -12,6 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
+import { PLUS_NAME } from '../constants/brand';
 import { usePurchases } from '../context/PurchasesContext';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 
@@ -81,7 +82,7 @@ function ActionRow({ icon, title, subtitle, onPress, danger }) {
         <Ionicons
           name={icon}
           size={moderateScale(18)}
-          color={danger ? COLORS.danger : COLORS.textPrimary}
+          color={danger ? COLORS.danger : COLORS.icon}
         />
       </View>
       <View style={styles.menuTextGroup}>
@@ -151,7 +152,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
   }, [managementURL, busy]);
 
   const handleContactSupport = useCallback(() => {
-    const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Ante Pro — subscription help')}`;
+    const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`${PLUS_NAME} — subscription help`)}`;
     Linking.openURL(url).catch(() => {
       Alert.alert('No mail app found', `You can reach us at ${SUPPORT_EMAIL}.`);
     });
@@ -187,7 +188,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
               />
             </View>
             <View style={styles.statusHeaderText}>
-              <Text style={styles.cardTitle}>Ante Pro</Text>
+              <Text style={styles.cardTitle}>{PLUS_NAME}</Text>
               <Text style={[styles.statusLine, { color: statusColor }]}>{statusText}</Text>
             </View>
           </View>
@@ -234,7 +235,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
                   <View style={styles.menuTextGroup}>
                     <Text style={styles.menuTitle}>Lifetime access</Text>
                     <Text style={styles.menuSubtitle}>
-                      You own Ante Pro for good — there’s no subscription to cancel.
+                      You own {PLUS_NAME} for good — there’s no subscription to cancel.
                     </Text>
                   </View>
                 </View>
@@ -253,8 +254,8 @@ export default function ManageSubscriptionScreen({ navigation }) {
                       title="Cancel subscription"
                       subtitle={
                         expiryDate
-                          ? `You’ll keep Pro until ${expiryDate}`
-                          : 'You’ll keep Pro until the period ends'
+                          ? `You’ll keep ${PLUS_NAME} until ${expiryDate}`
+                          : `You’ll keep ${PLUS_NAME} until the period ends`
                       }
                       onPress={handleOpenStore}
                       danger
@@ -266,7 +267,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
                     title="Manage subscription"
                     subtitle={
                       expiryDate
-                        ? `Auto-renewal is off — Pro ends ${expiryDate}`
+                        ? `Auto-renewal is off — ${PLUS_NAME} ends ${expiryDate}`
                         : 'Auto-renewal is off'
                     }
                     onPress={handleOpenStore}
@@ -278,14 +279,14 @@ export default function ManageSubscriptionScreen({ navigation }) {
                     <Ionicons
                       name="information-circle-outline"
                       size={moderateScale(18)}
-                      color={COLORS.textSecondary}
+                      color={COLORS.icon}
                     />
                   </View>
                   <View style={styles.menuTextGroup}>
                     <Text style={styles.menuTitle}>Cancel or change plan</Text>
                     <Text style={styles.menuSubtitle}>
-                      Open {purchasedVia || 'your app store'} and go to Subscriptions to manage
-                      Ante Pro.
+                      Open {purchasedVia || 'your app store'} and go to Subscriptions to manage{' '}
+                      {PLUS_NAME}.
                     </Text>
                   </View>
                 </View>
@@ -305,8 +306,8 @@ export default function ManageSubscriptionScreen({ navigation }) {
 
         <Text style={styles.footnote}>
           {isLifetime
-            ? 'Ante Pro lifetime access is tied to your account and the store it was bought from.'
-            : 'Subscriptions renew automatically until cancelled. Turn off renewal any time from your store account — you keep Pro until the current period ends.'}
+            ? `${PLUS_NAME} lifetime access is tied to your account and the store it was bought from.`
+            : `Subscriptions renew automatically until cancelled. Turn off renewal any time from your store account — you keep ${PLUS_NAME} until the current period ends.`}
         </Text>
       </ScrollView>
     </SafeAreaView>

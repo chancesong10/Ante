@@ -1,131 +1,323 @@
+/* Ante — site identity.
+   Palette is the app's own (constants/theme.js): Zinc 950 ground, Zinc 50
+   foreground, #F87171 danger as the single accent. Deliberately dark-only —
+   Ante is a dark product and the site commits to that world, painting every
+   colour explicitly rather than inheriting one.
+
+   Type roles:
+     Bodoni Moda    display — wordmark, page titles, the hero headline
+     IBM Plex Sans  body — running text, where a didone would be unreadable
+     IBM Plex Mono  utility — section markers, labels, chrome, data
+   Plex Sans and Plex Mono are the same superfamily, so the pairing is a
+   designed relationship rather than two faces that happen to sit together. */
+
 :root {
-  --bg: #0B0F19;
-  --card: #161F30;
-  --border: #233047;
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-  --primary: #3B82F6;
+  --ground:   #09090B;
+  --surface:  #18181B;
+  --raised:   #27272A;
+  --fg:       #FAFAFA;
+  --muted:    #A1A1AA;
+  --faint:    #71717A;
+  --hairline: rgba(250, 250, 250, 0.14);
+  --lift:     rgba(250, 250, 250, 0.16);
+  --accent:   #F87171;
+
+  --display: 'Bodoni Moda', 'Didot', 'Times New Roman', serif;
+  --body:    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono:    'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --measure: 68ch;
+  color-scheme: dark;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text-secondary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.6;
+  background-color: var(--ground);
+  /* Same dot texture as the motion frame. */
+  background-image: radial-gradient(rgba(250, 250, 250, 0.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
 }
 
 .wrap {
-  max-width: 720px;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 48px 24px 96px;
+  padding: 0 24px 96px;
 }
 
-header {
+/* ------------------------------------------------------------- site chrome */
+
+.site-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 28px 0 22px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 48px;
+}
+
+.mark {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
-}
-
-header img {
-  width: 36px;
-  height: 36px;
-}
-
-header .brand {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: 0.5px;
-}
-
-h1 {
-  color: var(--text-primary);
-  font-size: 28px;
-  margin: 28px 0 4px;
-}
-
-.tagline {
-  color: var(--text-secondary);
-  font-size: 15px;
-  margin-bottom: 32px;
-}
-
-.updated {
-  color: var(--text-muted);
-  font-size: 13px;
-  margin-bottom: 32px;
-}
-
-h2 {
-  color: var(--primary);
-  font-size: 16px;
-  margin-top: 36px;
-  margin-bottom: 10px;
-}
-
-p {
-  margin: 0 0 12px;
-  font-size: 15px;
-}
-
-ul {
-  margin: 0 0 12px;
-  padding-left: 20px;
-}
-
-li {
-  margin-bottom: 8px;
-  font-size: 15px;
-}
-
-a {
-  color: var(--primary);
   text-decoration: none;
 }
 
-a:hover {
-  text-decoration: underline;
+.mark img { width: 38px; height: 38px; display: block; }
+
+.mark-text { display: flex; flex-direction: column; line-height: 1.15; }
+
+.brand {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--fg);
 }
+
+.brand-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+.site-nav {
+  display: flex;
+  gap: 26px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.site-nav a { color: var(--muted); text-decoration: none; }
+.site-nav a:hover,
+.site-nav a[aria-current='page'] { color: var(--fg); }
+
+/* ------------------------------------------------------------------- type */
+
+h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(38px, 7vw, 62px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  margin: 0 0 10px;
+  text-wrap: balance;
+}
+
+h1 em { font-style: italic; font-weight: 500; color: var(--accent); }
+
+/* Section markers read as document labels, not headings — the chrome
+   language from the motion frame carried into a long document. */
+h2 {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 52px 0 14px;
+  padding-top: 22px;
+  border-top: 1px solid var(--hairline);
+}
+
+p, li { max-width: var(--measure); }
+p { margin: 0 0 14px; }
+ul { margin: 0 0 14px; padding-left: 20px; }
+li { margin-bottom: 10px; }
+li::marker { color: var(--faint); }
+strong { color: var(--fg); font-weight: 600; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.tagline {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: var(--measure);
+  margin: 0 0 40px;
+}
+
+.updated {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 8px;
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.cards { display: grid; gap: 14px; margin-top: 8px; }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 16px;
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 22px 24px;
+  text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease;
 }
+
+.card:hover { border-color: var(--lift); background: var(--raised); text-decoration: none; }
 
 .card-title {
-  color: var(--text-primary);
-  font-weight: 700;
-  font-size: 15px;
-  margin-bottom: 4px;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--fg);
+  margin-bottom: 6px;
 }
 
-.card p {
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin-bottom: 0;
-}
+.card p { color: var(--muted); font-size: 15px; margin: 0; }
 
 .links-row {
   display: flex;
-  gap: 20px;
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-  font-size: 14px;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin-top: 56px;
+  padding-top: 22px;
+  border-top: 1px solid var(--hairline);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
+.links-row a { color: var(--muted); }
+.links-row a:hover { color: var(--fg); }
 
 footer {
-  margin-top: 48px;
-  color: var(--text-muted);
-  font-size: 12px;
+  margin-top: 56px;
+  padding-top: 22px;
+  border-top: 1px solid var(--hairline);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+footer a { color: var(--muted); }
+
+/* ------------------------------------------------------------------- hero */
+
+.hero { padding: 8px 0 24px; }
+
+.hero-figure {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  display: block;
+}
+.hero-figure svg { display: block; width: 100%; height: auto; }
+
+.hero-copy { margin-top: 22px; text-align: center; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 16px;
+}
+
+.hero-copy h1 { margin-bottom: 18px; }
+.hero-copy .tagline { margin: 0 auto 12px; text-align: center; }
+
+/* Data pipeline strip — the app's real flow, not decoration. */
+.pipeline {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 44px 0 8px;
+  padding: 18px 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.pipeline span { color: var(--muted); }
+
+.trackers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--hairline);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 40px 0 8px;
+}
+.tracker { background: var(--ground); padding: 20px 22px; }
+.tracker-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg);
+  margin-bottom: 6px;
+}
+.tracker p { font-size: 14px; margin: 0; color: var(--faint); }
+
+/* ----------------------------------------------------------------- motion
+   Rings and rim turn at different speeds; depth comes from the delta, not
+   from parallax. Transform/opacity only. */
+@keyframes ante-spin     { to { transform: rotate(360deg); } }
+@keyframes ante-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes ante-ping {
+  0%   { transform: scale(1);    opacity: 0.40; }
+  70%  { transform: scale(1.7);  opacity: 0; }
+  100% { transform: scale(1.7);  opacity: 0; }
+}
+
+.ring-a, .ring-b, .ring-c, .chip-rim, .ping, .lbl {
+  transform-box: view-box;
+  will-change: transform;
+}
+.ring-a, .ring-b, .ring-c, .chip-rim, .ping { transform-origin: 450px 450px; }
+
+.ring-a   { animation: ante-spin      60s linear infinite; }
+.ring-b   { animation: ante-spin-rev  90s linear infinite; }
+.ring-c   { animation: ante-spin     120s linear infinite; }
+.chip-rim { animation: ante-spin      40s linear infinite; }
+.ping     { animation: ante-ping     2.4s cubic-bezier(.22,.61,.36,1) infinite; }
+/* Labels ride ring-c but counter-spin about their own anchor at the same
+   period, so the vocabulary orbits while staying upright. */
+.lbl      { animation: ante-spin-rev 120s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-a, .ring-b, .ring-c, .chip-rim, .ping, .lbl { animation: none; }
+  .card { transition: none; }
+}
+
+@media (max-width: 560px) {
+  .wrap { padding: 0 18px 72px; }
+  .site-head { margin-bottom: 34px; }
+  /* The orbiting vocabulary is illegible below this width — drop it rather
+     than render a ring of unreadable smudges. */
+  .ring-labels { display: none; }
 }

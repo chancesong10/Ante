@@ -17,6 +17,7 @@ import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
+import LivePulseDot from './LivePulseDot';
 
 // Reports the OS "reduce motion" setting and keeps it live. Inlined rather
 // than shared so this modal stays self-contained.
@@ -44,7 +45,7 @@ const GAME_CARDS = [
     nav: 'onNavigateToBlackjack',
     title: 'Blackjack Live Tracker',
     description: 'Track bets, doubles, splits, and calculate real-time net profit',
-    renderIcon: (c) => <MaterialCommunityIcons name="cards" size={24} color={c} />,
+    renderIcon: (c) => <MaterialCommunityIcons name="cards-outline" size={24} color={c} />,
   },
   {
     key: 'Poker',
@@ -203,9 +204,6 @@ function GameOptionCard({
         <View style={styles.gameInfo}>
           <View style={styles.gameTitleRow}>
             <Text style={styles.gameTitle}>{card.title}</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Ready</Text>
-            </View>
           </View>
           <Text style={styles.gameDescription}>{card.description}</Text>
         </View>
@@ -289,11 +287,11 @@ export default function StartSessionModal({
                   <Text style={styles.sheetTitle}>
                     {activeSession ? 'Session In Progress' : 'Start New Session'}
                   </Text>
-                  <Text style={styles.sheetSubtitle}>
-                    {activeSession
-                      ? 'You have an active session running'
-                      : 'Select a game tracker to begin'}
-                  </Text>
+                  {!!activeSession && (
+                    <Text style={styles.sheetSubtitle}>
+                      You have an active session running
+                    </Text>
+                  )}
                 </View>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -308,7 +306,7 @@ export default function StartSessionModal({
                 /* Session Active Options */
                 <View style={styles.activeContent}>
                   <View style={styles.activeInfoCard}>
-                    <View style={styles.livePulseDot} />
+                    <LivePulseDot size={moderateScale(10)} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.activeGameTitle}>
                         Active {activeSession.gameType} Session
@@ -502,18 +500,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
-  badge: {
-    backgroundColor: COLORS.primaryMuted,
-    paddingHorizontal: moderateScale(7),
-    paddingVertical: moderateScale(2),
-    borderRadius: RADIUS.xs,
-  },
-  badgeText: {
-    color: COLORS.primary,
-    fontSize: fluidFont(10),
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
   gameDescription: {
     fontSize: fluidFont(12),
     color: COLORS.textSecondary,
@@ -533,12 +519,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.primaryGlow,
     gap: SPACING.sm,
-  },
-  livePulseDot: {
-    width: moderateScale(10),
-    height: moderateScale(10),
-    borderRadius: moderateScale(5),
-    backgroundColor: COLORS.primary,
   },
   activeGameTitle: {
     fontSize: fluidFont(15),

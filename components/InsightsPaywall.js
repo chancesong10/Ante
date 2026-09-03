@@ -49,7 +49,7 @@ export function LockedLeakTeaser() {
       </View>
       <Text style={styles.leakTitle}>We found something in your play</Text>
       <Text style={styles.leakDetail}>
-        Ante's leak detector flagged a specific, costly pattern in your data. Unlock Pro to see exactly what it is — and what it's costing you.
+        Ante's leak detector flagged a specific, costly pattern in your data. Unlock Ante+ to see exactly what it is — and what it's costing you.
       </Text>
       <View style={styles.leakSkeletonLines}>
         <SkeletonBar width="92%" height={11} />
@@ -72,7 +72,7 @@ export function InsightsUnlockCta({ subtitle, onPress }) {
         </View>
         <Text style={styles.ctaTitle}>Unlock behavioral insights</Text>
         <Text style={styles.ctaSubtitle}>
-          {subtitle || 'Streaks, leak detection, and everything else on this page — unlocked with Ante Pro.'}
+          {subtitle || 'Streaks, leak detection, and everything else on this page — unlocked with Ante+.'}
         </Text>
         <Pressable
           style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.62 }]}

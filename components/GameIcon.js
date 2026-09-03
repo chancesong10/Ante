@@ -3,10 +3,10 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { getGameColor, getGameColorMuted } from '../constants/theme';
+import { COLORS } from '../constants/theme';
 import { moderateScale, RADIUS } from '../constants/layout';
 
-export function renderGameIcon(gameType, size = 18, color = getGameColor(gameType)) {
+export function renderGameIcon(gameType, size = 18, color = COLORS.primary) {
   if (gameType === 'Poker') {
     return <Ionicons name="cash-outline" size={size} color={color} />;
   }
@@ -16,20 +16,19 @@ export function renderGameIcon(gameType, size = 18, color = getGameColor(gameTyp
   if (gameType === 'General') {
     return <Ionicons name="dice-outline" size={size} color={color} />;
   }
-  return <MaterialCommunityIcons name="cards" size={size} color={color} />;
+  // Outline variant, so Blackjack is drawn as a thin line like the other
+  // three rather than as a solid filled glyph.
+  return <MaterialCommunityIcons name="cards-outline" size={size} color={color} />;
 }
 
-// Rounded tile holding the game glyph, tinted in the game's own colour.
+// Rounded tile holding the game glyph — the small square that encapsulates
+// the icon. Style is lifted verbatim from the start-session sheet's
+// `gameIconBox` (dark surface, thin 1px border) and the glyph is drawn in
+// COLORS.primary exactly as that sheet draws it, so the two match.
 export function GameIconTile({ gameType, size = moderateScale(36), glyph = moderateScale(17), style }) {
   return (
-    <View
-      style={[
-        styles.tile,
-        { width: size, height: size, backgroundColor: getGameColorMuted(gameType) },
-        style,
-      ]}
-    >
-      {renderGameIcon(gameType, glyph, getGameColor(gameType))}
+    <View style={[styles.tile, { width: size, height: size }, style]}>
+      {renderGameIcon(gameType, glyph, COLORS.primary)}
     </View>
   );
 }
@@ -37,7 +36,11 @@ export function GameIconTile({ gameType, size = moderateScale(36), glyph = moder
 const styles = StyleSheet.create({
   tile: {
     borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primaryGlow,
+    overflow: 'visible',
   },
 });

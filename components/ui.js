@@ -81,7 +81,9 @@ export function Rise({ index = 0, reduced, style, children }) {
   );
 }
 
-export function LiveDot({ color = COLORS.textPrimary, size = moderateScale(6) }) {
+// "Live" is red app-wide (matches components/LivePulseDot) — the broadcast
+// convention, and the one colour that can't be read as a money or brand accent.
+export function LiveDot({ color = COLORS.danger, size = moderateScale(6) }) {
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -213,7 +215,7 @@ export function NavBar({ title, onBack, live = false, right = null }) {
         <View style={s.navBack} />
       )}
       <View style={s.navTitleWrap}>
-        {live && <LiveDot color={COLORS.accentCyan} />}
+        {live && <LiveDot />}
         <Text style={s.navTitle} numberOfLines={1}>
           {title}
         </Text>

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   StatusBar,
   Modal,
   TextInput,
@@ -19,6 +18,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
+import { PLUS_NAME } from '../constants/brand';
+import Toggle from '../components/Toggle';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences, DEFAULT_QUICK_CHIP_PRESETS } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
@@ -333,7 +334,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
               <Text style={styles.gridCardLabel}>TOTAL WAGERED</Text>
-              <Ionicons name="flame" size={moderateScale(15)} color="#FF5A1F" />
+              <Ionicons name="flame-outline" size={moderateScale(15)} color={COLORS.icon} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
               {privacyMode ? '••••••' : `${currencySymbol}${stats.totalWagered.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -345,7 +346,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
               <Text style={styles.gridCardLabel}>WIN RATE</Text>
-              <Ionicons name="trophy" size={moderateScale(15)} color={COLORS.warning} />
+              <Ionicons name="trophy-outline" size={moderateScale(15)} color={COLORS.icon} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]}>
               {stats.winRate}%
@@ -359,7 +360,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
               <Text style={styles.gridCardLabel}>BETS LOGGED</Text>
-              <Ionicons name="layers" size={moderateScale(15)} color={COLORS.accentCyan} />
+              <Ionicons name="layers-outline" size={moderateScale(15)} color={COLORS.icon} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]}>
               {stats.totalHands}
@@ -368,8 +369,8 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Section 0: Ante Pro */}
-        <Text style={styles.sectionTitle}>ANTE PRO</Text>
+        {/* Section 0: Ante+ */}
+        <Text style={styles.sectionTitle}>{PLUS_NAME.toUpperCase()}</Text>
         <View style={[styles.menuCard, styles.proMenuCard, SHADOWS.card]}>
           <View style={styles.menuRow}>
             <View style={styles.proIconCircle}>
@@ -380,11 +381,13 @@ export default function ProfileScreen({ navigation }) {
               />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>{isPro ? 'Ante Pro Active' : 'Unlock Ante Pro'}</Text>
+              <Text style={styles.menuTitle}>
+                {isPro ? `${PLUS_NAME} Active` : `Unlock ${PLUS_NAME}`}
+              </Text>
               <Text style={styles.menuSubtitle}>
                 {isPro
                   ? proPlanLabel || 'Every behavioral insights page is unlocked'
-                  : 'Leak detection, streaks, and every insights page — unlocked with Pro'}
+                  : `Leak detection, streaks, and every insights page — unlocked with ${PLUS_NAME}`}
               </Text>
             </View>
             {purchasesLoading && <ActivityIndicator size="small" color={COLORS.primary} />}
@@ -417,17 +420,16 @@ export default function ProfileScreen({ navigation }) {
           {/* Quick Chips Toggle */}
           <View style={styles.menuRow}>
             <View style={styles.menuIconCircle}>
-              <Ionicons name="flash-outline" size={moderateScale(18)} color={COLORS.primary} />
+              <Ionicons name="flash-outline" size={moderateScale(18)} color={COLORS.icon} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Quick Chip Buttons</Text>
               <Text style={styles.menuSubtitle}>Fast cumulative chip buttons during betting</Text>
             </View>
-            <Switch
+            <Toggle
               value={quickChipsEnabled}
               onValueChange={setQuickChipsEnabled}
-              trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-              thumbColor={quickChipsEnabled ? COLORS.primary : '#8E9BAE'}
+              accessibilityLabel="Quick chip buttons"
             />
           </View>
 
@@ -440,7 +442,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={handleOpenChipPresetModal}
           >
             <View style={styles.menuIconCircle}>
-              <MaterialCommunityIcons name="poker-chip" size={moderateScale(18)} color={COLORS.primary} />
+              <MaterialCommunityIcons name="poker-chip" size={moderateScale(18)} color={COLORS.icon} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Quick Chip Presets</Text>
@@ -460,7 +462,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => setCurrencyModalVisible(true)}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="globe-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
+              <Ionicons name="globe-outline" size={moderateScale(18)} color={COLORS.icon} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Display Currency</Text>
@@ -477,17 +479,16 @@ export default function ProfileScreen({ navigation }) {
           {/* Privacy Mode Toggle */}
           <View style={styles.menuRow}>
             <View style={styles.menuIconCircle}>
-              <Ionicons name="eye-off-outline" size={moderateScale(18)} color={COLORS.warning} />
+              <Ionicons name="eye-off-outline" size={moderateScale(18)} color={COLORS.icon} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Privacy Mode</Text>
               <Text style={styles.menuSubtitle}>Mask balances with bullets across cards</Text>
             </View>
-            <Switch
+            <Toggle
               value={privacyMode}
               onValueChange={(val) => updatePreferences && updatePreferences({ privacyMode: val })}
-              trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-              thumbColor={privacyMode ? COLORS.primary : '#8E9BAE'}
+              accessibilityLabel="Privacy mode"
             />
           </View>
         </View>
@@ -502,7 +503,11 @@ export default function ProfileScreen({ navigation }) {
             onPress={handleOpenLimitsModal}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="shield-outline" size={moderateScale(18)} color={COLORS.danger} />
+              <Ionicons
+                name={stopLossAlert ? 'shield-checkmark' : 'shield-outline'}
+                size={moderateScale(18)}
+                color={COLORS.danger}
+              />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Session Loss Alert</Text>
@@ -542,7 +547,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={handleCopySeed}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="key-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
+              <Ionicons name="key-outline" size={moderateScale(18)} color={COLORS.icon} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Vault Device Seed</Text>
@@ -572,7 +577,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="lock-closed-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
+              <Ionicons name="lock-closed-outline" size={moderateScale(18)} color={COLORS.icon} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Privacy Policy</Text>
@@ -589,7 +594,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => navigation.navigate('Legal', { doc: 'terms' })}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="document-text-outline" size={moderateScale(18)} color={COLORS.primary} />
+              <Ionicons name="document-text-outline" size={moderateScale(18)} color={COLORS.icon} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Terms of Service</Text>
@@ -699,11 +704,10 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.limitBlock}>
                   <View style={styles.limitTopRow}>
                     <Text style={styles.limitLabel}>Session Stop-Loss Alert</Text>
-                    <Switch
+                    <Toggle
                       value={tempStopLossAlert}
                       onValueChange={setTempStopLossAlert}
-                      trackColor={{ false: COLORS.cardBorder, true: COLORS.primaryMuted }}
-                      thumbColor={tempStopLossAlert ? COLORS.primary : '#8E9BAE'}
+                      accessibilityLabel="Session stop-loss alert"
                     />
                   </View>
                   <Text style={styles.limitSub}>

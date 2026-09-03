@@ -16,6 +16,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
+import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import SwipeableRow from '../components/SwipeableRow';
@@ -56,6 +57,7 @@ export default function PokerScreen({ navigation }) {
     endActiveSession,
     discardActiveSession,
   } = useActiveSession();
+  const { endSessionWithFx } = useSessionEndFx();
 
   // Screen View Mode: 'setup' | 'dashboard' | 'hand'
   const [viewMode, setViewMode] = useState('setup');
@@ -541,8 +543,11 @@ export default function PokerScreen({ navigation }) {
       return;
     }
 
-    endActiveSession();
-    navigation.navigate('MainTabs', { screen: 'History' });
+    endSessionWithFx({
+      net: sessionTotalNet,
+      gameType: 'Poker',
+      onCommit: () => endActiveSession(),
+    });
   };
 
   // Backing out of the dashboard just leaves the session live (like Blackjack

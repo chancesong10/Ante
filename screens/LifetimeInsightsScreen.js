@@ -394,7 +394,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
             {/* Copy Report */}
             <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]} activeOpacity={0.85} onPress={handleCopyReport}>
               <Ionicons name={isLocked ? 'lock-closed' : copied ? 'checkmark-circle' : 'clipboard-outline'} size={18} color={COLORS.textDark} style={{ marginRight: 8 }} />
-              <Text style={styles.copyReportBtnText}>{isLocked ? 'Unlock Pro to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}</Text>
+              <Text style={styles.copyReportBtnText}>{isLocked ? 'Unlock Ante+ to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}</Text>
             </TouchableOpacity>
             <Text style={styles.copyReportHint}>
               Paste this into a doc or an AI chat to dig into your numbers further. It's a plain-text summary of everything on this page — not gambling advice.
@@ -404,7 +404,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
       </ScrollView>
       {isLocked && (
         <InsightsUnlockCta
-          subtitle="Cross-game patterns, session streaks, and leak detection — unlocked with Ante Pro."
+          subtitle="Cross-game patterns, session streaks, and leak detection — unlocked with Ante+."
           onPress={() => presentPaywallIfNeeded()}
         />
       )}
