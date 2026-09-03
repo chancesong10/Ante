@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
+import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 import { useAuth } from '../context/AuthContext';
@@ -49,6 +50,7 @@ export default function SportsBettingScreen({ navigation }) {
     endActiveSession,
     discardActiveSession,
   } = useActiveSession();
+  const { endSessionWithFx } = useSessionEndFx();
 
   useEffect(() => {
     if (!activeSession) {
@@ -136,8 +138,11 @@ export default function SportsBettingScreen({ navigation }) {
       navigation.navigate('MainTabs', { screen: 'Home' });
       return;
     }
-    endActiveSession();
-    navigation.navigate('MainTabs', { screen: 'History' });
+    endSessionWithFx({
+      net: totalNet,
+      gameType: 'Sports Betting',
+      onCommit: () => endActiveSession(),
+    });
   };
 
   const canSubmit = hasValidStake && hasValidOdds && outcome;

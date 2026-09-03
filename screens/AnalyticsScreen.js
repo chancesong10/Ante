@@ -9,12 +9,13 @@ import {
 
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import BankrollLineChart from '../components/BankrollLineChart';
+import { GameIconTile } from '../components/GameIcon';
 
 export default function AnalyticsScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
@@ -396,9 +397,7 @@ export default function AnalyticsScreen({ navigation }) {
         <View style={[styles.portfolioCard, SHADOWS.card]}>
           {/* Blackjack */}
           <View style={styles.portfolioRow}>
-            <View style={styles.portfolioIconBox}>
-              <MaterialCommunityIcons name="cards" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
+            <GameIconTile gameType="Blackjack" glyph={moderateScale(18)} style={styles.portfolioIconBox} />
             <View style={styles.portfolioInfo}>
               <Text style={styles.portfolioName}>Blackjack</Text>
               <Text style={styles.portfolioSub}>
@@ -414,9 +413,7 @@ export default function AnalyticsScreen({ navigation }) {
 
           {/* Poker */}
           <View style={styles.portfolioRow}>
-            <View style={styles.portfolioIconBox}>
-              <Ionicons name="cash-outline" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
+            <GameIconTile gameType="Poker" glyph={moderateScale(18)} style={styles.portfolioIconBox} />
             <View style={styles.portfolioInfo}>
               <Text style={styles.portfolioName}>Poker</Text>
               <Text style={styles.portfolioSub}>{games.Poker.sessions} sessions logged</Text>
@@ -430,9 +427,7 @@ export default function AnalyticsScreen({ navigation }) {
 
           {/* Sports Betting */}
           <View style={styles.portfolioRow}>
-            <View style={styles.portfolioIconBox}>
-              <Ionicons name="basketball-outline" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
+            <GameIconTile gameType="Sports Betting" glyph={moderateScale(18)} style={styles.portfolioIconBox} />
             <View style={styles.portfolioInfo}>
               <Text style={styles.portfolioName}>Sports Betting</Text>
               <Text style={styles.portfolioSub}>
@@ -448,9 +443,7 @@ export default function AnalyticsScreen({ navigation }) {
 
           {/* General */}
           <View style={styles.portfolioRow}>
-            <View style={styles.portfolioIconBox}>
-              <Ionicons name="dice-outline" size={moderateScale(18)} color={COLORS.primary} />
-            </View>
+            <GameIconTile gameType="General" glyph={moderateScale(18)} style={styles.portfolioIconBox} />
             <View style={styles.portfolioInfo}>
               <Text style={styles.portfolioName}>General Tracker</Text>
               <Text style={styles.portfolioSub}>{games.General.sessions} sessions logged</Text>
@@ -737,13 +730,8 @@ insightLinkSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }
     alignItems: 'center',
     paddingVertical: moderateScale(10),
   },
+  // Surface and size come from GameIconTile — this only positions it.
   portfolioIconBox: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: RADIUS.xs,
-    backgroundColor: COLORS.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: SPACING.sm,
   },
   portfolioInfo: {

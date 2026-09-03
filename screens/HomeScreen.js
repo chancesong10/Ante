@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,55 +7,18 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
-  Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SHADOWS, getGameColor, getGameColorMuted } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
-
-const renderGameIcon = (gameType, size = 18, color = getGameColor(gameType)) => {
-  if (gameType === 'Poker') {
-    return <Ionicons name="cash-outline" size={size} color={color} />;
-  }
-  if (gameType === 'Sports Betting') {
-    return <Ionicons name="basketball-outline" size={size} color={color} />;
-  }
-  if (gameType === 'General') {
-    return <Ionicons name="dice-outline" size={size} color={color} />;
-  }
-  return <MaterialCommunityIcons name="cards" size={size} color={color} />;
-};
-
-const LiveDot = () => {
-  const pulse = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 0.35,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
-
-  return <Animated.View style={[styles.liveDot, { opacity: pulse }]} />;
-};
+import LivePulseDot from '../components/LivePulseDot';
+import { GameIconTile } from '../components/GameIcon';
 
 export default function HomeScreen({ navigation, onOpenAddModal }) {
   const { activeSession, endActiveSession } = useActiveSession();
@@ -133,26 +96,23 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
             />
             <View style={styles.brandTextContainer}>
               <Text style={styles.brandTitle}>ANTE</Text>
-              <Text style={styles.headerSubtitle}>Session & Bankroll Tracker</Text>
+              {!!user && (
+                <Text style={styles.greetingText} numberOfLines={1}>
+                  {greetingTime}, {firstName}
+                </Text>
+              )}
             </View>
           </View>
         </View>
 
         {!user && <GuestModeBanner />}
 
-        {/* Greeting */}
-        {!!user && (
-          <View style={styles.greetingContainer}>
-            <Text style={styles.greetingText}>{greetingTime}, {firstName}!</Text>
-          </View>
-        )}
-
         {/* ACTIVE SESSION CARD (Rendered whenever a session is active) */}
         {activeSession && (
           <View style={[styles.activeCard, SHADOWS.card]}>
             <View style={styles.activeHeader}>
               <View style={styles.liveBadge}>
-                <LiveDot />
+                <LivePulseDot size={moderateScale(6)} />
                 <Text style={styles.liveBadgeText}>ACTIVE SESSION</Text>
               </View>
               <Text style={styles.activeGameName}>{activeSession.gameType}</Text>
@@ -320,14 +280,12 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                 activeOpacity={0.7}
                 onPress={() => navigation.navigate('History')}
               >
-                <View
-                  style={[
-                    styles.sessionIconBox,
-                    { backgroundColor: getGameColorMuted(session.gameType) },
-                  ]}
-                >
-                  {renderGameIcon(session.gameType, moderateScale(18))}
-                </View>
+                <GameIconTile
+                  gameType={session.gameType}
+                  size={moderateScale(38)}
+                  glyph={moderateScale(18)}
+                  style={styles.sessionIconBox}
+                />
                 <View style={styles.sessionInfo}>
                   <Text style={styles.sessionTitle}>{session.gameType} Session</Text>
                   <Text style={styles.sessionDate}>{session.formattedDate}</Text>
@@ -374,51 +332,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.pageHorizontal,
     paddingTop: SPACING.sm,
   },
+  // Wordmark + greeting stack beside the logo and stay inside its height, so
+  // the whole header costs one logo's worth of vertical space.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     marginTop: SPACING.xxs,
   },
   brandRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: moderateScale(12),
+    gap: moderateScale(10),
   },
   headerLogo: {
-    width: moderateScale(56),
-    height: moderateScale(56),
+    width: moderateScale(44),
+    height: moderateScale(44),
   },
   brandTextContainer: {
+    flex: 1,
     justifyContent: 'center',
   },
   brandTitle: {
-    fontSize: fluidFont(24),
+    fontSize: fluidFont(19),
     fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 1.4,
     color: COLORS.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: fluidFont(12),
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-
-  // Greeting
-  greetingContainer: {
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.xs,
   },
   greetingText: {
-    fontSize: fluidFont(20),
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  greetingSubtext: {
-    fontSize: fluidFont(13),
+    fontSize: fluidFont(12),
+    fontWeight: '500',
     color: COLORS.textSecondary,
-    lineHeight: fluidFont(18),
+    marginTop: 1,
   },
   // Active Session Card
   activeCard: {
@@ -435,23 +381,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.sm,
   },
+  // "Live" reads red across the whole app (see components/LivePulseDot) —
+  // the broadcast/recording convention, and the one colour that can't be
+  // confused with a money or brand accent.
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.accentCyanMuted,
+    backgroundColor: COLORS.dangerMuted,
     paddingHorizontal: moderateScale(8),
     paddingVertical: moderateScale(4),
     borderRadius: RADIUS.xs,
     gap: moderateScale(6),
   },
-  liveDot: {
-    width: moderateScale(6),
-    height: moderateScale(6),
-    borderRadius: moderateScale(3),
-    backgroundColor: COLORS.accentCyan,
-  },
   liveBadgeText: {
-    color: COLORS.accentCyan,
+    color: COLORS.danger,
     fontSize: fluidFont(11),
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -655,13 +598,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  // Size and surface come from GameIconTile — this only positions it.
   sessionIconBox: {
-    width: moderateScale(38),
-    height: moderateScale(38),
-    borderRadius: RADIUS.xs,
-    backgroundColor: COLORS.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: SPACING.sm,
   },
   sessionInfo: {

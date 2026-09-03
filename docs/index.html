@@ -3,31 +3,125 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ante — Legal</title>
+<title>Ante — Bankroll System</title>
+<meta name="description" content="Ante is a bankroll and session tracker for blackjack, poker and sports betting, with a leak detector that names what a losing pattern is costing you." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
 <link rel="stylesheet" href="./assets/style.css" />
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <img src="./assets/logo.png" alt="" onerror="this.style.display='none'" />
-      <span class="brand">ANTE</span>
+    <header class="site-head">
+      <a class="mark" href="./index.html">
+        <img src="./assets/logo.png" alt="" onerror="this.style.display='none'" />
+        <span class="mark-text">
+          <span class="brand">ANTE</span>
+          <span class="brand-tag">Bankroll System</span>
+        </span>
+      </a>
+      <nav class="site-nav">
+        <a href="./privacy-policy.html">Privacy</a>
+        <a href="./terms-of-service.html">Terms</a>
+      </nav>
     </header>
 
-    <h1>Legal</h1>
-    <p class="tagline">The bankroll tracker that tells you the truth about your gambling.</p>
+    <section class="hero">
+      <div class="hero-figure">
+        <svg viewBox="0 0 900 900" role="img" aria-label="A wireframe chip orbited by Ante's leak-detection metrics">
+          <!-- rings -->
+          <g fill="none">
+            <g class="ring-a">
+              <circle cx="450" cy="450" r="230" stroke="rgba(250,250,250,0.16)" stroke-width="1.2" stroke-dasharray="2 14"></circle>
+            </g>
+            <g class="ring-b">
+              <circle cx="450" cy="450" r="265" stroke="rgba(250,250,250,0.10)" stroke-width="1.2" stroke-dasharray="44 22"></circle>
+            </g>
+            <g class="ring-c">
+              <circle cx="450" cy="450" r="295" stroke="rgba(250,250,250,0.13)" stroke-width="1"></circle>
+              <circle cx="450" cy="450" r="306" stroke="rgba(250,250,250,0.20)" stroke-width="7" stroke-dasharray="1 42"></circle>
+            </g>
+          </g>
 
-    <div class="card">
-      <div class="card-title"><a href="./privacy-policy.html">Privacy Policy</a></div>
-      <p>What Ante stores, how it's kept on your device, and how you stay in control of it.</p>
+          <!-- focal: wireframe chip. Rim and edge spots turn; monogram holds still. -->
+          <g class="chip-rim" fill="none">
+            <circle cx="450" cy="450" r="190" stroke="rgba(250,250,250,0.45)" stroke-width="1.4"></circle>
+            <g fill="rgba(250,250,250,0.30)" stroke="none">
+              <rect x="427" y="260" width="46" height="25" rx="2" transform="rotate(0 450 450)"></rect>
+              <rect x="427" y="260" width="46" height="25" rx="2" transform="rotate(60 450 450)"></rect>
+              <rect x="427" y="260" width="46" height="25" rx="2" transform="rotate(120 450 450)"></rect>
+              <rect x="427" y="260" width="46" height="25" rx="2" transform="rotate(180 450 450)"></rect>
+              <rect x="427" y="260" width="46" height="25" rx="2" transform="rotate(240 450 450)"></rect>
+              <rect x="427" y="260" width="46" height="25" rx="2" transform="rotate(300 450 450)"></rect>
+            </g>
+          </g>
+
+          <circle class="ping" cx="450" cy="450" r="88" fill="none" stroke="rgba(250,250,250,0.55)" stroke-width="1.2"></circle>
+          <circle cx="450" cy="450" r="165" fill="none" stroke="rgba(250,250,250,0.22)" stroke-width="1.2"></circle>
+          <circle cx="450" cy="450" r="88" fill="none" stroke="rgba(250,250,250,0.34)" stroke-width="1.2"></circle>
+          <text x="450" y="450" fill="#FAFAFA" font-family="'Bodoni Moda', Didot, serif" font-size="112" text-anchor="middle" dominant-baseline="central">A</text>
+
+          <!-- Orbiting vocabulary: every term is a real metric or leak id out of
+               utils/statsEngine.js, pokerStatsEngine.js and sportsStatsEngine.js. -->
+          <g class="ring-c ring-labels" fill="#A1A1AA" font-family="'IBM Plex Mono', monospace" font-size="20" letter-spacing="2" text-anchor="middle">
+            <g class="lbl" style="transform-origin:576.3px 145.1px"><text x="576.3" y="145.1">LOSS CHASING</text></g>
+            <g class="lbl" style="transform-origin:754.9px 323.7px"><text x="754.9" y="323.7">TILT INDEX</text></g>
+            <g class="lbl" style="transform-origin:754.9px 576.3px"><text x="754.9" y="576.3">bb / 100</text></g>
+            <g class="lbl" style="transform-origin:576.3px 754.9px"><text x="576.3" y="754.9">ODDS EDGE</text></g>
+            <g class="lbl" style="transform-origin:323.7px 754.9px"><text x="323.7" y="754.9">VOLATILITY</text></g>
+            <g class="lbl" style="transform-origin:145.1px 576.3px"><text x="145.1" y="576.3">PARLAY LEAK</text></g>
+            <g class="lbl" style="transform-origin:145.1px 323.7px"><text x="145.1" y="323.7">BLUFF CATCH</text></g>
+            <g class="lbl" style="transform-origin:323.7px 145.1px"><text x="323.7" y="145.1">FATIGUE</text></g>
+          </g>
+        </svg>
+      </div>
+
+      <div class="hero-copy">
+        <p class="eyebrow">Leak Detection Engine</p>
+        <h1>Track every hand.<br />Find the <em>leak</em>.</h1>
+        <p class="tagline">A bankroll tracker for blackjack, poker and sports betting that does more than total your losses — it names the pattern costing you money, and tells you what it costs.</p>
+      </div>
+    </section>
+
+    <div class="pipeline">
+      <span>Session</span> → <span>Hand</span> → <span>Outcome</span> → <span>Leak</span>
     </div>
 
-    <div class="card">
-      <div class="card-title"><a href="./terms-of-service.html">Terms of Service</a></div>
-      <p>The rules for using the app, including eligibility, responsible gambling, and liability.</p>
+    <h2>What Ante tracks</h2>
+    <div class="trackers">
+      <div class="tracker">
+        <div class="tracker-name">Blackjack</div>
+        <p>Hand by hand, with splits, doubles and naturals kept separate.</p>
+      </div>
+      <div class="tracker">
+        <div class="tracker-name">Poker</div>
+        <p>Fold quality is the point — was it a good fold, or did you get bluffed?</p>
+      </div>
+      <div class="tracker">
+        <div class="tracker-name">Sports Betting</div>
+        <p>Stake, odds and result, measured against the price the book gave you.</p>
+      </div>
+      <div class="tracker">
+        <div class="tracker-name">General</div>
+        <p>Buy-in and cash-out for slots, roulette, craps — anything else.</p>
+      </div>
+    </div>
+
+    <h2>Legal</h2>
+    <div class="cards">
+      <a class="card" href="./privacy-policy.html">
+        <div class="card-title">Privacy Policy</div>
+        <p>What Ante stores, how it's kept on your device, and how you stay in control of it.</p>
+      </a>
+      <a class="card" href="./terms-of-service.html">
+        <div class="card-title">Terms of Service</div>
+        <p>The rules for using the app, including eligibility, responsible gambling, and liability.</p>
+      </a>
     </div>
 
     <footer>
-      &copy; 2026 Tnc, Inc. Questions can be sent to <a href="mailto:tncante1008@gmail.com">tncante1008@gmail.com</a>.
+      &copy; 2026 Tnc, Inc. · Ante is a tracking tool, not a gambling service.<br />
+      Questions can be sent to <a href="mailto:tncante1008@gmail.com">tncante1008@gmail.com</a>.
     </footer>
   </div>
 </body>

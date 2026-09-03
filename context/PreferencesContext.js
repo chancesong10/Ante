@@ -59,9 +59,14 @@ export function PreferencesProvider({ children }) {
     })();
   }, []);
 
+  // Debounced so a burst of changes — flipping a switch, or typing through
+  // the chip-preset inputs — coalesces into one write instead of hitting
+  // AsyncStorage on every keystroke/tap and competing with the animation
+  // running on the same JS thread.
   useEffect(() => {
-    if (!isLoaded) return;
-    savePreferences(preferences);
+    if (!isLoaded) return undefined;
+    const t = setTimeout(() => savePreferences(preferences), 250);
+    return () => clearTimeout(t);
   }, [preferences, isLoaded]);
 
   const updatePreferences = useCallback((partial) => {

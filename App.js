@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -11,6 +11,7 @@ import { PreferencesProvider, usePreferences } from './context/PreferencesContex
 import { AuthProvider } from './context/AuthContext';
 import { PurchasesProvider } from './context/PurchasesContext';
 import { useSyncEngine } from './context/SyncContext';
+import { SessionEndFxProvider } from './context/SessionEndFxContext';
 
 import PokerScreen from './screens/PokerScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -347,6 +348,14 @@ function AppContent() {
     }
   };
 
+  // Fired once the end-session wash is opaque — History mounts and the stack
+  // finishes its pop entirely out of sight, well before the wash lifts.
+  const handleSessionEndNavigate = useCallback(() => {
+    if (navigationRef.isReady()) {
+      navigationRef.navigate('MainTabs', { screen: 'History' });
+    }
+  }, [navigationRef]);
+
   const handleAcknowledge = () => {
     setAlertModalVisible(false);
     if (!activeSession) return;
@@ -369,6 +378,7 @@ function AppContent() {
   return (
     <View style={styles.rootContainer}>
       <StatusBar style="light" backgroundColor={COLORS.background} />
+      <SessionEndFxProvider onNavigate={handleSessionEndNavigate}>
       <NavigationContainer ref={navigationRef}>
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           <Stack.Screen name="MainTabs">
@@ -394,6 +404,7 @@ function AppContent() {
           <Stack.Screen name="Auth" component={AuthScreen} options={{ presentation: 'modal' }} />
         </Stack.Navigator>
       </NavigationContainer>
+      </SessionEndFxProvider>
 
       {/* Center 'Add' Action Modal */}
       <StartSessionModal

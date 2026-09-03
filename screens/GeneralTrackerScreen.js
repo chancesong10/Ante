@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
+import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
@@ -31,6 +32,7 @@ export default function GeneralTrackerScreen({ navigation }) {
     discardActiveSession,
     setSessionBuyInCashOut,
   } = useActiveSession();
+  const { endSessionWithFx } = useSessionEndFx();
 
   useEffect(() => {
     if (!activeSession) {
@@ -77,8 +79,11 @@ export default function GeneralTrackerScreen({ navigation }) {
       });
       return;
     }
-    endActiveSession(parsedBuyIn, parsedCashOut);
-    navigation.navigate('MainTabs', { screen: 'History' });
+    endSessionWithFx({
+      net: liveNet,
+      gameType: 'General',
+      onCommit: () => endActiveSession(parsedBuyIn, parsedCashOut),
+    });
   };
 
   const handleDiscardPress = () => {
