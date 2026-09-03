@@ -10,6 +10,7 @@ import {
   Easing,
   AccessibilityInfo,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,6 +18,7 @@ import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
+import ConfirmModal from './ConfirmModal';
 
 // Reports the OS "reduce motion" setting and keeps it live. Inlined rather
 // than shared so this modal stays self-contained.
@@ -252,8 +254,23 @@ export default function StartSessionModal({
     [activeSession, startSession, onClose]
   );
 
+  const [showEndWarning, setShowEndWarning] = useState(false);
+
   const handleEndSession = () => {
     hapticSuccess();
+    if (activeSession && activeSession.gameType === 'Sports Betting') {
+      const hasPending = activeSession.hands?.some((b) => b.outcome === 'pending');
+      if (hasPending) {
+        setShowEndWarning(true);
+        return;
+      }
+    }
+    endActiveSession();
+    onClose();
+  };
+
+  const executeEndSession = () => {
+    setShowEndWarning(false);
     endActiveSession();
     onClose();
   };
@@ -266,6 +283,17 @@ export default function StartSessionModal({
       statusBarTranslucent
       onRequestClose={onClose}
     >
+      <ConfirmModal
+        visible={showEndWarning}
+        title="Pending Bets Remaining"
+        message="You have unresolved pending bets. If you end the session now, they will be saved as unresolved and cannot be edited later.\n\nEnd session anyway?"
+        confirmText="End Session"
+        cancelText="Cancel"
+        variant="danger"
+        icon="alert-circle-outline"
+        onConfirm={executeEndSession}
+        onCancel={() => setShowEndWarning(false)}
+      />
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>

@@ -236,6 +236,16 @@ export function SessionProvider({ children }) {
     });
   }, []);
 
+  const updateHandInActiveSession = useCallback((handId, updates) => {
+    setActiveSession((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        hands: prev.hands.map((h) => (h.id === handId ? { ...h, ...updates } : h)),
+      };
+    });
+  }, []);
+
   const setSessionBuyInCashOut = useCallback((buyIn, cashOut) => {
     setActiveSession((prev) => {
       if (!prev) return null;
@@ -317,6 +327,7 @@ export function SessionProvider({ children }) {
       updateActiveSessionMetadata,
       logHandToActiveSession,
       removeHandFromActiveSession,
+      updateHandInActiveSession,
       setSessionBuyInCashOut,
       endActiveSession,
       discardActiveSession,
@@ -327,6 +338,7 @@ export function SessionProvider({ children }) {
       updateActiveSessionMetadata,
       logHandToActiveSession,
       removeHandFromActiveSession,
+      updateHandInActiveSession,
       setSessionBuyInCashOut,
       endActiveSession,
       discardActiveSession,
