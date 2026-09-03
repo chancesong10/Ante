@@ -63,6 +63,12 @@ const renderFilterIcon = (gameType, size = 18, color = COLORS.primary) => {
 const keyExtractor = (item) => String(item.id);
 const NEW_ROW_SLIDE = moderateScale(96);
 
+// Session records that round-trip through Supabase (or predate a schema
+// change) can arrive missing numeric fields the row rendering assumes are
+// always there. Coerce defensively so one malformed record can't take the
+// whole list down with a `.toFixed` on undefined.
+const num = (v, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
+
 // Slides a freshly-stored session in from the right with a slight arrival
 // scale. Transform + opacity only, on the native driver — so it runs on the
 // UI thread and can't be stuttered by the JS work of storing the session.
@@ -124,6 +130,7 @@ const SessionRow = React.memo(function SessionRow({
   const isBuyInMode = session.mode === 'buyInCashOut';
   const terms = getSessionTerms(session.gameType);
   const recordText = buildRecordText(session);
+  const handRecords = Array.isArray(session.hands) ? session.hands : [];
 
   const handNet = (value) => (
     <Text style={[styles.handNet, { color: netTone(value) }]}>
@@ -161,7 +168,7 @@ const SessionRow = React.memo(function SessionRow({
           <View style={styles.statsStrip}>
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>{terms.unit}</Text>
-              <Text style={styles.statVal}>{session.totalHands}</Text>
+              <Text style={styles.statVal}>{num(session.totalHands)}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
@@ -172,7 +179,7 @@ const SessionRow = React.memo(function SessionRow({
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>Win rate</Text>
               <Text style={[styles.statVal, isWin && { color: COLORS.success }]}>
-                {session.winRate.toFixed(1)}%
+                {num(session.winRate).toFixed(1)}%
               </Text>
             </View>
           </View>
@@ -183,14 +190,14 @@ const SessionRow = React.memo(function SessionRow({
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>Buy-in</Text>
               <Text style={styles.statVal}>
-                {privacyMode ? '••••' : `${currencySymbol}${session.buyIn.toFixed(2)}`}
+                {privacyMode ? '••••' : `${currencySymbol}${num(session.buyIn).toFixed(2)}`}
               </Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>Cash-out</Text>
               <Text style={styles.statVal}>
-                {privacyMode ? '••••' : `${currencySymbol}${session.cashOut.toFixed(2)}`}
+                {privacyMode ? '••••' : `${currencySymbol}${num(session.cashOut).toFixed(2)}`}
               </Text>
             </View>
           </View>
@@ -206,13 +213,13 @@ const SessionRow = React.memo(function SessionRow({
                 <View style={styles.buyInRow}>
                   <Text style={styles.buyInLabel}>Buy-in</Text>
                   <Text style={styles.buyInValue}>
-                    {privacyMode ? '••••' : `${currencySymbol}${session.buyIn.toFixed(2)}`}
+                    {privacyMode ? '••••' : `${currencySymbol}${num(session.buyIn).toFixed(2)}`}
                   </Text>
                 </View>
                 <View style={styles.buyInRow}>
                   <Text style={styles.buyInLabel}>Cash-out</Text>
                   <Text style={styles.buyInValue}>
-                    {privacyMode ? '••••' : `${currencySymbol}${session.cashOut.toFixed(2)}`}
+                    {privacyMode ? '••••' : `${currencySymbol}${num(session.cashOut).toFixed(2)}`}
                   </Text>
                 </View>
                 <View style={[styles.buyInRow, styles.buyInTotalRow]}>
@@ -225,9 +232,9 @@ const SessionRow = React.memo(function SessionRow({
             ) : (
               <>
                 <Text style={styles.expandedTitle}>
-                  Logged {terms.unit.toLowerCase()} ({session.hands.length})
+                  Logged {terms.unit.toLowerCase()} ({handRecords.length})
                 </Text>
-                {session.hands.map((h, idx) => {
+                {handRecords.map((h, idx) => {
                   if (h.type === 'split') {
                     return (
                       <View key={idx} style={styles.splitRowBox}>
@@ -238,7 +245,7 @@ const SessionRow = React.memo(function SessionRow({
                               Hand {sIdx + 1}: {currencySymbol}
                               {subHand.bet}
                               {subHand.doubled ? ' (2x)' : ''}
-                              {subHand.blackjack ? ' (BJ)' : ''} — {subHand.outcome.toUpperCase()}
+                              {subHand.blackjack ? ' (BJ)' : ''} — {(subHand.outcome || '').toUpperCase()}
                             </Text>
                             {handNet(subHand.netChange)}
                           </View>
@@ -279,8 +286,8 @@ const SessionRow = React.memo(function SessionRow({
                     <View key={idx} style={styles.handRow}>
                       <Text style={styles.handDetail}>
                         {h.matchup
-                          ? `${h.matchup} (${h.betType}): ${currencySymbol}${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${h.outcome.toUpperCase()}`
-                          : `${session.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${h.outcome.toUpperCase()}`}
+                          ? `${h.matchup} (${h.betType}): ${currencySymbol}${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${(h.outcome || '').toUpperCase()}`
+                          : `${session.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${(h.outcome || '').toUpperCase()}`}
                       </Text>
                       {handNet(h.netChange)}
                     </View>

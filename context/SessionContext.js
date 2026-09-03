@@ -151,6 +151,21 @@ export function finalizeSession(activeSession, overrideBuyIn = null, overrideCas
   return completedRecord;
 }
 
+// True if a live session has anything worth keeping — at least one logged
+// hand, or a completed (finite) buy-in/cash-out pair. An untouched session
+// (tracker opened, nothing entered) has neither, and finalizing it would
+// leave a phantom $0 / 0-hand row in History. `NaN`/`Infinity` buy-in or
+// cash-out counts as "no content" too, so a half-entered amount can't slip
+// a broken record through.
+export function sessionHasContent(session, overrideBuyIn = null, overrideCashOut = null) {
+  if (!session) return false;
+  const hands = Array.isArray(session.hands) ? session.hands : [];
+  if (hands.length > 0) return true;
+  const buyIn = overrideBuyIn !== null ? overrideBuyIn : session.buyIn;
+  const cashOut = overrideCashOut !== null ? overrideCashOut : session.cashOut;
+  return Number.isFinite(buyIn) && Number.isFinite(cashOut);
+}
+
 export function SessionProvider({ children }) {
   const [activeSession, setActiveSession] = useState(null);
   const [sessionHistory, setSessionHistory] = useState([]);
@@ -178,10 +193,14 @@ export function SessionProvider({ children }) {
       
       let finalHistory = storedHistory;
       if (storedActive) {
-        // App was closed while a session was live. End it and save to history.
-        const finalized = finalizeSession(storedActive);
-        if (finalized) {
-          finalHistory = [finalized, ...finalHistory];
+        // App was closed while a session was live. Finalize it into history
+        // only if something was actually logged; otherwise discard the empty
+        // shell so it doesn't leave a phantom $0 / 0-hand row.
+        if (sessionHasContent(storedActive)) {
+          const finalized = finalizeSession(storedActive);
+          if (finalized) {
+            finalHistory = [finalized, ...finalHistory];
+          }
         }
         await saveActiveSession(null);
       }
@@ -260,6 +279,15 @@ export function SessionProvider({ children }) {
   const endActiveSession = useCallback((overrideBuyIn = null, overrideCashOut = null) => {
     const activeSession = activeSessionRef.current;
     if (!activeSession) return null;
+
+    // Nothing logged and no completed buy-in/cash-out — drop the session
+    // instead of saving a phantom $0 / 0-hand record. The per-game screens
+    // already guard this on their "End Session" buttons; this covers the
+    // other callers (Home, the start-session sheet, the stop-loss alert).
+    if (!sessionHasContent(activeSession, overrideBuyIn, overrideCashOut)) {
+      setActiveSession(null);
+      return null;
+    }
 
     const completedRecord = finalizeSession(activeSession, overrideBuyIn, overrideCashOut);
 
