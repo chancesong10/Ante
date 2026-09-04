@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
-import { useActiveSession } from '../context/SessionContext';
+import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
@@ -55,7 +55,7 @@ export default function SportsBettingScreen({ navigation }) {
     updateHandInActiveSession,
     endActiveSession,
     discardActiveSession,
-  } = useActiveSession();
+  } = useGameSession("Sports Betting");
   const { endSessionWithFx } = useSessionEndFx();
 
   useEffect(() => {

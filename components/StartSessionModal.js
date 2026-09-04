@@ -9,17 +9,17 @@ import {
   Animated,
   Easing,
   AccessibilityInfo,
-  Dimensions,
-  Alert,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
-import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
+import { COLORS, getGameColor } from '../constants/theme';
+import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
+import { useSessionEndFx } from '../context/SessionEndFxContext';
+import { usePreferences } from '../context/PreferencesContext';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
-import LivePulseDot from './LivePulseDot';
-import ConfirmModal from './ConfirmModal';
+import ActiveSessionSlip from './ActiveSessionSlip';
 
 // Reports the OS "reduce motion" setting and keeps it live. Inlined rather
 // than shared so this modal stays self-contained.
@@ -223,7 +223,10 @@ export default function StartSessionModal({
   onNavigateToSportsBetting,
   onNavigateToGeneral,
 }) {
-  const { activeSession, startSession, endActiveSession } = useActiveSession();
+  const { activeSessionList, activeSessionCount, startSession, endActiveSession } =
+    useActiveSession();
+  const { endSessionWithFx } = useSessionEndFx();
+  const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
   const reduced = useReduceMotion();
   const [committingGame, setCommittingGame] = useState(null);
@@ -240,37 +243,50 @@ export default function StartSessionModal({
     onNavigateToGeneral,
   };
 
-  // Same order the per-game handlers used before: start, close, navigate.
+  // Start, close, navigate. `startSession` is a no-op when that game already
+  // has a live session, so tapping a running game's card just reopens it.
   const commitAndStart = useCallback(
     (gameKey, navFn) => {
-      if (!activeSession) {
-        startSession(gameKey);
-      }
+      startSession(gameKey);
       onClose();
       if (navFn) navFn();
     },
-    [activeSession, startSession, onClose]
+    [startSession, onClose]
   );
 
-  const [showEndWarning, setShowEndWarning] = useState(false);
+  const navFor = (gameType) =>
+    gameType === 'Poker'
+      ? onNavigateToPoker
+      : gameType === 'Sports Betting'
+      ? onNavigateToSportsBetting
+      : gameType === 'General'
+      ? onNavigateToGeneral
+      : onNavigateToBlackjack;
 
-  const handleEndSession = () => {
-    hapticSuccess();
-    if (activeSession && activeSession.gameType === 'Sports Betting') {
-      const hasPending = activeSession.hands?.some((b) => b.outcome === 'pending');
-      if (hasPending) {
-        setShowEndWarning(true);
-        return;
-      }
-    }
-    endActiveSession();
+  const resumeSession = (session) => {
+    hapticLight();
     onClose();
+    navFor(session.gameType)?.();
   };
 
-  const executeEndSession = () => {
-    setShowEndWarning(false);
-    endActiveSession();
+  // General needs both amounts typed in before it has anything to save, and
+  // Sports Betting has its own pending-bet confirmation — so for those two
+  // the stop button opens the tracker rather than ending blind.
+  const endSessionFromList = (session) => {
+    hapticSuccess();
     onClose();
+    if (session.gameType === 'General' || session.gameType === 'Sports Betting') {
+      navFor(session.gameType)?.();
+      return;
+    }
+    const net = (session.hands || [])
+      .flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]))
+      .reduce((sum, h) => sum + (h.netChange || 0), 0);
+    endSessionWithFx({
+      net,
+      gameType: session.gameType,
+      onCommit: () => endActiveSession(session.gameType),
+    });
   };
 
   return (
@@ -281,17 +297,6 @@ export default function StartSessionModal({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <ConfirmModal
-        visible={showEndWarning}
-        title="Pending Bets Remaining"
-        message="You have unresolved pending bets. If you end the session now, they will be saved as unresolved and cannot be edited later.\n\nEnd session anyway?"
-        confirmText="End Session"
-        cancelText="Cancel"
-        variant="danger"
-        icon="alert-circle-outline"
-        onConfirm={executeEndSession}
-        onCancel={() => setShowEndWarning(false)}
-      />
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
@@ -312,12 +317,12 @@ export default function StartSessionModal({
               {/* Header */}
               <View style={styles.headerRow}>
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.sheetTitle}>
-                    {activeSession ? 'Session In Progress' : 'Start New Session'}
-                  </Text>
-                  {!!activeSession && (
+                  <Text style={styles.sheetTitle}>Start New Session</Text>
+                  {activeSessionCount > 0 && (
                     <Text style={styles.sheetSubtitle}>
-                      You have an active session running
+                      {activeSessionCount === 1
+                        ? '1 session already running'
+                        : `${activeSessionCount} sessions already running`}
                     </Text>
                   )}
                 </View>
@@ -330,66 +335,27 @@ export default function StartSessionModal({
                 </TouchableOpacity>
               </View>
 
-              {activeSession ? (
-                /* Session Active Options */
-                <View style={styles.activeContent}>
-                  <View style={styles.activeInfoCard}>
-                    <LivePulseDot size={moderateScale(10)} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.activeGameTitle}>
-                        Active {activeSession.gameType} Session
-                      </Text>
-                      <Text style={styles.activeGameMeta}>
-                        {activeSession.hands.length} hands recorded
-                      </Text>
-                    </View>
-                  </View>
-
-                  <TouchableOpacity
-                    style={[styles.primaryButton, SHADOWS.card]}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      hapticLight();
-                      onClose();
-                      if (activeSession?.gameType === 'Poker') {
-                        if (onNavigateToPoker) onNavigateToPoker();
-                      } else if (activeSession?.gameType === 'Sports Betting') {
-                        if (onNavigateToSportsBetting) onNavigateToSportsBetting();
-                      } else if (activeSession?.gameType === 'General') {
-                        if (onNavigateToGeneral) onNavigateToGeneral();
-                      } else {
-                        if (onNavigateToBlackjack) onNavigateToBlackjack();
-                      }
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Resume Session"
-                  >
-                    <Ionicons
-                      name="play"
-                      size={moderateScale(18)}
-                      color={COLORS.textDark}
-                      style={{ marginRight: 6 }}
+              {/* Anything already running, listed above the game cards so
+                  you can resume one or start a different game from the same
+                  place. Tapping a game already running just reopens it —
+                  startSession is a no-op when that game has a live session. */}
+              {activeSessionList.length > 0 && (
+                <View style={styles.runningBlock}>
+                  <Text style={styles.runningLabel}>RUNNING NOW</Text>
+                  {activeSessionList.map((s) => (
+                    <ActiveSessionSlip
+                      key={s.id}
+                      session={s}
+                      currencySymbol={currencySymbol}
+                      privacyMode={privacyMode}
+                      onResume={() => resumeSession(s)}
+                      onEnd={() => endSessionFromList(s)}
                     />
-                    <Text style={styles.primaryButtonText}>Resume Session</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.endSessionBtn}
-                    activeOpacity={0.8}
-                    onPress={handleEndSession}
-                    accessibilityRole="button"
-                    accessibilityLabel="End Session and Save"
-                  >
-                    <Ionicons
-                      name="stop-circle-outline"
-                      size={moderateScale(18)}
-                      color={COLORS.danger}
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.endSessionText}>End Session & Save to History</Text>
-                  </TouchableOpacity>
+                  ))}
                 </View>
-              ) : (
+              )}
+
+              {
                 /* Start New Session Options */
                 <View style={styles.newContent}>
                   {GAME_CARDS.map((card, i) => (
@@ -422,7 +388,7 @@ export default function StartSessionModal({
                     </View>
                   </View>
                 </View>
-              )}
+              }
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -482,6 +448,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  runningBlock: {
+    gap: SPACING.xs,
+    marginBottom: SPACING.md,
+  },
+  runningLabel: {
+    fontSize: fluidFont(11),
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
   newContent: {
     gap: SPACING.sm,
     marginBottom: SPACING.sm,
@@ -533,74 +510,5 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 3,
     lineHeight: fluidFont(16),
-  },
-  activeContent: {
-    gap: SPACING.sm,
-    marginBottom: SPACING.sm,
-  },
-  activeInfoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.sm,
-    padding: moderateScale(14),
-    borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
-    gap: SPACING.sm,
-  },
-  activeGameTitle: {
-    fontSize: fluidFont(15),
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  activeGameMeta: {
-    fontSize: fluidFont(12),
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.sm,
-    paddingVertical: moderateScale(14),
-    minHeight: TOUCH_TARGET.minSize,
-  },
-  primaryButtonText: {
-    color: COLORS.textDark,
-    fontSize: fluidFont(15),
-    fontWeight: '700',
-  },
-  endSessionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.sm,
-    paddingVertical: moderateScale(14),
-    borderWidth: 1,
-    borderColor: COLORS.dangerBorder,
-    minHeight: TOUCH_TARGET.minSize,
-  },
-  endSessionText: {
-    color: COLORS.danger,
-    fontSize: fluidFont(14),
-    fontWeight: '700',
-  },
-  cancelButton: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.sm,
-    paddingVertical: moderateScale(13),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    minHeight: TOUCH_TARGET.minSize,
-  },
-  cancelButtonText: {
-    color: COLORS.textSecondary,
-    fontSize: fluidFont(14),
-    fontWeight: '600',
   },
 });

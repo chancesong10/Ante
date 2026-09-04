@@ -116,11 +116,42 @@ const AnimatedSessionItem = React.memo(function AnimatedSessionItem({ children, 
   );
 });
 
+// Brief ring around a row that was just opened from Home's recent-sessions
+// list, so the session you tapped is findable the moment History appears.
+// Opacity only, on the native driver — a border colour can't be animated
+// natively, so this is an overlay that fades rather than a tweened border.
+function HighlightPulse() {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const seq = Animated.sequence([
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.delay(950),
+      Animated.timing(anim, {
+        toValue: 0,
+        duration: 620,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]);
+    seq.start();
+    return () => seq.stop();
+  }, [anim]);
+
+  return <Animated.View pointerEvents="none" style={[styles.highlightRing, { opacity: anim }]} />;
+}
+
 // One history row. Memoised so that toggling one row's expansion, or storing
 // a new session, doesn't re-render every other row in the list.
 const SessionRow = React.memo(function SessionRow({
   session,
   isExpanded,
+  isHighlighted,
   onToggle,
   onDelete,
   currencySymbol,
@@ -145,6 +176,7 @@ const SessionRow = React.memo(function SessionRow({
       confirmMessage="This will permanently remove this session and its history. This cannot be undone."
     >
       <View style={styles.card}>
+        {isHighlighted && <HighlightPulse />}
         <Tappable onPress={() => onToggle(session.id)} style={styles.cardHeader}>
           <GameIconTile gameType={session.gameType} style={styles.icon} />
 
@@ -302,7 +334,7 @@ const SessionRow = React.memo(function SessionRow({
   );
 });
 
-export default function HistoryScreen({ navigation }) {
+export default function HistoryScreen({ navigation, route }) {
   const { sessionHistory, deleteSession } = useVisibleSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
@@ -313,6 +345,28 @@ export default function HistoryScreen({ navigation }) {
   const [expandedId, setExpandedId] = useState(null);
   const [gameFilterModalVisible, setGameFilterModalVisible] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
+
+  // A session opened from Home's recent list arrives flagged here. `highlightAt`
+  // is a nonce so tapping the same row twice re-triggers the pulse.
+  const highlightId = route?.params?.highlightId;
+  const highlightAt = route?.params?.highlightAt;
+  const [highlighted, setHighlighted] = useState(null);
+
+  useEffect(() => {
+    if (!highlightId) return undefined;
+    setHighlighted(highlightId);
+    const t = setTimeout(() => setHighlighted(null), 1900);
+    return () => clearTimeout(t);
+  }, [highlightId, highlightAt]);
+
+  // A row hidden behind a filter can't pulse, so clear the filters when a
+  // specific session was asked for — otherwise the tap looks like it did
+  // nothing at all.
+  useEffect(() => {
+    if (!highlightId) return;
+    setGameFilter('All');
+    setOutcomeFilter('All');
+  }, [highlightId, highlightAt]);
 
   // True once History is focused AND the stack transition that revealed it
   // has finished — the signal the new-row slide waits on, so it plays with
@@ -403,6 +457,7 @@ export default function HistoryScreen({ navigation }) {
         <SessionRow
           session={item}
           isExpanded={expandedId === item.id}
+          isHighlighted={highlighted === item.id}
           onToggle={handleToggle}
           onDelete={deleteSession}
           currencySymbol={currencySymbol}
@@ -410,7 +465,15 @@ export default function HistoryScreen({ navigation }) {
         />
       </AnimatedSessionItem>
     ),
-    [expandedId, entranceReady, handleToggle, deleteSession, currencySymbol, privacyMode]
+    [
+      expandedId,
+      highlighted,
+      entranceReady,
+      handleToggle,
+      deleteSession,
+      currencySymbol,
+      privacyMode,
+    ]
   );
 
   const hasSessions = sessionHistory.length > 0;
@@ -479,7 +542,7 @@ export default function HistoryScreen({ navigation }) {
           data={paginatedHistory}
           keyExtractor={keyExtractor}
           renderItem={renderSessionItem}
-          extraData={expandedId}
+          extraData={`${expandedId}|${highlighted}`}
           initialNumToRender={8}
           maxToRenderPerBatch={6}
           windowSize={9}
@@ -634,6 +697,14 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(14),
     fontWeight: '600',
     color: COLORS.textSecondary,
+  },
+
+  highlightRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(250, 250, 250, 0.05)',
   },
 
   // Session card

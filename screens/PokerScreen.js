@@ -15,7 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
-import { useActiveSession } from '../context/SessionContext';
+import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
@@ -56,7 +56,7 @@ export default function PokerScreen({ navigation }) {
     removeHandFromActiveSession,
     endActiveSession,
     discardActiveSession,
-  } = useActiveSession();
+  } = useGameSession("Poker");
   const { endSessionWithFx } = useSessionEndFx();
 
   // Screen View Mode: 'setup' | 'dashboard' | 'hand'

@@ -17,6 +17,8 @@ export const COLORS = {
   primaryDark: '#09090B', // Used for text on primary button
   accentCyan: '#38BDF8',
   accentCyanMuted: 'rgba(56, 189, 248, 0.1)',
+  accentOrange: '#FB923C', // Orange 400 — volume/heat, distinct from `warning`
+  accentViolet: '#C084FC', // Violet 400 — identity/device
 
   // High contrast text
   textPrimary: '#FAFAFA', // Zinc 50
@@ -26,12 +28,21 @@ export const COLORS = {
 
   // Icons
   //
-  // Settings/menu row glyphs are deliberately monochrome. Colour in this app
-  // is reserved for meaning — money up or down (success/danger), a live
-  // warning state (warning), a destructive action (danger), and the
-  // selected/active state (primary). Tinting every row a different hue makes
-  // a list read as decoration rather than information, so `icon` is the
-  // default for any glyph that is only labelling its row.
+  // The rule, so this doesn't drift back into rainbow-by-default:
+  //
+  //   Stat tiles get their own hue. They're quantities shown side by side,
+  //   and distinct colour is what lets the grid be scanned rather than read.
+  //
+  //   Feature rows get a hue only where it carries meaning — the safety
+  //   pair (loss alert red, safer-play green), the state of a toggle, or a
+  //   row whose subject already has a colour (money, chips).
+  //
+  //   Document and security rows carry a hue too, but a fixed one per
+  //   subject rather than an arbitrary one — identity is cyan, keys are
+  //   amber, the device seed is violet — so the same idea reads the same
+  //   colour wherever it turns up.
+  //
+  //   `icon` stays the default for anything with no such meaning.
   icon: '#A1A1AA', // tracks textSecondary
   iconActive: '#FAFAFA', // tracks textPrimary — selected / emphasised rows
 

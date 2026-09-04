@@ -167,45 +167,41 @@ export function sessionHasContent(session, overrideBuyIn = null, overrideCashOut
 }
 
 export function SessionProvider({ children }) {
-  const [activeSession, setActiveSession] = useState(null);
+  // Live sessions, keyed by game type — at most one per game, so Blackjack,
+  // Poker, Sports Betting and General can all be running at once. Keying by
+  // game rather than by id is what lets each tracker screen keep owning "its"
+  // session without having to be handed an id through navigation.
+  const [activeSessions, setActiveSessions] = useState({});
   const [sessionHistory, setSessionHistory] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const hasLoadedOnce = useRef(false);
 
-  // Mirrors activeSession so action callbacks below can read the latest
+  // Mirrors activeSessions so action callbacks below can read the latest
   // value without listing it as a dependency — keeps their identities
   // stable across every hand logged, so components/contexts memoized on
   // these functions (or on the provider's value object) don't get
   // invalidated on the app's hottest update path.
-  const activeSessionRef = useRef(activeSession);
+  const activeSessionsRef = useRef(activeSessions);
   useEffect(() => {
-    activeSessionRef.current = activeSession;
-  }, [activeSession]);
+    activeSessionsRef.current = activeSessions;
+  }, [activeSessions]);
 
-  // Load persisted history and any interrupted active session once on app start.
+  // Load persisted history once on app start.
+  //
+  // Live sessions are deliberately NOT persisted: closing the app ends them.
+  // Worth knowing that on the next launch the OS can't tell a deliberate
+  // force-quit from a low-memory kill, so a backgrounded session can be lost
+  // the same way. Re-enabling recovery means restoring a write here and
+  // finalising whatever `sessionHasContent` approves on the way back in.
   useEffect(() => {
     if (hasLoadedOnce.current) return;
     hasLoadedOnce.current = true;
 
     (async () => {
       const storedHistory = await loadSessionHistory();
-      const storedActive = await loadActiveSession();
-      
-      let finalHistory = storedHistory;
-      if (storedActive) {
-        // App was closed while a session was live. Finalize it into history
-        // only if something was actually logged; otherwise discard the empty
-        // shell so it doesn't leave a phantom $0 / 0-hand row.
-        if (sessionHasContent(storedActive)) {
-          const finalized = finalizeSession(storedActive);
-          if (finalized) {
-            finalHistory = [finalized, ...finalHistory];
-          }
-        }
-        await saveActiveSession(null);
-      }
-      
-      setSessionHistory(finalHistory);
+      // Clears anything a previous build left behind under the old key.
+      await saveActiveSession(null);
+      setSessionHistory(storedHistory);
       setIsLoaded(true);
     })();
   }, []);
@@ -216,11 +212,23 @@ export function SessionProvider({ children }) {
     saveSessionHistory(sessionHistory);
   }, [sessionHistory, isLoaded]);
 
-  // Persist activeSession so we can recover it if the app is closed.
-  useEffect(() => {
-    if (!isLoaded) return;
-    saveActiveSession(activeSession);
-  }, [activeSession, isLoaded]);
+  // Applies `fn` to one game's live session, leaving the others untouched.
+  const patchSession = useCallback((gameType, fn) => {
+    setActiveSessions((prev) => {
+      const current = prev[gameType];
+      if (!current) return prev;
+      return { ...prev, [gameType]: fn(current) };
+    });
+  }, []);
+
+  const dropSession = useCallback((gameType) => {
+    setActiveSessions((prev) => {
+      if (!prev[gameType]) return prev;
+      const next = { ...prev };
+      delete next[gameType];
+      return next;
+    });
+  }, []);
 
   const startSession = useCallback((gameType = 'Blackjack') => {
     const newSession = {
@@ -231,91 +239,73 @@ export function SessionProvider({ children }) {
       buyIn: null,
       cashOut: null,
     };
-    setActiveSession(newSession);
+    // Never clobber a session already running for this game — the tracker
+    // screens call this on mount, so returning to one has to be a no-op.
+    setActiveSessions((prev) => (prev[gameType] ? prev : { ...prev, [gameType]: newSession }));
     return newSession;
   }, []);
 
-  const logHandToActiveSession = useCallback((handRecord) => {
-    setActiveSession((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        hands: [handRecord, ...prev.hands],
-      };
-    });
-  }, []);
+  const logHandToActiveSession = useCallback(
+    (gameType, handRecord) =>
+      patchSession(gameType, (s) => ({ ...s, hands: [handRecord, ...s.hands] })),
+    [patchSession]
+  );
 
-  const removeHandFromActiveSession = useCallback((handId) => {
-    setActiveSession((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        hands: prev.hands.filter((h) => h.id !== handId),
-      };
-    });
-  }, []);
+  const removeHandFromActiveSession = useCallback(
+    (gameType, handId) =>
+      patchSession(gameType, (s) => ({ ...s, hands: s.hands.filter((h) => h.id !== handId) })),
+    [patchSession]
+  );
 
-  const updateHandInActiveSession = useCallback((handId, updates) => {
-    setActiveSession((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        hands: prev.hands.map((h) => (h.id === handId ? { ...h, ...updates } : h)),
-      };
-    });
-  }, []);
+  const updateHandInActiveSession = useCallback(
+    (gameType, handId, updates) =>
+      patchSession(gameType, (s) => ({
+        ...s,
+        hands: s.hands.map((h) => (h.id === handId ? { ...h, ...updates } : h)),
+      })),
+    [patchSession]
+  );
 
-  const setSessionBuyInCashOut = useCallback((buyIn, cashOut) => {
-    setActiveSession((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        buyIn,
-        cashOut,
-      };
-    });
-  }, []);
+  const setSessionBuyInCashOut = useCallback(
+    (gameType, buyIn, cashOut) => patchSession(gameType, (s) => ({ ...s, buyIn, cashOut })),
+    [patchSession]
+  );
 
-  const updateActiveSessionMetadata = useCallback((metadata) => {
-    setActiveSession((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        ...metadata,
-      };
-    });
-  }, []);
+  const updateActiveSessionMetadata = useCallback(
+    (gameType, metadata) => patchSession(gameType, (s) => ({ ...s, ...metadata })),
+    [patchSession]
+  );
 
-  const endActiveSession = useCallback((overrideBuyIn = null, overrideCashOut = null) => {
-    const activeSession = activeSessionRef.current;
-    if (!activeSession) return null;
+  const endActiveSession = useCallback(
+    (gameType, overrideBuyIn = null, overrideCashOut = null) => {
+      const session = activeSessionsRef.current[gameType];
+      if (!session) return null;
 
-    // Nothing logged and no completed buy-in/cash-out — drop the session
-    // instead of saving a phantom $0 / 0-hand record. The per-game screens
-    // already guard this on their "End Session" buttons; this covers the
-    // other callers (Home, the start-session sheet, the stop-loss alert).
-    if (!sessionHasContent(activeSession, overrideBuyIn, overrideCashOut)) {
-      setActiveSession(null);
-      return null;
-    }
+      // Nothing logged and no completed buy-in/cash-out — drop the session
+      // instead of saving a phantom $0 / 0-hand record. The per-game screens
+      // already guard this on their "End Session" buttons; this covers the
+      // other callers (Home, the start-session sheet, the stop-loss alert).
+      if (!sessionHasContent(session, overrideBuyIn, overrideCashOut)) {
+        dropSession(gameType);
+        return null;
+      }
 
-    const completedRecord = finalizeSession(activeSession, overrideBuyIn, overrideCashOut);
+      const completedRecord = finalizeSession(session, overrideBuyIn, overrideCashOut);
+      setSessionHistory((prev) => [completedRecord, ...prev]);
+      dropSession(gameType);
+      return completedRecord;
+    },
+    [dropSession]
+  );
 
-    setSessionHistory((prev) => [completedRecord, ...prev]);
-    setActiveSession(null);
-    return completedRecord;
-  }, []);
-
-  const discardActiveSession = useCallback(() => {
-    setActiveSession(null);
-  }, []);
+  const discardActiveSession = useCallback((gameType) => dropSession(gameType), [dropSession]);
 
   const deleteSession = useCallback((sessionId) => {
     setSessionHistory((prev) => prev.filter((s) => s.id !== sessionId));
   }, []);
 
   const clearAllSessions = useCallback(() => {
-    setActiveSession(null);
+    setActiveSessions({});
     setSessionHistory([]);
   }, []);
 
@@ -348,9 +338,17 @@ export function SessionProvider({ children }) {
   // Each recomputed only when its own underlying data actually changes, so
   // a screen subscribed to just one of the two contexts doesn't re-render
   // when the other one updates.
+  // Newest first, so lists read the same way History does.
+  const activeSessionList = useMemo(
+    () => Object.values(activeSessions).sort((a, b) => b.startTime - a.startTime),
+    [activeSessions]
+  );
+
   const activeSessionValue = useMemo(
     () => ({
-      activeSession,
+      activeSessions,
+      activeSessionList,
+      activeSessionCount: activeSessionList.length,
       startSession,
       updateActiveSessionMetadata,
       logHandToActiveSession,
@@ -361,7 +359,8 @@ export function SessionProvider({ children }) {
       discardActiveSession,
     }),
     [
-      activeSession,
+      activeSessions,
+      activeSessionList,
       startSession,
       updateActiveSessionMetadata,
       logHandToActiveSession,
@@ -400,6 +399,35 @@ export function useActiveSession() {
     throw new Error('useActiveSession must be used within a SessionProvider');
   }
   return context;
+}
+
+// One game's slice of the above, with the game type already bound.
+//
+// Every tracker screen owns exactly one game, so this lets them keep the API
+// they had when there was only ever a single live session — `activeSession`
+// plus the same action names, none of which take a game type. That's what
+// kept going multi-session from rippling through all four screens.
+export function useGameSession(gameType) {
+  const ctx = useActiveSession();
+  return useMemo(
+    () => ({
+      activeSession: ctx.activeSessions[gameType] ?? null,
+      // Accepts and ignores an argument, since callers historically passed
+      // their game type in.
+      startSession: () => ctx.startSession(gameType),
+      updateActiveSessionMetadata: (metadata) =>
+        ctx.updateActiveSessionMetadata(gameType, metadata),
+      logHandToActiveSession: (hand) => ctx.logHandToActiveSession(gameType, hand),
+      removeHandFromActiveSession: (handId) => ctx.removeHandFromActiveSession(gameType, handId),
+      updateHandInActiveSession: (handId, updates) =>
+        ctx.updateHandInActiveSession(gameType, handId, updates),
+      setSessionBuyInCashOut: (buyIn, cashOut) =>
+        ctx.setSessionBuyInCashOut(gameType, buyIn, cashOut),
+      endActiveSession: (buyIn, cashOut) => ctx.endActiveSession(gameType, buyIn, cashOut),
+      discardActiveSession: () => ctx.discardActiveSession(gameType),
+    }),
+    [ctx, gameType]
+  );
 }
 
 export function useSessionHistory() {

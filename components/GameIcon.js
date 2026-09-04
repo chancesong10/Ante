@@ -25,9 +25,18 @@ export function renderGameIcon(gameType, size = 18, color = COLORS.primary) {
 // the icon. Style is lifted verbatim from the start-session sheet's
 // `gameIconBox` (dark surface, thin 1px border) and the glyph is drawn in
 // COLORS.primary exactly as that sheet draws it, so the two match.
-export function GameIconTile({ gameType, size = moderateScale(36), glyph = moderateScale(17), style }) {
+// `children` render behind the glyph, so a caller can layer effects inside
+// the tile (the commit flood and ripple ring on Home's recent sessions).
+export function GameIconTile({
+  gameType,
+  size = moderateScale(36),
+  glyph = moderateScale(17),
+  style,
+  children,
+}) {
   return (
     <View style={[styles.tile, { width: size, height: size }, style]}>
+      {children}
       {renderGameIcon(gameType, glyph, COLORS.primary)}
     </View>
   );
