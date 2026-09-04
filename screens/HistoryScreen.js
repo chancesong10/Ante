@@ -20,8 +20,9 @@ import { renderGameIcon, GameIconTile } from '../components/GameIcon';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
+import usePullToRefresh from '../components/usePullToRefresh';
 
-const GAME_TYPE_ORDER = ['Blackjack', 'Poker', 'Sports Betting', 'General'];
+const GAME_TYPE_ORDER = ['Blackjack', 'Poker', 'Sports Betting', 'Roulette', 'Baccarat', 'General'];
 
 // Per-game vocabulary for the stats strip and expanded list. Blackjack keeps
 // the classic win-loss-push record; poker has folds instead of pushes, and a
@@ -35,6 +36,10 @@ const getSessionTerms = (gameType) => {
   }
   if (gameType === 'General') {
     return { unit: 'Entries', recordLabel: 'Record (W-L)', recordKind: 'wl' };
+  }
+  if (gameType === 'Roulette') {
+    // No push in roulette — a spin either hits or it doesn't.
+    return { unit: 'Spins', recordLabel: 'Record (W-L)', recordKind: 'wl' };
   }
   return { unit: 'Hands', recordLabel: 'Record (W-L-P)', recordKind: 'wlp' };
 };
@@ -154,6 +159,7 @@ const SessionRow = React.memo(function SessionRow({
   isHighlighted,
   onToggle,
   onDelete,
+  onToggleStar,
   currencySymbol,
   privacyMode,
 }) {
@@ -181,14 +187,42 @@ const SessionRow = React.memo(function SessionRow({
           <GameIconTile gameType={session.gameType} style={styles.icon} />
 
           <View style={styles.sessionMeta}>
-            <Text style={styles.gameType}>{session.gameType}</Text>
-            <Text style={styles.sessionDateTime}>{session.formattedDate}</Text>
+            <Text style={styles.gameType} numberOfLines={1}>
+              {/* General sessions carry what the user typed ("Roulette"),
+                  which is far more useful than the word "General". */}
+              {session.label || session.gameType}
+            </Text>
+            <Text style={styles.sessionDateTime}>
+              {session.label ? `${session.gameType} · ` : ''}
+              {session.formattedDate}
+            </Text>
           </View>
 
           <View style={styles.netContainer}>
-            <Text style={[styles.netProfitText, { color: netTone(session.netProfit) }]}>
-              {formatMoney(session.netProfit, currencySymbol, privacyMode)}
-            </Text>
+            <View style={styles.netAmountRow}>
+              {/* Its own touch target inside the row's expand-tap, with
+                  generous hitSlop so the star is easy to hit without opening
+                  the row. Sits right on the net-amount line — same line, same
+                  scale as the number it's tagging — rather than centered
+                  against the whole two-line block, where it used to land in
+                  the gap between the amount and the duration. */}
+              <Tappable
+                style={styles.starBtn}
+                onPress={() => onToggleStar(session.id)}
+                hitSlop={TOUCH_TARGET.hitSlop}
+                accessibilityRole="button"
+                accessibilityLabel={session.starred ? 'Remove star' : 'Star this session'}
+              >
+                <Ionicons
+                  name={session.starred ? 'star' : 'star-outline'}
+                  size={moderateScale(18)}
+                  color={session.starred ? COLORS.warning : COLORS.textMuted}
+                />
+              </Tappable>
+              <Text style={[styles.netProfitText, { color: netTone(session.netProfit) }]}>
+                {formatMoney(session.netProfit, currencySymbol, privacyMode)}
+              </Text>
+            </View>
             <View style={styles.durationRow}>
               <Ionicons name="time-outline" size={moderateScale(12)} color={COLORS.textMuted} />
               <Text style={styles.durationText}>{session.durationFormatted}</Text>
@@ -314,6 +348,30 @@ const SessionRow = React.memo(function SessionRow({
                     );
                   }
 
+                  if (session.gameType === 'Roulette') {
+                    return (
+                      <View key={idx} style={styles.handRow}>
+                        <Text style={styles.handDetail}>
+                          {h.betLabel || 'Bet'} · {h.odds}:1: {currencySymbol}
+                          {h.bet} — {(h.outcome || '').toUpperCase()}
+                        </Text>
+                        {handNet(h.netChange)}
+                      </View>
+                    );
+                  }
+
+                  if (session.gameType === 'Baccarat') {
+                    return (
+                      <View key={idx} style={styles.handRow}>
+                        <Text style={styles.handDetail}>
+                          {h.betOn || 'Bet'}: {currencySymbol}
+                          {h.bet} — {(h.outcome || '').toUpperCase()}
+                        </Text>
+                        {handNet(h.netChange)}
+                      </View>
+                    );
+                  }
+
                   return (
                     <View key={idx} style={styles.handRow}>
                       <Text style={styles.handDetail}>
@@ -335,16 +393,18 @@ const SessionRow = React.memo(function SessionRow({
 });
 
 export default function HistoryScreen({ navigation, route }) {
-  const { sessionHistory, deleteSession } = useVisibleSessionHistory();
+  const { sessionHistory, deleteSession, toggleSessionStar } = useVisibleSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const reduced = useReduceMotion();
+  const refreshControl = usePullToRefresh();
   const [gameFilter, setGameFilter] = useState('All');
   const [outcomeFilter, setOutcomeFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
   const [gameFilterModalVisible, setGameFilterModalVisible] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [starredOnly, setStarredOnly] = useState(false);
 
   // A session opened from Home's recent list arrives flagged here. `highlightAt`
   // is a nonce so tapping the same row twice re-triggers the pulse.
@@ -419,7 +479,7 @@ export default function HistoryScreen({ navigation, route }) {
 
   useEffect(() => {
     setVisibleCount(10);
-  }, [gameFilter, outcomeFilter]);
+  }, [gameFilter, outcomeFilter, starredOnly]);
 
   // Only show a chip for a game the user actually has sessions for, so the
   // row doesn't fill up with dead filters for games never played.
@@ -430,15 +490,20 @@ export default function HistoryScreen({ navigation, route }) {
     return ['All', ...ordered, ...extras];
   }, [sessionHistory]);
 
+  // Filters AND together. Starred stays a filter rather than a sort:
+  // History's contract is newest-first, and floating stars to the top would
+  // break both that expectation and the new-row animation, which assumes
+  // index 0 is the session you just finished.
   const filteredHistory = useMemo(
     () =>
       sessionHistory.filter((item) => {
         if (gameFilter !== 'All' && item.gameType !== gameFilter) return false;
+        if (starredOnly && !item.starred) return false;
         if (outcomeFilter === 'Wins') return item.netProfit > 0;
         if (outcomeFilter === 'Losses') return item.netProfit < 0;
         return true;
       }),
-    [sessionHistory, gameFilter, outcomeFilter]
+    [sessionHistory, gameFilter, outcomeFilter, starredOnly]
   );
 
   const paginatedHistory = useMemo(
@@ -460,6 +525,7 @@ export default function HistoryScreen({ navigation, route }) {
           isHighlighted={highlighted === item.id}
           onToggle={handleToggle}
           onDelete={deleteSession}
+          onToggleStar={toggleSessionStar}
           currencySymbol={currencySymbol}
           privacyMode={privacyMode}
         />
@@ -471,6 +537,7 @@ export default function HistoryScreen({ navigation, route }) {
       entranceReady,
       handleToggle,
       deleteSession,
+      toggleSessionStar,
       currencySymbol,
       privacyMode,
     ]
@@ -515,6 +582,29 @@ export default function HistoryScreen({ navigation, route }) {
                 </Text>
               </Tappable>
             ))}
+
+            <Tappable
+              style={[
+                styles.filterPill,
+                styles.starPill,
+                starredOnly && styles.starredChipActive,
+              ]}
+              onPress={() => setStarredOnly((v) => !v)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: starredOnly }}
+              accessibilityLabel="Show starred sessions only"
+            >
+              <Ionicons
+                name={starredOnly ? 'star' : 'star-outline'}
+                size={moderateScale(12)}
+                color={starredOnly ? COLORS.warning : COLORS.textSecondary}
+              />
+              <Text
+                style={[styles.filterPillText, starredOnly && { color: COLORS.warning }]}
+              >
+                Starred
+              </Text>
+            </Tappable>
           </View>
           <Text style={styles.swipeHint}>Swipe a session to delete</Text>
         </Rise>
@@ -538,6 +628,7 @@ export default function HistoryScreen({ navigation, route }) {
         </View>
       ) : (
         <FlatList
+          refreshControl={refreshControl}
           style={styles.flex}
           data={paginatedHistory}
           keyExtractor={keyExtractor}
@@ -699,6 +790,19 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
 
+  starPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  starBtn: {
+    paddingHorizontal: moderateScale(2),
+    paddingVertical: moderateScale(4),
+  },
+  starredChipActive: {
+    backgroundColor: COLORS.warningMuted,
+    borderColor: COLORS.warningBorder,
+  },
   highlightRing: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: RADIUS.md,
@@ -737,6 +841,11 @@ const styles = StyleSheet.create({
   },
   netContainer: {
     alignItems: 'flex-end',
+  },
+  netAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   netProfitText: {
     fontSize: fluidFont(15),

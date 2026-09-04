@@ -73,8 +73,15 @@ export default function SessionEndOverlay({
 
   const visible = !!fx;
 
+  // Keyed on `fx` itself, not the `visible` boolean: the provider can hand
+  // off straight from one queued session's wash to the next (clearing fx and
+  // setting the next one in the same batch, so `visible` never actually
+  // toggles false in between). A fresh `fx` object is only ever created for
+  // a session that genuinely wants its own play-through, so restarting the
+  // animation whenever the reference changes — even true-to-true — is
+  // exactly the behaviour a second queued session needs.
   useEffect(() => {
-    if (!visible) return undefined;
+    if (!fx) return undefined;
 
     if (reduced) {
       // No motion: do the work in order and get out of the way.
@@ -135,7 +142,7 @@ export default function SessionEndOverlay({
       timers.current.forEach(clearTimeout);
       timers.current = [];
     };
-  }, [visible, reduced, flood, ripple, reveal, exit]);
+  }, [fx, reduced, flood, ripple, reveal, exit]);
 
   if (!visible) return null;
 

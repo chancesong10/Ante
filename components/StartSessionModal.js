@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   TouchableWithoutFeedback,
+  ScrollView,
   Animated,
   Easing,
   AccessibilityInfo,
-  Dimensions,
+  useWindowDimensions,
+  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -19,6 +21,7 @@ import { useActiveSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
+import { sanitizeGameOrder } from '../constants/games';
 import ActiveSessionSlip from './ActiveSessionSlip';
 
 // Reports the OS "reduce motion" setting and keeps it live. Inlined rather
@@ -39,7 +42,9 @@ function useReduceMotion() {
   return reduced;
 }
 
-// The four live trackers, in display order. `key` is the exact string
+// The six live trackers, in their default display order — overridden per
+// user by the `gameOrder` preference (Profile → Game Order), which
+// StartSessionModal sorts these against. `key` is the exact string
 // startSession() expects; `renderIcon` takes the glyph colour.
 const GAME_CARDS = [
   {
@@ -62,6 +67,20 @@ const GAME_CARDS = [
     title: 'Sports Betting Tracker',
     description: 'Log stake, odds, and outcome — payout calculated automatically',
     renderIcon: (c) => <Ionicons name="basketball-outline" size={24} color={c} />,
+  },
+  {
+    key: 'Roulette',
+    nav: 'onNavigateToRoulette',
+    title: 'Roulette Tracker',
+    description: 'Pick a bet type — straight up, red/black, dozens — odds calculated automatically',
+    renderIcon: (c) => <Ionicons name="disc-outline" size={24} color={c} />,
+  },
+  {
+    key: 'Baccarat',
+    nav: 'onNavigateToBaccarat',
+    title: 'Baccarat Tracker',
+    description: 'Bet Player, Banker, or Tie — commission and odds calculated automatically',
+    renderIcon: (c) => <MaterialCommunityIcons name="cards-diamond-outline" size={24} color={c} />,
   },
   {
     key: 'General',
@@ -221,15 +240,98 @@ export default function StartSessionModal({
   onNavigateToBlackjack,
   onNavigateToPoker,
   onNavigateToSportsBetting,
+  onNavigateToRoulette,
+  onNavigateToBaccarat,
   onNavigateToGeneral,
 }) {
   const { activeSessionList, activeSessionCount, startSession, endActiveSession } =
     useActiveSession();
   const { endSessionWithFx } = useSessionEndFx();
-  const { currencySymbol = '$', privacyMode = false } = usePreferences();
+  const { currencySymbol = '$', privacyMode = false, gameOrder } = usePreferences();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+
+  // Sorted per the user's saved order (Profile → Game Order), falling back
+  // to GAME_CARDS' own order for anything sanitizeGameOrder couldn't place —
+  // there shouldn't be any, but a card silently vanishing because its key
+  // fell out of the order is worse than it just appearing at the end.
+  const orderedCards = useMemo(() => {
+    const order = sanitizeGameOrder(gameOrder);
+    const byKey = new Map(GAME_CARDS.map((c) => [c.key, c]));
+    const sorted = order.map((key) => byKey.get(key)).filter(Boolean);
+    const missing = GAME_CARDS.filter((c) => !order.includes(c.key));
+    return [...sorted, ...missing];
+  }, [gameOrder]);
   const reduced = useReduceMotion();
   const [committingGame, setCommittingGame] = useState(null);
+
+  // An explicit height, not a maxHeight — the scroll body inside is a
+  // flex:1 ScrollView, and Yoga only resolves a flex child's size against a
+  // *definite* parent height. A maxHeight-only parent has no definite size
+  // of its own (it's sized by its content, which is what it's trying to
+  // constrain), so the ScrollView collapsed to zero and the sheet shrank to
+  // just its header, pinned to the bottom of the screen. Six game cards plus
+  // any running sessions routinely exceed a screen's height anyway, so a
+  // fixed height a fixed gap below the status bar is what most opens land on.
+  const sheetHeight = windowHeight - insets.top - moderateScale(24);
+
+  // Drag-to-dismiss by the handle bar. Held in a ref, not state, so the
+  // gesture reads the latest onClose without the PanResponder (created once
+  // below) closing over a stale one.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  const dragY = useRef(new Animated.Value(0)).current;
+
+  // Fresh every time the sheet opens, in case it was left mid-drag (dragged
+  // partway, then released back to resting) the last time it closed.
+  useEffect(() => {
+    if (visible) dragY.setValue(0);
+  }, [visible, dragY]);
+
+  const settleOpen = useCallback(() => {
+    Animated.spring(dragY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+  }, [dragY]);
+
+  const dismiss = useCallback(() => {
+    Animated.timing(dragY, {
+      // However tall the sheet actually is, this clears it off the bottom
+      // of the screen — no need to know the exact value.
+      toValue: sheetHeight + moderateScale(100),
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) onCloseRef.current?.();
+    });
+  }, [dragY, sheetHeight]);
+
+  // Claims the responder the instant a touch lands in the drag zone, rather
+  // than waiting to see real movement first. The handle and title block have
+  // no onPress of their own to protect (the close button is a separate
+  // sibling, deliberately kept outside this zone), so there's nothing lost
+  // by grabbing early — and grabbing late was the actual bug: waiting for
+  // onMoveShouldSetPanResponder meant this had to win a negotiation against
+  // the sheet's own TouchableWithoutFeedback (which claims on touch-start to
+  // keep taps on the sheet from closing it), and that handoff wasn't
+  // reliably happening, so the drag frequently just never started.
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy > 0) dragY.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        const pastThreshold = gesture.dy > moderateScale(120) || gesture.vy > 0.6;
+        if (pastThreshold) dismiss();
+        else settleOpen();
+      },
+      onPanResponderTerminate: settleOpen,
+    })
+  ).current;
 
   // Clear the commit lock whenever the sheet closes so the next open is fresh.
   useEffect(() => {
@@ -240,6 +342,8 @@ export default function StartSessionModal({
     onNavigateToBlackjack,
     onNavigateToPoker,
     onNavigateToSportsBetting,
+    onNavigateToRoulette,
+    onNavigateToBaccarat,
     onNavigateToGeneral,
   };
 
@@ -259,6 +363,10 @@ export default function StartSessionModal({
       ? onNavigateToPoker
       : gameType === 'Sports Betting'
       ? onNavigateToSportsBetting
+      : gameType === 'Roulette'
+      ? onNavigateToRoulette
+      : gameType === 'Baccarat'
+      ? onNavigateToBaccarat
       : gameType === 'General'
       ? onNavigateToGeneral
       : onNavigateToBlackjack;
@@ -300,21 +408,27 @@ export default function StartSessionModal({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View
+            <Animated.View
               style={[
                 styles.sheetContainer,
-                {
-                  minHeight: Dimensions.get('window').height * 0.75 + insets.bottom,
-                  paddingBottom:
-                    insets.bottom > 0
-                      ? insets.bottom + moderateScale(12)
-                      : moderateScale(24),
-                },
+                { height: sheetHeight, transform: [{ translateY: dragY }] },
               ]}
             >
-              <View style={styles.handleBar} />
+              {/* The grabbable area is padded well past the bar's own thin
+                  visual bounds, so it's the whole quiet strip at the top of
+                  the sheet you can grab — not just the 4px-tall bar itself.
+                  Deliberately kept off the header row below: it claims the
+                  responder the instant a touch lands (see panResponder), and
+                  the close button sits only 8px from the title block with a
+                  10px hitSlop reaching back into that gap — sharing the drag
+                  zone with anything that close made the close button
+                  unreliable, so this stays its own isolated strip instead. */}
+              <View {...panResponder.panHandlers} style={styles.dragHandle}>
+                <View style={styles.handleBar} />
+              </View>
 
-              {/* Header */}
+              {/* Header stays outside the scroll body — always visible, never
+                  something you have to scroll back up past to close the sheet. */}
               <View style={styles.headerRow}>
                 <View style={{ flex: 1, marginRight: 8 }}>
                   <Text style={styles.sheetTitle}>Start New Session</Text>
@@ -335,30 +449,44 @@ export default function StartSessionModal({
                 </TouchableOpacity>
               </View>
 
-              {/* Anything already running, listed above the game cards so
-                  you can resume one or start a different game from the same
-                  place. Tapping a game already running just reopens it —
-                  startSession is a no-op when that game has a live session. */}
-              {activeSessionList.length > 0 && (
-                <View style={styles.runningBlock}>
-                  <Text style={styles.runningLabel}>RUNNING NOW</Text>
-                  {activeSessionList.map((s) => (
-                    <ActiveSessionSlip
-                      key={s.id}
-                      session={s}
-                      currencySymbol={currencySymbol}
-                      privacyMode={privacyMode}
-                      onResume={() => resumeSession(s)}
-                      onEnd={() => endSessionFromList(s)}
-                    />
-                  ))}
-                </View>
-              )}
+              {/* Six game cards plus however many are already running no
+                  longer reliably fit in one screen — this scrolls internally
+                  now instead of the sheet just growing past the top of the
+                  screen (which left the header unreachable and opened on
+                  whatever the last card happened to be). */}
+              <ScrollView
+                style={styles.scrollBody}
+                contentContainerStyle={[
+                  styles.scrollBodyContent,
+                  {
+                    paddingBottom:
+                      insets.bottom > 0 ? insets.bottom + moderateScale(12) : moderateScale(24),
+                  },
+                ]}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Anything already running, listed above the game cards so
+                    you can resume one or start a different game from the same
+                    place. Tapping a game already running just reopens it —
+                    startSession is a no-op when that game has a live session. */}
+                {activeSessionList.length > 0 && (
+                  <View style={styles.runningBlock}>
+                    <Text style={styles.runningLabel}>RUNNING NOW</Text>
+                    {activeSessionList.map((s) => (
+                      <ActiveSessionSlip
+                        key={s.id}
+                        session={s}
+                        currencySymbol={currencySymbol}
+                        privacyMode={privacyMode}
+                        onResume={() => resumeSession(s)}
+                        onEnd={() => endSessionFromList(s)}
+                      />
+                    ))}
+                  </View>
+                )}
 
-              {
-                /* Start New Session Options */
                 <View style={styles.newContent}>
-                  {GAME_CARDS.map((card, i) => (
+                  {orderedCards.map((card, i) => (
                     <GameOptionCard
                       key={card.key}
                       card={card}
@@ -371,25 +499,9 @@ export default function StartSessionModal({
                       onCommit={() => commitAndStart(card.key, navByKey[card.nav])}
                     />
                   ))}
-
-                  {/* Future games go here as additional cards — greyed out until built */}
-                  <View style={[styles.gameOptionCard, styles.gameOptionCardDisabled]}>
-                    <View style={[styles.gameIconBox, styles.gameIconBoxDisabled]}>
-                      <Ionicons name="hourglass-outline" size={24} color={COLORS.textMuted} />
-                    </View>
-                    <View style={styles.gameInfo}>
-                      <View style={styles.gameTitleRow}>
-                        <Text style={[styles.gameTitle, { color: COLORS.textMuted }]}>More games</Text>
-                        <View style={styles.badgeMuted}>
-                          <Text style={styles.badgeMutedText}>Soon</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.gameDescription}>New trackers are on the way</Text>
-                    </View>
-                  </View>
                 </View>
-              }
-            </View>
+              </ScrollView>
+            </Animated.View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -412,15 +524,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     paddingTop: moderateScale(12),
     paddingHorizontal: SPACING.pageHorizontal,
-    minHeight: Dimensions.get('window').height * 0.75,
+  },
+  scrollBody: {
+    // Fills whatever's left of sheetContainer's explicit height once the
+    // handle bar and header take theirs — that's what makes the game-card
+    // list scroll internally instead of pushing the header off-screen.
+    flex: 1,
+  },
+  scrollBodyContent: {
+    flexGrow: 1,
+  },
+  // The pan responder's touch target — well past the bar's own 4px, so it's
+  // actually grabbable rather than requiring pixel-precise aim. Sized more
+  // generously than the bar alone needs, since this is now the sheet's only
+  // drag zone (see the comment above its usage).
+  dragHandle: {
+    alignItems: 'center',
+    paddingTop: moderateScale(14),
+    paddingBottom: moderateScale(20),
   },
   handleBar: {
     width: moderateScale(40),
     height: moderateScale(4),
     borderRadius: moderateScale(2),
     backgroundColor: COLORS.cardBorder,
-    alignSelf: 'center',
-    marginBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',

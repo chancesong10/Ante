@@ -31,6 +31,7 @@ export default function GeneralTrackerScreen({ navigation }) {
     endActiveSession,
     discardActiveSession,
     setSessionBuyInCashOut,
+    updateActiveSessionMetadata,
   } = useGameSession("General");
   const { endSessionWithFx } = useSessionEndFx();
 
@@ -64,6 +65,14 @@ export default function GeneralTrackerScreen({ navigation }) {
       setSessionBuyInCashOut(b, c);
     }
   }, [parsedBuyIn, parsedCashOut, activeSession?.id]);
+
+  // The label was being collected and then thrown away — it never reached the
+  // session, so "Roulette" vanished the moment you ended. Mirror it onto the
+  // live session the same way the amounts are.
+  useEffect(() => {
+    if (!activeSession || !updateActiveSessionMetadata) return;
+    updateActiveSessionMetadata({ label: label.trim() || undefined });
+  }, [label, activeSession?.id]);
 
   const liveNet = hasValidNumbers ? parsedCashOut - parsedBuyIn : 0;
 
@@ -167,7 +176,7 @@ export default function GeneralTrackerScreen({ navigation }) {
             {hasValidNumbers ? `${liveNet > 0 ? '+' : liveNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(liveNet).toFixed(2)}` : '—'}
           </Text>
           <Text style={styles.statsHint}>
-            For slots, craps, roulette, or anything you'd rather log simply
+            For slots, craps, keno, or anything you'd rather log simply
           </Text>
         </View>
 
@@ -175,7 +184,7 @@ export default function GeneralTrackerScreen({ navigation }) {
           <Text style={styles.label}>What are you tracking? (optional)</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Slots, Roulette, Craps"
+            placeholder="e.g. Slots, Craps, Keno"
             placeholderTextColor={COLORS.textMuted}
             value={label}
             onChangeText={setLabel}

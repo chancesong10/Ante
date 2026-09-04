@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { loadPreferences, savePreferences } from '../services/storageService';
+import { setHapticsEnabled } from '../utils/haptics';
+import { DEFAULT_GAME_ORDER, sanitizeGameOrder } from '../constants/games';
 
 const PreferencesContext = createContext();
 
@@ -24,11 +26,13 @@ export const DEFAULT_QUICK_CHIP_PRESETS = {
   poker: ['1', '5', '25', '100', '500', '1000'],
   // Cash stakes, not chips — round numbers around a typical unit size.
   sports: ['5', '10', '25', '50', '100'],
+  // Roulette and baccarat are both chip games at the table, same ladder as blackjack.
+  roulette: ['1', '5', '25', '100', '500'],
+  baccarat: ['1', '5', '25', '100', '500'],
 };
 
 const DEFAULT_PREFERENCES = {
   quickChipsEnabled: true,
-  username: 'Ante Highroller',
   currency: 'USD ($)',
   currencySymbol: '$',
   privacyMode: false,
@@ -36,6 +40,10 @@ const DEFAULT_PREFERENCES = {
   stopLossAlert: false,
   stopLossAmount: 250,
   quickChipPresets: DEFAULT_QUICK_CHIP_PRESETS,
+  // Which order the Start Session sheet lists its game cards in. Lives here
+  // rather than as sheet-local state so it's set once in Settings and just
+  // shows up the next time the sheet opens.
+  gameOrder: DEFAULT_GAME_ORDER,
 };
 
 export function PreferencesProvider({ children }) {
@@ -70,6 +78,9 @@ export function PreferencesProvider({ children }) {
             ...DEFAULT_QUICK_CHIP_PRESETS,
             ...(stored.quickChipPresets || {}),
           },
+          // Same idea for game order: reconcile against whatever games exist
+          // today rather than trusting a blob that might predate one of them.
+          gameOrder: sanitizeGameOrder(stored.gameOrder),
         }));
       }
       setIsLoaded(true);
@@ -85,6 +96,11 @@ export function PreferencesProvider({ children }) {
     const t = setTimeout(() => savePreferences(preferences), 250);
     return () => clearTimeout(t);
   }, [preferences, isLoaded]);
+
+  // Push the haptics preference down to the module the whole app calls into.
+  useEffect(() => {
+    setHapticsEnabled(preferences.hapticsEnabled);
+  }, [preferences.hapticsEnabled]);
 
   const updatePreferences = useCallback((partial) => {
     setPreferences((prev) => ({

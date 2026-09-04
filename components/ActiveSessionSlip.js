@@ -30,6 +30,8 @@ export function liveCountOf(session) {
 const UNIT = {
   Poker: 'hands',
   'Sports Betting': 'bets',
+  Roulette: 'spins',
+  Baccarat: 'hands',
   General: 'entries',
 };
 

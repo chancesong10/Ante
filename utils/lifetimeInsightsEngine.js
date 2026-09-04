@@ -6,7 +6,7 @@
 // "net profit" is the one currency that's uniformly meaningful across
 // every game type Ante tracks (including General's simple buy-in/cash-out
 // sessions, which have no hand-level detail at all).
-const GAME_KEYS = ['Blackjack', 'Poker', 'Sports Betting', 'General'];
+const GAME_KEYS = ['Blackjack', 'Poker', 'Sports Betting', 'Roulette', 'Baccarat', 'General'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // sessionHistory is stored newest-first; every stat below wants oldest-first.
@@ -15,9 +15,8 @@ export function getAllSessionsChronological(sessionHistory) {
 }
 
 // --- Per-game breakdown: which game is actually making or costing you
-// money, on average per session. Any gameType outside the four Ante
-// screens produce falls into "General," matching ProfileScreen's own
-// convention. ---
+// money, on average per session. Any gameType outside Ante's dedicated
+// trackers falls into "General," matching ProfileScreen's own convention. ---
 export function calcGameBreakdown(sessions) {
   const groups = {};
   GAME_KEYS.forEach((g) => (groups[g] = []));
@@ -118,6 +117,56 @@ export function calcDayOfWeekPerformance(sessions) {
   return { best, worst, allDays: withData };
 }
 
+// --- When you play, not just what day. Day-of-week already exists above,
+// but the hour a session *starts* is the sharper signal: late-night play is
+// the most consistently documented -EV window in gambling, because it
+// correlates with fatigue, alcohol, and chasing a bad night rather than with
+// anything about the game. Buckets are named windows rather than 24 hours,
+// since nobody has enough sessions for hour-by-hour to mean anything. ---
+const TIME_BLOCKS = [
+  { id: 'morning', label: 'Morning', range: '6am – 12pm', start: 6, end: 12 },
+  { id: 'afternoon', label: 'Afternoon', range: '12pm – 6pm', start: 12, end: 18 },
+  { id: 'evening', label: 'Evening', range: '6pm – 12am', start: 18, end: 24 },
+  { id: 'lateNight', label: 'Late night', range: '12am – 6am', start: 0, end: 6 },
+];
+
+export function calcTimeOfDayPerformance(sessions) {
+  const byBlock = {};
+  TIME_BLOCKS.forEach((b) => {
+    byBlock[b.id] = { ...b, netProfit: 0, sessions: 0 };
+  });
+
+  sessions.forEach((s) => {
+    const hour = new Date(s.startTime).getHours();
+    if (!Number.isFinite(hour)) return;
+    const block = TIME_BLOCKS.find((b) => hour >= b.start && hour < b.end);
+    if (!block) return;
+    byBlock[block.id].netProfit += s.netProfit || 0;
+    byBlock[block.id].sessions += 1;
+  });
+
+  const all = TIME_BLOCKS.map((b) => {
+    const bucket = byBlock[b.id];
+    return {
+      ...b,
+      sessions: bucket.sessions,
+      netProfit: bucket.netProfit,
+      avgNet: bucket.sessions > 0 ? bucket.netProfit / bucket.sessions : null,
+    };
+  });
+
+  const withData = all.filter((b) => b.sessions > 0);
+  // Same reasoning as day-of-week: one block means "best" and "worst" are the
+  // same thing, which reads as insight but isn't.
+  if (withData.length < 2) return null;
+
+  const best = withData.reduce((a, b) => (b.avgNet > a.avgNet ? b : a));
+  const worst = withData.reduce((a, b) => (b.avgNet < a.avgNet ? b : a));
+  const lateNight = all.find((b) => b.id === 'lateNight');
+
+  return { all, withData, best, worst, lateNight };
+}
+
 // --- Performance by session length, across every game combined. ---
 export function calcSessionLengthPerformance(sessions) {
   if (sessions.length < 3) return null;
@@ -192,7 +241,13 @@ export function calcTimePlayed(sessions) {
 // already computed for known -EV signatures and ranks whichever clear
 // their evidence threshold. `score` is a heuristic 0-100 used only to
 // rank leaks against each other. ---
-export function buildLeakReport({ gameBreakdown, dayOfWeekPerformance, sessionLengthPerformance, volatility }) {
+export function buildLeakReport({
+  gameBreakdown,
+  dayOfWeekPerformance,
+  timeOfDayPerformance,
+  sessionLengthPerformance,
+  volatility,
+}) {
   const leaks = [];
 
   if (
@@ -226,6 +281,31 @@ export function buildLeakReport({ gameBreakdown, dayOfWeekPerformance, sessionLe
       avgNet: dayOfWeekPerformance.worst.avgNet,
       bestDay: dayOfWeekPerformance.best.day,
       bestAvgNet: dayOfWeekPerformance.best.avgNet,
+    });
+  }
+
+  // Same evidence bar as the day-of-week rule: at least 3 sessions in the
+  // block, actually losing there, and losing by a wide enough margin over the
+  // best block that it isn't just noise.
+  if (
+    timeOfDayPerformance &&
+    timeOfDayPerformance.worst.sessions >= 3 &&
+    timeOfDayPerformance.worst.avgNet < 0 &&
+    timeOfDayPerformance.best.avgNet - timeOfDayPerformance.worst.avgNet >
+      Math.abs(timeOfDayPerformance.worst.avgNet) * 0.5
+  ) {
+    leaks.push({
+      id: 'time_of_day_drag',
+      score: Math.min(100, Math.abs(timeOfDayPerformance.worst.avgNet)),
+      block: timeOfDayPerformance.worst.label,
+      range: timeOfDayPerformance.worst.range,
+      // Late-night is the one window with a documented cause behind it
+      // (fatigue, chasing), so the UI can say something stronger about it.
+      isLateNight: timeOfDayPerformance.worst.id === 'lateNight',
+      sample: timeOfDayPerformance.worst.sessions,
+      avgNet: timeOfDayPerformance.worst.avgNet,
+      bestBlock: timeOfDayPerformance.best.label,
+      bestAvgNet: timeOfDayPerformance.best.avgNet,
     });
   }
 
@@ -272,11 +352,18 @@ export function computeLifetimeInsights(sessionHistory) {
   const gameBreakdown = calcGameBreakdown(sessions);
   const sessionStreaks = calcSessionStreaks(sessions);
   const dayOfWeekPerformance = calcDayOfWeekPerformance(sessions);
+  const timeOfDayPerformance = calcTimeOfDayPerformance(sessions);
   const sessionLengthPerformance = calcSessionLengthPerformance(sessions);
   const volatility = calcVolatility(sessions);
   const timePlayed = calcTimePlayed(sessions);
 
-  const leaks = buildLeakReport({ gameBreakdown, dayOfWeekPerformance, sessionLengthPerformance, volatility });
+  const leaks = buildLeakReport({
+    gameBreakdown,
+    dayOfWeekPerformance,
+    timeOfDayPerformance,
+    sessionLengthPerformance,
+    volatility,
+  });
 
   return {
     totalSessions,
@@ -285,6 +372,7 @@ export function computeLifetimeInsights(sessionHistory) {
     gameBreakdown,
     sessionStreaks,
     dayOfWeekPerformance,
+    timeOfDayPerformance,
     sessionLengthPerformance,
     volatility,
     timePlayed,

@@ -33,6 +33,15 @@ function getLeakCopy(leak, { fmtMoney, fmtPct }) {
         title: `${leak.day}s Are Costing You`,
         detail: `${leak.day} sessions average ${fmtMoney(leak.avgNet)} (n=${leak.sample}), vs. ${fmtMoney(leak.bestAvgNet)} on your best day, ${leak.bestDay}. Could be fatigue, tilt, or just a bad night out — worth noticing either way.`,
       };
+    case 'time_of_day_drag':
+      return {
+        title: leak.isLateNight
+          ? 'Late-Night Sessions Are Your Worst'
+          : `${leak.block} Sessions Are Costing You`,
+        detail: leak.isLateNight
+          ? `Sessions you start between ${leak.range} average ${fmtMoney(leak.avgNet)} (n=${leak.sample}), against ${fmtMoney(leak.bestAvgNet)} in the ${leak.bestBlock.toLowerCase()}. Late play is the most reliably losing window there is — usually tiredness and chasing rather than anything about the game.`
+          : `Sessions you start in the ${leak.block.toLowerCase()} (${leak.range}) average ${fmtMoney(leak.avgNet)} (n=${leak.sample}), against ${fmtMoney(leak.bestAvgNet)} in the ${leak.bestBlock.toLowerCase()}.`,
+      };
     case 'session_length_fatigue':
       return {
         title: 'Your Longer Sessions Run Worse',
@@ -52,6 +61,8 @@ const GAME_ICONS = {
   Blackjack: 'albums-outline',
   Poker: 'cash-outline',
   'Sports Betting': 'basketball-outline',
+  Roulette: 'disc-outline',
+  Baccarat: 'diamond-outline',
   General: 'dice-outline',
 };
 
@@ -94,6 +105,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
   const games = stats.gameBreakdown;
   const streaks = stats.sessionStreaks;
   const dow = stats.dayOfWeekPerformance;
+  const tod = stats.timeOfDayPerformance;
   const lenPerf = stats.sessionLengthPerformance;
   const vol = stats.volatility;
   const timePlayed = stats.timePlayed;
@@ -145,6 +157,14 @@ export default function LifetimeInsightsScreen({ navigation }) {
       lines.push('BEST & WORST DAYS');
       lines.push(`Best: ${dow.best.day}, ${fmtMoney(dow.best.avgNet)}`);
       lines.push(`Worst: ${dow.worst.day}, ${fmtMoney(dow.worst.avgNet)}`);
+      lines.push('');
+    }
+
+    if (tod) {
+      lines.push('PERFORMANCE BY TIME OF DAY');
+      tod.withData.forEach((b) => {
+        lines.push(`${b.label} (${b.range}), n=${b.sessions}: ${fmtMoney(b.avgNet)}`);
+      });
       lines.push('');
     }
 
@@ -335,6 +355,37 @@ export default function LifetimeInsightsScreen({ navigation }) {
                 <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
                 <Text style={styles.unlockText}>
                   All your sessions so far landed on the same day of the week — log sessions on at least one more day to unlock a best-vs-worst comparison.
+                </Text>
+              </View>
+            )}
+
+            {/* Time of Day — when you start matters as much as which day */}
+            {tod ? (
+              <View style={[styles.card, SHADOWS.card]}>
+                <Text style={styles.cardLabel}>PERFORMANCE BY TIME OF DAY</Text>
+                <Text style={styles.cardHint}>By the hour a session started</Text>
+                {tod.withData.map((block) => (
+                  <StatLine
+                    key={block.id}
+                    label={`${block.label} · ${block.range} (${block.sessions})`}
+                    value={fmtMoney(block.avgNet)}
+                    valueColor={
+                      block.avgNet > 0
+                        ? COLORS.success
+                        : block.avgNet < 0
+                        ? COLORS.danger
+                        : COLORS.textPrimary
+                    }
+                    locked={isLocked}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View style={[styles.card, SHADOWS.card, styles.unlockCard]}>
+                <Text style={styles.cardLabel}>PERFORMANCE BY TIME OF DAY</Text>
+                <Text style={styles.unlockText}>
+                  Every session so far started in the same part of the day — play at another time to compare
+                  mornings, afternoons, evenings and late nights.
                 </Text>
               </View>
             )}
