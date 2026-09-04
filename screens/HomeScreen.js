@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,22 +7,135 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
+  Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession } from '../context/SessionContext';
+import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { GameIconTile } from '../components/GameIcon';
-import ConfirmModal from '../components/ConfirmModal';
+import ActiveSessionsModal from '../components/ActiveSessionsModal';
+import { liveNetOf, liveCountOf } from '../components/ActiveSessionSlip';
+import { useCommitPress } from '../components/CommitAnimation';
+import { useReduceMotion } from '../components/ui';
+import { hapticLight } from '../utils/haptics';
+
+// One recent-session row. Plays the same commit beat as the start-session
+// sheet's game cards — press-in, the tile flooding with the game's colour, a
+// ring rippling out — but hands off to History instead of starting a session.
+function RecentSessionCard({
+  session,
+  reduced,
+  screenFocused,
+  committing,
+  otherCommitting,
+  currencySymbol,
+  privacyMode,
+  onSelect,
+  onCommit,
+}) {
+  const gameColor = getGameColor(session.gameType);
+  const { play, reset, flood, containerStyle, ringStyle } = useCommitPress({
+    reduced,
+    dimmed: otherCommitting,
+    onCommit,
+  });
+
+  // Home is a tab, so it stays mounted after the hand-off and the tile would
+  // otherwise still be flooded when you come back. Clear it once the screen
+  // is off view, so returning always finds the card at rest.
+  useEffect(() => {
+    if (!screenFocused) reset();
+  }, [screenFocused, reset]);
+
+  const handlePress = () => {
+    hapticLight();
+    onSelect();
+    play();
+  };
+
+  const net = session.netProfit || 0;
+
+  return (
+    <Animated.View style={containerStyle}>
+      <TouchableOpacity
+        style={[styles.sessionCard, SHADOWS.card]}
+        activeOpacity={0.9}
+        disabled={committing || otherCommitting}
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${session.gameType} session in History`}
+      >
+        <GameIconTile
+          gameType={session.gameType}
+          size={moderateScale(38)}
+          glyph={moderateScale(18)}
+          style={styles.sessionIconBox}
+        >
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: gameColor, opacity: flood, borderRadius: RADIUS.sm },
+            ]}
+          />
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.commitRing, { borderColor: gameColor }, ringStyle]}
+          />
+        </GameIconTile>
+
+        <View style={styles.sessionInfo}>
+          <Text style={styles.sessionTitle}>{session.gameType} Session</Text>
+          <Text style={styles.sessionDate}>{session.formattedDate}</Text>
+        </View>
+
+        <View style={styles.sessionResult}>
+          <Text
+            style={[
+              styles.sessionNet,
+              {
+                color:
+                  net > 0 ? COLORS.success : net < 0 ? COLORS.danger : COLORS.textPrimary,
+              },
+            ]}
+          >
+            {privacyMode
+              ? '••••••'
+              : `${net > 0 ? '+' : net < 0 ? '-' : ''}${currencySymbol}${Math.abs(net).toFixed(2)}`}
+          </Text>
+          <Text style={styles.sessionDuration}>{session.durationFormatted}</Text>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
 
 export default function HomeScreen({ navigation, onOpenAddModal }) {
-  const { activeSession, endActiveSession } = useActiveSession();
+  const { activeSessionList, activeSessionCount, endActiveSession } = useActiveSession();
+  const { endSessionWithFx } = useSessionEndFx();
+  const [sessionsModalVisible, setSessionsModalVisible] = useState(false);
+  const reduced = useReduceMotion();
+  const isFocused = useIsFocused();
+
+  // Which recent-session card is mid-commit, so its siblings step back.
+  const [openingId, setOpeningId] = useState(null);
+
+  // Hands off to History with the tapped session flagged, so it can pulse
+  // there. `at` is a nonce — tapping the same row twice must re-trigger the
+  // highlight, and identical params wouldn't fire History's effect again.
+  const openSessionInHistory = (sessionId) => {
+    setOpeningId(null);
+    navigation.navigate('History', { highlightId: sessionId, highlightAt: Date.now() });
+  };
   const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const { user, profile } = useAuth();
@@ -45,11 +158,38 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
       ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
       : '0.0';
 
-  // Active session live calculations
-  const activeHands = activeSession
-    ? activeSession.hands.flatMap((r) => (r.type === 'split' ? r.hands : [r]))
-    : [];
-  const activeNet = activeHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
+  // Combined live figures across everything running.
+  const activeNet = activeSessionList.reduce((sum, s) => sum + liveNetOf(s), 0);
+  const activeBetCount = activeSessionList.reduce((sum, s) => sum + liveCountOf(s), 0);
+
+  const resumeSession = (session) => {
+    setSessionsModalVisible(false);
+    const screen =
+      session.gameType === 'Poker'
+        ? 'Poker'
+        : session.gameType === 'Sports Betting'
+        ? 'SportsBetting'
+        : session.gameType === 'General'
+        ? 'GeneralTracker'
+        : 'Blackjack';
+    navigation.navigate(screen);
+  };
+
+  // General needs a buy-in and cash-out typed in before it has anything to
+  // save, and Sports Betting has its own pending-bet confirmation — so for
+  // those two the stop button opens the tracker rather than ending blind.
+  const endSessionFromList = (session) => {
+    setSessionsModalVisible(false);
+    if (session.gameType === 'General' || session.gameType === 'Sports Betting') {
+      resumeSession(session);
+      return;
+    }
+    endSessionWithFx({
+      net: liveNetOf(session),
+      gameType: session.gameType,
+      onCommit: () => endActiveSession(session.gameType),
+    });
+  };
 
   const handleStartNewSession = () => {
     if (onOpenAddModal) {
@@ -57,49 +197,16 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
     }
   };
 
-  const [showEndWarning, setShowEndWarning] = useState(false);
-
-  const handleEndSession = () => {
-    if (activeSession && activeSession.gameType === 'Sports Betting') {
-      const hasPending = activeSession.hands?.some((b) => b.outcome === 'pending');
-      if (hasPending) {
-        setShowEndWarning(true);
-        return;
-      }
-    }
-    endActiveSession();
-  };
-
-  const executeEndSession = () => {
-    setShowEndWarning(false);
-    endActiveSession();
-  };
-
-  const handleResumeSession = () => {
-    if (!activeSession) return;
-    if (activeSession.gameType === 'Poker') {
-      navigation.navigate('Poker');
-    } else if (activeSession.gameType === 'Sports Betting') {
-      navigation.navigate('SportsBetting');
-    } else if (activeSession.gameType === 'General') {
-      navigation.navigate('GeneralTracker');
-    } else {
-      navigation.navigate('Blackjack');
-    }
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <ConfirmModal
-        visible={showEndWarning}
-        title="Pending Bets Remaining"
-        message="You have unresolved pending bets. If you end the session now, they will be saved as unresolved and cannot be edited later.\n\nEnd session anyway?"
-        confirmText="End Session"
-        cancelText="Cancel"
-        variant="danger"
-        icon="alert-circle-outline"
-        onConfirm={executeEndSession}
-        onCancel={() => setShowEndWarning(false)}
+      <ActiveSessionsModal
+        visible={sessionsModalVisible}
+        sessions={activeSessionList}
+        currencySymbol={currencySymbol}
+        privacyMode={privacyMode}
+        onClose={() => setSessionsModalVisible(false)}
+        onResume={resumeSession}
+        onEnd={endSessionFromList}
       />
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <ScrollView
@@ -133,20 +240,36 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 
         {!user && <GuestModeBanner />}
 
-        {/* ACTIVE SESSION CARD (Rendered whenever a session is active) */}
-        {activeSession && (
-          <View style={[styles.activeCard, SHADOWS.card]}>
+        {/* Summary of everything running. Tapping opens the full list — one
+            card here regardless of how many games are live, so the home
+            screen doesn't grow a stack of them. */}
+        {activeSessionCount > 0 && (
+          <TouchableOpacity
+            style={[styles.activeCard, SHADOWS.card]}
+            activeOpacity={0.85}
+            onPress={() => setSessionsModalVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`${activeSessionCount} sessions running. Open the list.`}
+          >
             <View style={styles.activeHeader}>
               <View style={styles.liveBadge}>
                 <LivePulseDot size={moderateScale(6)} />
-                <Text style={styles.liveBadgeText}>ACTIVE SESSION</Text>
+                <Text style={styles.liveBadgeText}>
+                  {activeSessionCount === 1 ? 'SESSION RUNNING' : 'SESSIONS RUNNING'}
+                </Text>
               </View>
-              <Text style={styles.activeGameName}>{activeSession.gameType}</Text>
+              <Text style={styles.activeGameName}>
+                {activeSessionCount === 1
+                  ? activeSessionList[0].gameType
+                  : `${activeSessionCount} games`}
+              </Text>
             </View>
 
             <View style={styles.activeBalanceRow}>
               <View>
-                <Text style={styles.activeLabel}>LIVE NET OUTCOME</Text>
+                <Text style={styles.activeLabel}>
+                  {activeSessionCount === 1 ? 'LIVE NET OUTCOME' : 'COMBINED LIVE NET'}
+                </Text>
                 <Text
                   style={[
                     styles.activeNetAmount,
@@ -166,46 +289,18 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                 </Text>
               </View>
               <View style={styles.activeHandsBadge}>
-                <Text style={styles.activeHandsNum}>{activeHands.length}</Text>
-                <Text style={styles.activeHandsLabel}>hands logged</Text>
+                <Text style={styles.activeHandsNum}>{activeBetCount}</Text>
+                <Text style={styles.activeHandsLabel}>logged</Text>
               </View>
             </View>
 
-            {/* Prominent Action Buttons for Active Session */}
-            <View style={styles.activeButtonRow}>
-              <TouchableOpacity
-                style={[styles.resumeButton, SHADOWS.card]}
-                activeOpacity={0.85}
-                onPress={handleResumeSession}
-                accessibilityRole="button"
-                accessibilityLabel="Resume Session"
-              >
-                <Ionicons
-                  name="play"
-                  size={moderateScale(16)}
-                  color={COLORS.textDark}
-                  style={{ marginRight: moderateScale(6) }}
-                />
-                <Text style={styles.resumeButtonText}>Resume Session</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.endButton}
-                activeOpacity={0.85}
-                onPress={handleEndSession}
-                accessibilityRole="button"
-                accessibilityLabel="End Session"
-              >
-                <Ionicons
-                  name="stop-circle-outline"
-                  size={moderateScale(16)}
-                  color={COLORS.danger}
-                  style={{ marginRight: moderateScale(6) }}
-                />
-                <Text style={styles.endButtonText}>End Session</Text>
-              </TouchableOpacity>
+            <View style={styles.activeOpenRow}>
+              <Text style={styles.activeOpenText}>
+                {activeSessionCount === 1 ? 'View session' : 'View all sessions'}
+              </Text>
+              <Ionicons name="chevron-forward" size={moderateScale(16)} color={COLORS.textSecondary} />
             </View>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* OVERALL PERFORMANCE CARD */}
@@ -256,8 +351,8 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
             </View>
           </View>
 
-          {/* Quick Action when no active session */}
-          {!activeSession && (
+          {/* Quick Action when nothing is running */}
+          {activeSessionCount === 0 && (
             <TouchableOpacity
               style={styles.startSessionCta}
               activeOpacity={0.85}
@@ -300,43 +395,18 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
         ) : (
           <View style={styles.sessionsList}>
             {sessionHistory.slice(0, 4).map((session) => (
-              <TouchableOpacity
+              <RecentSessionCard
                 key={session.id}
-                style={[styles.sessionCard, SHADOWS.card]}
-                activeOpacity={0.7}
-                onPress={() => navigation.navigate('History')}
-              >
-                <GameIconTile
-                  gameType={session.gameType}
-                  size={moderateScale(38)}
-                  glyph={moderateScale(18)}
-                  style={styles.sessionIconBox}
-                />
-                <View style={styles.sessionInfo}>
-                  <Text style={styles.sessionTitle}>{session.gameType} Session</Text>
-                  <Text style={styles.sessionDate}>{session.formattedDate}</Text>
-                </View>
-                <View style={styles.sessionResult}>
-                  <Text
-                    style={[
-                      styles.sessionNet,
-                      {
-                        color:
-                          session.netProfit > 0
-                            ? COLORS.success
-                            : session.netProfit < 0
-                            ? COLORS.danger
-                            : COLORS.textPrimary,
-                      },
-                    ]}
-                  >
-                    {privacyMode
-                      ? '••••••'
-                      : `${session.netProfit > 0 ? '+' : session.netProfit < 0 ? '-' : ''}${currencySymbol}${Math.abs(session.netProfit).toFixed(2)}`}
-                  </Text>
-                  <Text style={styles.sessionDuration}>{session.durationFormatted}</Text>
-                </View>
-              </TouchableOpacity>
+                session={session}
+                reduced={reduced}
+                screenFocused={isFocused}
+                committing={openingId === session.id}
+                otherCommitting={!!openingId && openingId !== session.id}
+                currencySymbol={currencySymbol}
+                privacyMode={privacyMode}
+                onSelect={() => setOpeningId(session.id)}
+                onCommit={() => openSessionInHistory(session.id)}
+              />
             ))}
           </View>
         )}
@@ -624,9 +694,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  activeOpenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.cardBorder,
+  },
+  activeOpenText: {
+    fontSize: fluidFont(13),
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
   // Size and surface come from GameIconTile — this only positions it.
   sessionIconBox: {
     marginRight: SPACING.sm,
+  },
+  // Ripples out past the tile, so the tile must not clip it.
+  commitRing: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: RADIUS.md,
+    borderWidth: 2,
   },
   sessionInfo: {
     flex: 1,

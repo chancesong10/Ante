@@ -42,7 +42,16 @@ const CHIP_PRESET_GAMES = [
 
 export default function ProfileScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
-  const { user, profile, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    signOut,
+    updateUsername,
+    hasPasswordLogin,
+    updatePasswordWithCurrent,
+    sendPasswordChangeCode,
+    updatePasswordWithCode,
+  } = useAuth();
   const {
     isPro,
     isLoading: purchasesLoading,
@@ -76,6 +85,112 @@ export default function ProfileScreen({ navigation }) {
   const [tempLossLimit, setTempLossLimit] = useState(String(stopLossAmount));
   const [copiedSeed, setCopiedSeed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  // Account settings — 'username' | 'password' | null
+  const [accountModal, setAccountModal] = useState(null);
+  const [tempUsername, setTempUsername] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  // Google-only accounts prove identity with an emailed code instead.
+  const [codeSent, setCodeSent] = useState(false);
+  const [verifyCode, setVerifyCode] = useState('');
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [accountError, setAccountError] = useState(null);
+  const [accountNotice, setAccountNotice] = useState(null);
+
+  const openUsernameModal = () => {
+    setTempUsername(profile?.username || '');
+    setAccountError(null);
+    setAccountModal('username');
+  };
+
+  const openPasswordModal = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setVerifyCode('');
+    setCodeSent(false);
+    setAccountError(null);
+    setAccountModal('password');
+  };
+
+  const handleSendCode = async () => {
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      await sendPasswordChangeCode();
+      setCodeSent(true);
+    } catch (err) {
+      setAccountError(err?.message || "That code couldn't be sent. Try again.");
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const closeAccountModal = () => {
+    if (accountBusy) return; // don't drop a request that's mid-flight
+    setAccountModal(null);
+    setAccountError(null);
+  };
+
+  const flashNotice = (text) => {
+    setAccountNotice(text);
+    setTimeout(() => setAccountNotice(null), 2600);
+  };
+
+  const handleSaveUsername = async () => {
+    const name = tempUsername.trim();
+    if (name.length < 2) {
+      setAccountError('Pick a username of at least 2 characters.');
+      return;
+    }
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      await updateUsername(name);
+      setAccountModal(null);
+      flashNotice('Username updated.');
+    } catch (err) {
+      setAccountError(err?.message || "That username couldn't be saved. Try again.");
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const handleSavePassword = async () => {
+    if (hasPasswordLogin && !currentPassword) {
+      setAccountError('Enter your current password.');
+      return;
+    }
+    if (!hasPasswordLogin && !verifyCode.trim()) {
+      setAccountError('Enter the code we emailed you.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setAccountError('Use at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setAccountError("Those two passwords don't match.");
+      return;
+    }
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      if (hasPasswordLogin) {
+        await updatePasswordWithCurrent(currentPassword, newPassword);
+      } else {
+        await updatePasswordWithCode(verifyCode, newPassword);
+      }
+      setAccountModal(null);
+      flashNotice('Password updated.');
+    } catch (err) {
+      setAccountError(err?.message || "That password couldn't be saved. Try again.");
+    } finally {
+      setAccountBusy(false);
+    }
+  };
 
   const activeProEntitlement = customerInfo?.entitlements?.active?.[ANTE_PRO_ENTITLEMENT_ID];
   const proPlanLabel = activeProEntitlement
@@ -227,7 +342,6 @@ export default function ProfileScreen({ navigation }) {
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>VAULT PROFILE</Text>
-            <Text style={styles.subtitle}>Secured on-device bankroll identity</Text>
           </View>
         </View>
 
@@ -278,6 +392,55 @@ export default function ProfileScreen({ navigation }) {
             <Ionicons name="log-in-outline" size={16} color={COLORS.textDark} />
             <Text style={styles.signInButtonText}>Sign In / Create Account</Text>
           </TouchableOpacity>
+        )}
+
+        {/* Section: Account (signed-in only) */}
+        {!!user && (
+          <>
+            <Text style={styles.sectionTitle}>ACCOUNT</Text>
+            <View style={[styles.menuCard, SHADOWS.card]}>
+              <TouchableOpacity
+                style={styles.menuRow}
+                activeOpacity={0.7}
+                onPress={openUsernameModal}
+              >
+                <View style={styles.menuIconCircle}>
+                  <Ionicons name="person-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
+                </View>
+                <View style={styles.menuTextGroup}>
+                  <Text style={styles.menuTitle}>Username</Text>
+                  <Text style={styles.menuSubtitle} numberOfLines={1}>
+                    {profile?.username || 'Not set yet'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+
+              <View style={styles.menuDivider} />
+
+              <TouchableOpacity
+                style={styles.menuRow}
+                activeOpacity={0.7}
+                onPress={openPasswordModal}
+              >
+                <View style={styles.menuIconCircle}>
+                  <Ionicons name="key-outline" size={moderateScale(18)} color={COLORS.warning} />
+                </View>
+                <View style={styles.menuTextGroup}>
+                  <Text style={styles.menuTitle}>Password</Text>
+                  <Text style={styles.menuSubtitle}>Set a new password for this account</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {!!accountNotice && (
+              <View style={styles.noticeRow}>
+                <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
+                <Text style={styles.noticeText}>{accountNotice}</Text>
+              </View>
+            )}
+          </>
         )}
 
         {/* 2x2 High-Impact Bankroll Vault Grid */}
@@ -334,7 +497,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
               <Text style={styles.gridCardLabel}>TOTAL WAGERED</Text>
-              <Ionicons name="flame-outline" size={moderateScale(15)} color={COLORS.icon} />
+              <Ionicons name="flame-outline" size={moderateScale(15)} color={COLORS.accentOrange} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
               {privacyMode ? '••••••' : `${currencySymbol}${stats.totalWagered.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -346,7 +509,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
               <Text style={styles.gridCardLabel}>WIN RATE</Text>
-              <Ionicons name="trophy-outline" size={moderateScale(15)} color={COLORS.icon} />
+              <Ionicons name="trophy-outline" size={moderateScale(15)} color={COLORS.warning} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]}>
               {stats.winRate}%
@@ -360,7 +523,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
               <Text style={styles.gridCardLabel}>BETS LOGGED</Text>
-              <Ionicons name="layers-outline" size={moderateScale(15)} color={COLORS.icon} />
+              <Ionicons name="layers-outline" size={moderateScale(15)} color={COLORS.accentCyan} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]}>
               {stats.totalHands}
@@ -420,7 +583,7 @@ export default function ProfileScreen({ navigation }) {
           {/* Quick Chips Toggle */}
           <View style={styles.menuRow}>
             <View style={styles.menuIconCircle}>
-              <Ionicons name="flash-outline" size={moderateScale(18)} color={COLORS.icon} />
+              <Ionicons name="flash-outline" size={moderateScale(18)} color={COLORS.warning} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Quick Chip Buttons</Text>
@@ -442,7 +605,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={handleOpenChipPresetModal}
           >
             <View style={styles.menuIconCircle}>
-              <MaterialCommunityIcons name="poker-chip" size={moderateScale(18)} color={COLORS.icon} />
+              <MaterialCommunityIcons name="poker-chip" size={moderateScale(18)} color={COLORS.accentOrange} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Quick Chip Presets</Text>
@@ -462,7 +625,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => setCurrencyModalVisible(true)}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="globe-outline" size={moderateScale(18)} color={COLORS.icon} />
+              <Ionicons name="globe-outline" size={moderateScale(18)} color={COLORS.success} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Display Currency</Text>
@@ -479,7 +642,11 @@ export default function ProfileScreen({ navigation }) {
           {/* Privacy Mode Toggle */}
           <View style={styles.menuRow}>
             <View style={styles.menuIconCircle}>
-              <Ionicons name="eye-off-outline" size={moderateScale(18)} color={COLORS.icon} />
+              <Ionicons
+                name={privacyMode ? 'eye-off-outline' : 'eye-outline'}
+                size={moderateScale(18)}
+                color={privacyMode ? COLORS.accentCyan : COLORS.icon}
+              />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Privacy Mode</Text>
@@ -547,7 +714,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={handleCopySeed}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="key-outline" size={moderateScale(18)} color={COLORS.icon} />
+              <Ionicons name="finger-print-outline" size={moderateScale(18)} color={COLORS.accentViolet} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Vault Device Seed</Text>
@@ -577,7 +744,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="lock-closed-outline" size={moderateScale(18)} color={COLORS.icon} />
+              <Ionicons name="lock-closed-outline" size={moderateScale(18)} color={COLORS.success} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Privacy Policy</Text>
@@ -594,7 +761,7 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => navigation.navigate('Legal', { doc: 'terms' })}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="document-text-outline" size={moderateScale(18)} color={COLORS.icon} />
+              <Ionicons name="document-text-outline" size={moderateScale(18)} color={COLORS.info} />
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Terms of Service</Text>
@@ -610,6 +777,196 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.copyrightText}>Device-Agnostic Adaptive Engine • Offline First</Text>
         </View>
       </ScrollView>
+
+      {/* CHANGE USERNAME MODAL */}
+      <Modal
+        visible={accountModal === 'username'}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAccountModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <TouchableWithoutFeedback onPress={closeAccountModal}>
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
+                style={[styles.modalSheet, SHADOWS.card]}
+              >
+                <View style={styles.modalHeaderRow}>
+                  <Text style={styles.modalTitle}>Change Username</Text>
+                  <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
+                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.limitSub}>This is the name shown on your profile.</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.textInput}
+                    value={tempUsername}
+                    onChangeText={setTempUsername}
+                    placeholder="Ante Highroller"
+                    placeholderTextColor={COLORS.textMuted}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    maxLength={24}
+                  />
+                </View>
+
+                {!!accountError && <Text style={styles.accountError}>{accountError}</Text>}
+
+                <TouchableOpacity
+                  style={[styles.saveModalBtn, accountBusy && styles.saveModalBtnBusy]}
+                  activeOpacity={0.85}
+                  onPress={handleSaveUsername}
+                  disabled={accountBusy}
+                >
+                  {accountBusy ? (
+                    <ActivityIndicator size="small" color={COLORS.textDark} />
+                  ) : (
+                    <Text style={styles.saveModalBtnText}>Save Username</Text>
+                  )}
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* CHANGE PASSWORD MODAL */}
+      <Modal
+        visible={accountModal === 'password'}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAccountModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <TouchableWithoutFeedback onPress={closeAccountModal}>
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
+                style={[styles.modalSheet, SHADOWS.card]}
+              >
+                <View style={styles.modalHeaderRow}>
+                  <Text style={styles.modalTitle}>Change Password</Text>
+                  <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
+                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                {hasPasswordLogin ? (
+                  <>
+                    <Text style={styles.limitSub}>
+                      Confirm your current password, then choose a new one.
+                    </Text>
+                    <View style={styles.inputContainer}>
+                      <TextInput
+                        style={styles.textInput}
+                        value={currentPassword}
+                        onChangeText={setCurrentPassword}
+                        placeholder="Current password"
+                        placeholderTextColor={COLORS.textMuted}
+                        secureTextEntry
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.limitSub}>
+                      You signed in with Google, so there's no current password to confirm.
+                      We'll email a code to {user?.email} instead.
+                    </Text>
+                    {codeSent ? (
+                      <View style={styles.inputContainer}>
+                        <TextInput
+                          style={styles.textInput}
+                          value={verifyCode}
+                          onChangeText={setVerifyCode}
+                          placeholder="6-digit code"
+                          placeholderTextColor={COLORS.textMuted}
+                          keyboardType="number-pad"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          maxLength={8}
+                        />
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.secondaryModalBtn}
+                        activeOpacity={0.85}
+                        onPress={handleSendCode}
+                        disabled={accountBusy}
+                      >
+                        {accountBusy ? (
+                          <ActivityIndicator size="small" color={COLORS.textPrimary} />
+                        ) : (
+                          <Text style={styles.secondaryModalBtnText}>Email me a code</Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
+
+                {(hasPasswordLogin || codeSent) && (
+                  <View style={[styles.inputContainer, { marginTop: SPACING.xs }]}>
+                    <TextInput
+                      style={styles.textInput}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      placeholder="New password (8+ characters)"
+                      placeholderTextColor={COLORS.textMuted}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                )}
+                {(hasPasswordLogin || codeSent) && (
+                  <View style={[styles.inputContainer, { marginTop: SPACING.xs }]}>
+                    <TextInput
+                      style={styles.textInput}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="Confirm new password"
+                      placeholderTextColor={COLORS.textMuted}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                )}
+
+                {!!accountError && <Text style={styles.accountError}>{accountError}</Text>}
+
+                {(hasPasswordLogin || codeSent) && (
+                  <TouchableOpacity
+                    style={[styles.saveModalBtn, accountBusy && styles.saveModalBtnBusy]}
+                    activeOpacity={0.85}
+                    onPress={handleSavePassword}
+                    disabled={accountBusy}
+                  >
+                    {accountBusy ? (
+                      <ActivityIndicator size="small" color={COLORS.textDark} />
+                    ) : (
+                      <Text style={styles.saveModalBtnText}>Save Password</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* CURRENCY SELECTOR MODAL */}
       <Modal
@@ -904,11 +1261,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: fluidFont(12),
-    color: COLORS.textSecondary,
-    marginTop: 2,
   },
   // Stake-Style Profile Card
   profileCard: {
@@ -1311,6 +1663,42 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     fontSize: fluidFont(14),
     fontWeight: '700',
+  },
+  saveModalBtnBusy: {
+    opacity: 0.7,
+  },
+  secondaryModalBtn: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorderHighlight,
+    paddingVertical: moderateScale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.xs,
+  },
+  secondaryModalBtnText: {
+    color: COLORS.textPrimary,
+    fontSize: fluidFont(14),
+    fontWeight: '700',
+  },
+  accountError: {
+    fontSize: fluidFont(12),
+    color: COLORS.danger,
+    marginTop: SPACING.xs,
+  },
+  noticeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: -SPACING.md,
+    marginBottom: SPACING.lg,
+    marginLeft: 2,
+  },
+  noticeText: {
+    fontSize: fluidFont(12),
+    color: COLORS.success,
+    fontWeight: '600',
   },
   helpText: {
     fontSize: fluidFont(13),

@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
-import { useActiveSession } from '../context/SessionContext';
+import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import SwipeableRow from '../components/SwipeableRow';
 import { usePreferences } from '../context/PreferencesContext';
@@ -32,7 +32,7 @@ export default function BlackjackScreen({ navigation }) {
     removeHandFromActiveSession,
     endActiveSession,
     discardActiveSession,
-  } = useActiveSession();
+  } = useGameSession("Blackjack");
   const { endSessionWithFx } = useSessionEndFx();
 
   useEffect(() => {

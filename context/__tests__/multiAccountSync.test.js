@@ -101,7 +101,7 @@ function createBuyInSession(buyIn, cashOut) {
     latestApi.startSession('Poker');
   });
   act(() => {
-    latestApi.endActiveSession(buyIn, cashOut);
+    latestApi.endActiveSession('Poker', buyIn, cashOut);
   });
 }
 

@@ -171,8 +171,44 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, []);
 
-  const updatePassword = useCallback(async (newPassword) => {
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+  // Supabase's updateUser({ password }) does NOT check the old password — a
+  // valid session is all it asks for. That means an unlocked phone is enough
+  // to take over the account, so the two functions below add the proof of
+  // identity that Supabase leaves to the app.
+
+  // Email/password accounts: re-authenticate with the current password
+  // first. signInWithPassword against the same account is the supported way
+  // to verify it; it refreshes the session, which is harmless here since the
+  // user id doesn't change.
+  const updatePasswordWithCurrent = useCallback(
+    async (currentPassword, newPassword) => {
+      const email = session?.user?.email;
+      if (!email) throw new Error('You need to be signed in to change your password.');
+
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+      if (reauthError) throw new Error('That current password is not correct.');
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    },
+    [session]
+  );
+
+  // Google accounts have no password to check, so identity is proved by a
+  // one-time code Supabase emails to the address on the account.
+  const sendPasswordChangeCode = useCallback(async () => {
+    const { error } = await supabase.auth.reauthenticate();
+    if (error) throw error;
+  }, []);
+
+  const updatePasswordWithCode = useCallback(async (code, newPassword) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      nonce: code.trim(),
+    });
     if (error) throw error;
   }, []);
 
@@ -186,30 +222,44 @@ export function AuthProvider({ children }) {
     setProfile((prev) => (prev ? { ...prev, username: newUsername } : prev));
   }, [session]);
 
+  // Whether this account can sign in with a password at all. A Google-only
+  // account has no current password to verify, so it takes the emailed-code
+  // route instead.
+  const hasPasswordLogin = useMemo(
+    () => (session?.user?.identities ?? []).some((i) => i.provider === 'email'),
+    [session]
+  );
+
   const value = useMemo(
     () => ({
       session,
       user: session?.user ?? null,
       profile,
       isLoading,
+      hasPasswordLogin,
       signInWithEmail,
       signUpWithEmail,
       signInWithGoogle,
       signOut,
       resetPassword,
-      updatePassword,
+      updatePasswordWithCurrent,
+      sendPasswordChangeCode,
+      updatePasswordWithCode,
       updateUsername,
     }),
     [
       session,
       profile,
       isLoading,
+      hasPasswordLogin,
       signInWithEmail,
       signUpWithEmail,
       signInWithGoogle,
       signOut,
       resetPassword,
-      updatePassword,
+      updatePasswordWithCurrent,
+      sendPasswordChangeCode,
+      updatePasswordWithCode,
       updateUsername,
     ]
   );

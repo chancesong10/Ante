@@ -11,7 +11,7 @@ import { PreferencesProvider, usePreferences } from './context/PreferencesContex
 import { AuthProvider } from './context/AuthContext';
 import { PurchasesProvider } from './context/PurchasesContext';
 import { useSyncEngine } from './context/SyncContext';
-import { SessionEndFxProvider } from './context/SessionEndFxContext';
+import { SessionEndFxProvider, useSessionEndFx } from './context/SessionEndFxContext';
 
 import PokerScreen from './screens/PokerScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -262,91 +262,12 @@ function MainTabNavigator({ onOpenAddModal }) {
   );
 }
 
-function AppContent() {
-  const [appReady, setAppReady] = useState(false);
-  const [addModalVisible, setAddModalVisible] = useState(false);
+// Holds the navigation ref and the end-session provider, so that everything
+// below — AppContent itself, the start-session sheet, and every screen — can
+// reach the transition. It used to wrap only the NavigationContainer, which
+// left the sheet and the stop-loss alert outside it and unable to use it.
+function AppShell() {
   const navigationRef = useNavigationContainerRef();
-  const { activeSession, endActiveSession } = useActiveSession();
-  const { isLoaded: isSessionLoaded } = useSessionHistory();
-  useSyncEngine();
-  const {
-    stopLossAlert = false,
-    stopLossAmount = 250,
-    currencySymbol = '$',
-    isLoaded: isPrefsLoaded,
-  } = usePreferences();
-
-  // Responsible Gaming Alert state
-  const [alertModalVisible, setAlertModalVisible] = useState(false);
-
-  // Tracking snooze loss tiers per session
-  const [alertTracking, setAlertTracking] = useState({
-    sessionId: null,
-    alertedLossTier: 0,
-  });
-
-  // Calculate live session metrics
-  const sessionMetrics = useMemo(() => {
-    if (!activeSession) {
-      return { netOutcome: 0, totalBets: 0, durationMinutes: 0 };
-    }
-
-    const durationMinutes = Math.max(
-      0,
-      Math.floor((Date.now() - activeSession.startTime) / 60000)
-    );
-
-    let netOutcome = 0;
-    let totalBets = 0;
-
-    if (activeSession.mode === 'hands' || Array.isArray(activeSession.hands)) {
-      const allHands = (activeSession.hands || []).flatMap((r) =>
-        r.type === 'split' && r.hands ? r.hands : [r]
-      );
-      totalBets = allHands.length;
-      netOutcome = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
-    } else if (activeSession.buyIn !== null && activeSession.cashOut !== null) {
-      // Until cash-out is entered there's no known live balance for a
-      // buy-in/cash-out session, so leave netOutcome at 0 rather than
-      // treating the un-entered cash-out as a total loss of the buy-in.
-      totalBets = 1;
-      netOutcome = activeSession.cashOut - activeSession.buyIn;
-    }
-
-    return { netOutcome, totalBets, durationMinutes };
-  }, [activeSession]);
-
-  // Monitor Stop-Loss limit (cumulative session loss dropping past threshold)
-  useEffect(() => {
-    if (!activeSession || !stopLossAlert || stopLossAmount <= 0) return;
-
-    let tracking = alertTracking;
-    if (tracking.sessionId !== activeSession.id) {
-      tracking = {
-        sessionId: activeSession.id,
-        alertedLossTier: 0,
-      };
-      setAlertTracking(tracking);
-    }
-
-    const netLoss = -sessionMetrics.netOutcome;
-    if (netLoss >= stopLossAmount) {
-      const currentTier = Math.floor(netLoss / stopLossAmount);
-      if (currentTier > tracking.alertedLossTier) {
-        setAlertModalVisible(true);
-      }
-    }
-  }, [activeSession, sessionMetrics.netOutcome, stopLossAlert, stopLossAmount, alertTracking]);
-
-  const handleEndSession = () => {
-    setAlertModalVisible(false);
-    if (activeSession) {
-      endActiveSession();
-      if (navigationRef.isReady()) {
-        navigationRef.navigate('MainTabs', { screen: 'History' });
-      }
-    }
-  };
 
   // Fired once the end-session wash is opaque — History mounts and the stack
   // finishes its pop entirely out of sight, well before the wash lifts.
@@ -356,21 +277,103 @@ function AppContent() {
     }
   }, [navigationRef]);
 
-  const handleAcknowledge = () => {
-    setAlertModalVisible(false);
-    if (!activeSession) return;
+  return (
+    <SessionEndFxProvider onNavigate={handleSessionEndNavigate}>
+      <AppContent navigationRef={navigationRef} />
+    </SessionEndFxProvider>
+  );
+}
 
-    // Snooze to current loss tier so it only alerts if losses deepen further
-    setAlertTracking(() => {
-      const netLoss = -sessionMetrics.netOutcome;
-      const currentLossTier =
-        netLoss >= stopLossAmount ? Math.floor(netLoss / stopLossAmount) : 0;
+function AppContent({ navigationRef }) {
+  const [appReady, setAppReady] = useState(false);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const { endSessionWithFx } = useSessionEndFx();
+  const { activeSessionList, endActiveSession } = useActiveSession();
+  const { isLoaded: isSessionLoaded } = useSessionHistory();
+  useSyncEngine();
+  const {
+    stopLossAlert = false,
+    stopLossAmount = 250,
+    currencySymbol = '$',
+    isLoaded: isPrefsLoaded,
+  } = usePreferences();
 
-      return {
-        sessionId: activeSession.id,
-        alertedLossTier: currentLossTier,
-      };
+  // Responsible Gaming Alert state. With several sessions able to run at
+  // once, the alert is *about* one of them — `alertSessionId` says which, and
+  // the snoozed loss tier is tracked per session id so a quiet blackjack
+  // table can't suppress a warning from a poker one.
+  const [alertSessionId, setAlertSessionId] = useState(null);
+  const [alertedTiers, setAlertedTiers] = useState({});
+
+  // Live metrics for every running session, keyed by id.
+  const sessionMetrics = useMemo(() => {
+    const byId = {};
+    activeSessionList.forEach((s) => {
+      const durationMinutes = Math.max(0, Math.floor((Date.now() - s.startTime) / 60000));
+      const hands = Array.isArray(s.hands) ? s.hands : [];
+
+      let netOutcome = 0;
+      let totalBets = 0;
+
+      if (hands.length > 0) {
+        const allHands = hands.flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]));
+        totalBets = allHands.length;
+        netOutcome = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
+      } else if (s.buyIn !== null && s.cashOut !== null) {
+        // Until cash-out is entered there's no known live balance for a
+        // buy-in/cash-out session, so leave netOutcome at 0 rather than
+        // treating the un-entered cash-out as a total loss of the buy-in.
+        totalBets = 1;
+        netOutcome = s.cashOut - s.buyIn;
+      }
+
+      byId[s.id] = { netOutcome, totalBets, durationMinutes };
     });
+    return byId;
+  }, [activeSessionList]);
+
+  const alertSession = activeSessionList.find((s) => s.id === alertSessionId) || null;
+  const alertMetrics = sessionMetrics[alertSessionId] || {
+    netOutcome: 0,
+    totalBets: 0,
+    durationMinutes: 0,
+  };
+
+  // Monitor the stop-loss limit across every running session. One alert at a
+  // time — whichever session crosses a new tier first raises it.
+  useEffect(() => {
+    if (!stopLossAlert || stopLossAmount <= 0 || alertSessionId) return;
+
+    const crossed = activeSessionList.find((s) => {
+      const netLoss = -(sessionMetrics[s.id]?.netOutcome ?? 0);
+      if (netLoss < stopLossAmount) return false;
+      return Math.floor(netLoss / stopLossAmount) > (alertedTiers[s.id] || 0);
+    });
+
+    if (crossed) setAlertSessionId(crossed.id);
+  }, [activeSessionList, sessionMetrics, stopLossAlert, stopLossAmount, alertedTiers, alertSessionId]);
+
+  const handleEndSession = () => {
+    const session = alertSession;
+    setAlertSessionId(null);
+    if (!session) return;
+    endSessionWithFx({
+      net: sessionMetrics[session.id]?.netOutcome ?? 0,
+      gameType: session.gameType,
+      onCommit: () => endActiveSession(session.gameType),
+    });
+  };
+
+  const handleAcknowledge = () => {
+    const session = alertSession;
+    setAlertSessionId(null);
+    if (!session) return;
+
+    // Snooze to the current loss tier so it only alerts if this session's
+    // losses deepen further.
+    const netLoss = -(sessionMetrics[session.id]?.netOutcome ?? 0);
+    const tier = netLoss >= stopLossAmount ? Math.floor(netLoss / stopLossAmount) : 0;
+    setAlertedTiers((prev) => ({ ...prev, [session.id]: tier }));
   };
 
 
@@ -378,7 +381,6 @@ function AppContent() {
   return (
     <View style={styles.rootContainer}>
       <StatusBar style="light" backgroundColor={COLORS.background} />
-      <SessionEndFxProvider onNavigate={handleSessionEndNavigate}>
       <NavigationContainer ref={navigationRef}>
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           <Stack.Screen name="MainTabs">
@@ -404,7 +406,6 @@ function AppContent() {
           <Stack.Screen name="Auth" component={AuthScreen} options={{ presentation: 'modal' }} />
         </Stack.Navigator>
       </NavigationContainer>
-      </SessionEndFxProvider>
 
       {/* Center 'Add' Action Modal */}
       <StartSessionModal
@@ -422,10 +423,10 @@ function AppContent() {
 
       {/* Responsible Gaming Limits In-App Safety Alert Modal */}
       <ResponsibleGamingAlertModal
-        visible={alertModalVisible}
-        netOutcome={sessionMetrics.netOutcome}
-        durationMinutes={sessionMetrics.durationMinutes}
-        totalBets={sessionMetrics.totalBets}
+        visible={!!alertSession}
+        netOutcome={alertMetrics.netOutcome}
+        durationMinutes={alertMetrics.durationMinutes}
+        totalBets={alertMetrics.totalBets}
         thresholdAmount={stopLossAmount}
         currencySymbol={currencySymbol}
         onEndSession={handleEndSession}
@@ -452,7 +453,7 @@ export default function App() {
           <PurchasesProvider>
             <PreferencesProvider>
               <SessionProvider>
-                <AppContent />
+                <AppShell />
               </SessionProvider>
             </PreferencesProvider>
           </PurchasesProvider>
