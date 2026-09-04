@@ -16,6 +16,13 @@ export function renderGameIcon(gameType, size = 18, color = COLORS.primary) {
   if (gameType === 'General') {
     return <Ionicons name="dice-outline" size={size} color={color} />;
   }
+  if (gameType === 'Roulette') {
+    // No wheel glyph in either icon set — a plain disc reads as the wheel.
+    return <Ionicons name="disc-outline" size={size} color={color} />;
+  }
+  if (gameType === 'Baccarat') {
+    return <MaterialCommunityIcons name="cards-diamond-outline" size={size} color={color} />;
+  }
   // Outline variant, so Blackjack is drawn as a thin line like the other
   // three rather than as a solid filled glyph.
   return <MaterialCommunityIcons name="cards-outline" size={size} color={color} />;

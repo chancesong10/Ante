@@ -20,6 +20,8 @@ import HistoryScreen from './screens/HistoryScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import BlackjackScreen from './screens/BlackjackScreen';
 import SportsBettingScreen from './screens/SportsBettingScreen';
+import RouletteScreen from './screens/RouletteScreen';
+import BaccaratScreen from './screens/BaccaratScreen';
 import GeneralTrackerScreen from './screens/GeneralTrackerScreen';
 import InsightsScreen from './screens/InsightsScreen';
 import PokerInsightsScreen from './screens/PokerInsightsScreen';
@@ -397,6 +399,8 @@ function AppContent({ navigationRef }) {
           <Stack.Screen name="Blackjack" component={BlackjackScreen} />
           <Stack.Screen name="Poker" component={PokerScreen} />
           <Stack.Screen name="SportsBetting" component={SportsBettingScreen} />
+          <Stack.Screen name="Roulette" component={RouletteScreen} />
+          <Stack.Screen name="Baccarat" component={BaccaratScreen} />
           <Stack.Screen name="GeneralTracker" component={GeneralTrackerScreen} />
           <Stack.Screen name="Insights" component={InsightsScreen} />
           <Stack.Screen name="PokerInsights" component={PokerInsightsScreen} />
@@ -420,6 +424,8 @@ function AppContent({ navigationRef }) {
           navigationRef.navigate('Poker');
         }}
         onNavigateToSportsBetting={() => navigationRef.navigate('SportsBetting')}
+        onNavigateToRoulette={() => navigationRef.navigate('Roulette')}
+        onNavigateToBaccarat={() => navigationRef.navigate('Baccarat')}
         onNavigateToGeneral={() => navigationRef.navigate('GeneralTracker')}
       />
 

@@ -91,6 +91,9 @@ export function finalizeSession(activeSession, overrideBuyIn = null, overrideCas
       rawDate: new Date(startTime).toISOString(),
       durationFormatted: formatDuration(startTime, endTime),
       mode: 'buyInCashOut',
+      // What the General tracker was actually tracking ("Craps", "Keno").
+      // Undefined for the templated games, which don't ask.
+      label: activeSession.label || undefined,
       buyIn: finalBuyIn,
       cashOut: finalCashOut,
       hands: [],
@@ -300,6 +303,20 @@ export function SessionProvider({ children }) {
 
   const discardActiveSession = useCallback((gameType) => dropSession(gameType), [dropSession]);
 
+  // Stars ride on the session record itself, so they persist and sync with
+  // everything else — no separate store to keep in step. `starredAt` isn't
+  // shown anywhere; it exists purely so the sync layer can tell a star
+  // toggle apart from a session that hasn't changed since it last synced,
+  // and so mergeSessionsFromCloud can resolve a star that changed on two
+  // devices by last-write-wins instead of just dropping the cloud's copy.
+  const toggleSessionStar = useCallback((sessionId) => {
+    setSessionHistory((prev) =>
+      prev.map((s) =>
+        s.id === sessionId ? { ...s, starred: !s.starred, starredAt: Date.now() } : s
+      )
+    );
+  }, []);
+
   const deleteSession = useCallback((sessionId) => {
     setSessionHistory((prev) => prev.filter((s) => s.id !== sessionId));
   }, []);
@@ -310,17 +327,29 @@ export function SessionProvider({ children }) {
   }, []);
 
   // Unions cloud sessions pulled for the current account into local history,
-  // deduped by id (the same client-generated UUID on both sides). Existing
-  // local records win on conflict since they're the more recently-touched
-  // copy; sessions are immutable once completed so this is a plain union,
-  // never a field-level merge.
+  // deduped by id (the same client-generated UUID on both sides). Sessions
+  // are otherwise immutable once completed, so this stays a plain union for
+  // every field but one: `starred` is field-level merged by `starredAt`
+  // (last-write-wins), since it's the one thing a session can still change
+  // after the fact — and only on the device that changed it, until a pull
+  // like this one carries it back in.
   const mergeSessionsFromCloud = useCallback((cloudSessions) => {
     if (!cloudSessions?.length) return;
     setSessionHistory((prev) => {
-      const knownIds = new Set(prev.map((s) => s.id));
-      const additions = cloudSessions.filter((s) => !knownIds.has(s.id));
-      if (!additions.length) return prev;
-      return [...prev, ...additions].sort((a, b) => b.startTime - a.startTime);
+      const localById = new Map(prev.map((s) => [s.id, s]));
+      const cloudById = new Map(cloudSessions.map((s) => [s.id, s]));
+      const additions = cloudSessions.filter((s) => !localById.has(s.id));
+
+      let starChanged = false;
+      const reconciled = prev.map((s) => {
+        const cloud = cloudById.get(s.id);
+        if (!cloud || (cloud.starredAt || 0) <= (s.starredAt || 0)) return s;
+        starChanged = true;
+        return { ...s, starred: cloud.starred, starredAt: cloud.starredAt };
+      });
+
+      if (!additions.length && !starChanged) return prev;
+      return [...reconciled, ...additions].sort((a, b) => b.startTime - a.startTime);
     });
   }, []);
 
@@ -376,12 +405,13 @@ export function SessionProvider({ children }) {
     () => ({
       sessionHistory,
       isLoaded,
+      toggleSessionStar,
       deleteSession,
       clearAllSessions,
       mergeSessionsFromCloud,
       markSessionsSynced,
     }),
-    [sessionHistory, isLoaded, deleteSession, clearAllSessions, mergeSessionsFromCloud, markSessionsSynced]
+    [sessionHistory, isLoaded, toggleSessionStar, deleteSession, clearAllSessions, mergeSessionsFromCloud, markSessionsSynced]
   );
 
   return (

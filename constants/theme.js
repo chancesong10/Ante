@@ -95,6 +95,8 @@ export const GAME_COLORS = {
   Blackjack: '#60A5FA', // Blue 400
   'Sports Betting': '#38BDF8', // Sky 400 (matches existing accentCyan usage in that screen)
   General: '#FB923C', // Orange 400
+  Roulette: '#FB7185', // Rose 400 — the wheel's red, kept a shade off COLORS.danger
+  Baccarat: '#FCD34D', // Amber 300 — gold, a shade off COLORS.warning
 };
 
 export const GAME_COLORS_MUTED = {
@@ -102,6 +104,8 @@ export const GAME_COLORS_MUTED = {
   Blackjack: 'rgba(96, 165, 250, 0.12)',
   'Sports Betting': 'rgba(56, 189, 248, 0.12)',
   General: 'rgba(251, 146, 60, 0.12)',
+  Roulette: 'rgba(251, 113, 133, 0.12)',
+  Baccarat: 'rgba(252, 211, 77, 0.12)',
 };
 
 export const getGameColor = (gameType) => GAME_COLORS[gameType] || COLORS.primary;

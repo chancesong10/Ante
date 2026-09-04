@@ -26,6 +26,14 @@ function isTransientSyncError(error) {
   return !!error && TRANSIENT_ERROR_CODES.has(error.code);
 }
 
+// The one field a session can still change after it's otherwise complete.
+// The write-through effect keys its "already synced, nothing to do" set on
+// this instead of bare id membership, so a star toggle on a session that
+// synced long ago gets re-pushed instead of silently staying local-only.
+function syncVersion(session) {
+  return session.starredAt || 0;
+}
+
 // Wraps a syncService call (pushSessions/pullSessions/deleteCloudSessions,
 // all of which resolve to an object with an `error` field) and retries it
 // once, after a short delay, if the first attempt failed with a transient
@@ -48,7 +56,10 @@ export function useSyncEngine() {
   const { sessionHistory, isLoaded, mergeSessionsFromCloud, markSessionsSynced } = useSessionHistory();
 
   const lastUserId = useRef(null);
-  const knownIds = useRef(new Set());
+  // id -> syncVersion(session) as of the last confirmed push/pull, so the
+  // write-through effect below can tell "already synced, untouched since"
+  // apart from "already synced, but starred locally after the fact."
+  const knownVersions = useRef(new Map());
   const hasReconciled = useRef(false);
   // True for the whole span of an in-flight reconciliation (pull -> merge ->
   // push), not just before it starts. Reconciling reads sessionHistory and
@@ -89,9 +100,12 @@ export function useSyncEngine() {
         });
 
         const { error } = await withTransientRetry(() => pushSessions(userId, toPush));
-        const pushedIds = error ? [] : toPush.map((s) => s.id);
-        if (pushedIds.length) markSessionsSynced(pushedIds, userId);
-        knownIds.current = new Set([...cloudSessions.map((s) => s.id), ...pushedIds]);
+        const pushed = error ? [] : toPush;
+        if (pushed.length) markSessionsSynced(pushed.map((s) => s.id), userId);
+        knownVersions.current = new Map([
+          ...cloudSessions.map((s) => [s.id, syncVersion(s)]),
+          ...pushed.map((s) => [s.id, syncVersion(s)]),
+        ]);
       } finally {
         hasReconciled.current = true;
         isReconciling.current = false;
@@ -100,9 +114,11 @@ export function useSyncEngine() {
   }, [user, isLoaded, sessionHistory, mergeSessionsFromCloud, markSessionsSynced]);
 
   // Ongoing write-through: after the initial reconciliation, diff the
-  // current session-id set against the last-known-synced set on every
-  // change — new ids get pushed, ids that disappeared (deleteSession /
-  // clearAllSessions) get deleted from the cloud too.
+  // current sessions against the last-known-synced versions on every change —
+  // new ids and ids whose syncVersion moved on (a star toggled) get pushed,
+  // ids that disappeared (deleteSession / clearAllSessions) get deleted from
+  // the cloud too. pushSessions upserts by id, so re-pushing an id that's
+  // already in the cloud is just an update, not a duplicate.
   useEffect(() => {
     if (!isLoaded || !user?.id || !hasReconciled.current || isReconciling.current) return;
     const userId = user.id;
@@ -114,25 +130,31 @@ export function useSyncEngine() {
     });
     const currentIds = new Set(eligible.map((s) => s.id));
 
-    const newSessions = eligible.filter((s) => !knownIds.current.has(s.id));
-    const removedIds = [...knownIds.current].filter((id) => !currentIds.has(id));
+    const toPush = eligible.filter((s) => {
+      const known = knownVersions.current.get(s.id);
+      return known === undefined || known !== syncVersion(s);
+    });
+    const removedIds = [...knownVersions.current.keys()].filter((id) => !currentIds.has(id));
 
-    // Only mark ids "known" (skip on future diffs) once we've confirmed they
-    // were actually pushed — a failed push must stay eligible for retry.
-    knownIds.current = new Set([...knownIds.current].filter((id) => currentIds.has(id)));
-    if (!newSessions.length && !removedIds.length) return;
+    // Only mark an id "known" at its current version (skip on future diffs)
+    // once we've confirmed it was actually pushed — a failed push, or one
+    // never attempted, must stay eligible for retry.
+    knownVersions.current = new Map(
+      [...knownVersions.current].filter(([id]) => currentIds.has(id))
+    );
+    if (!toPush.length && !removedIds.length) return;
 
     (async () => {
-      if (newSessions.length) {
-        const { error } = await withTransientRetry(() => pushSessions(userId, newSessions));
+      if (toPush.length) {
+        const { error } = await withTransientRetry(() => pushSessions(userId, toPush));
         if (!error) {
-          markSessionsSynced(newSessions.map((s) => s.id), userId);
-          newSessions.forEach((s) => knownIds.current.add(s.id));
+          markSessionsSynced(toPush.map((s) => s.id), userId);
+          toPush.forEach((s) => knownVersions.current.set(s.id, syncVersion(s)));
         }
       }
       if (removedIds.length) {
         const { error } = await withTransientRetry(() => deleteCloudSessions(userId, removedIds));
-        if (error) removedIds.forEach((id) => knownIds.current.add(id));
+        if (error) removedIds.forEach((id) => knownVersions.current.set(id, 0));
       }
     })();
   }, [sessionHistory, isLoaded, user, markSessionsSynced]);
@@ -143,9 +165,31 @@ export function useSyncEngine() {
     if (!user) {
       hasReconciled.current = false;
       isReconciling.current = false;
-      knownIds.current = new Set();
+      knownVersions.current = new Map();
     }
   }, [user]);
+}
+
+// Manual "pull down to refresh" for screens that show history. Deliberately
+// separate from useSyncEngine's reconciliation: it only ever pulls and merges,
+// and mergeSessionsFromCloud dedupes by id, so calling it repeatedly is safe
+// and can't disturb the engine's push bookkeeping.
+//
+// Returns null when signed out — there is no cloud to pull from, so the caller
+// should leave the refresh control off rather than spin on nothing.
+export function useCloudRefresh() {
+  const { user } = useAuth();
+  const { mergeSessionsFromCloud } = useSessionHistory();
+  const userId = user?.id ?? null;
+
+  return useMemo(() => {
+    if (!userId) return null;
+    return async () => {
+      const { sessions, error } = await pullSessions(userId);
+      if (error) return;
+      mergeSessionsFromCloud(sessions.map((s) => ({ ...s, syncedUserId: userId })));
+    };
+  }, [userId, mergeSessionsFromCloud]);
 }
 
 // The raw sessionHistory from SessionContext is a single unscoped pool —

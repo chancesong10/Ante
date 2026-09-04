@@ -3,6 +3,7 @@ import {
   calcGameBreakdown,
   calcSessionStreaks,
   calcDayOfWeekPerformance,
+  calcTimeOfDayPerformance,
   calcSessionLengthPerformance,
   calcVolatility,
   calcTimePlayed,
@@ -94,10 +95,10 @@ describe('calcGameBreakdown', () => {
   });
 
   test('an unrecognized gameType falls into the General bucket', () => {
-    const sessions = [handsSession({ gameType: 'Roulette', netProfit: 10, wins: 1, losses: 0 })];
+    const sessions = [handsSession({ gameType: 'Craps', netProfit: 10, wins: 1, losses: 0 })];
     const breakdown = calcGameBreakdown(sessions);
     expect(breakdown.all.find((g) => g.gameType === 'General').sessions).toBe(1);
-    expect(breakdown.all.find((g) => g.gameType === 'Roulette')).toBeUndefined();
+    expect(breakdown.all.find((g) => g.gameType === 'Craps')).toBeUndefined();
   });
 
   test('excludes game buckets with fewer than 3 sessions from best/worst ranking', () => {
@@ -317,5 +318,107 @@ describe('computeLifetimeInsights — end-to-end smoke test', () => {
     expect(Array.isArray(stats.leaks)).toBe(true);
     const breakdownTotalSessions = stats.gameBreakdown.all.reduce((sum, g) => sum + g.sessions, 0);
     expect(breakdownTotalSessions).toBe(30);
+  });
+});
+
+describe('calcTimeOfDayPerformance', () => {
+  // Local time, since the buckets are about when the player experienced the
+  // session, not UTC. Built with the Date(y, m, d, h) constructor for that.
+  const at = (hour, netProfit) => ({
+    id: Math.random().toString(36).slice(2),
+    gameType: 'Blackjack',
+    mode: 'hands',
+    startTime: new Date(2026, 3, 14, hour, 0, 0).getTime(),
+    totalHands: 10,
+    netProfit,
+  });
+
+  test('buckets sessions into named windows and averages each', () => {
+    const result = calcTimeOfDayPerformance([
+      at(9, 100), // morning
+      at(11, 50), // morning
+      at(14, -20), // afternoon
+      at(2, -300), // late night
+      at(3, -100), // late night
+    ]);
+
+    const morning = result.all.find((b) => b.id === 'morning');
+    const lateNight = result.all.find((b) => b.id === 'lateNight');
+
+    expect(morning.sessions).toBe(2);
+    expect(morning.avgNet).toBeCloseTo(75, 2);
+    expect(lateNight.sessions).toBe(2);
+    expect(lateNight.avgNet).toBeCloseTo(-200, 2);
+  });
+
+  test('identifies the best and worst window', () => {
+    const result = calcTimeOfDayPerformance([
+      at(10, 200),
+      at(20, 10),
+      at(1, -400),
+    ]);
+    expect(result.best.id).toBe('morning');
+    expect(result.worst.id).toBe('lateNight');
+  });
+
+  test('boundaries land in the window that starts on them', () => {
+    // 6am opens morning, 12pm opens afternoon, 6pm opens evening, midnight
+    // opens late night — each block is start-inclusive, end-exclusive.
+    const result = calcTimeOfDayPerformance([at(6, 1), at(12, 1), at(18, 1), at(0, 1)]);
+    const counts = Object.fromEntries(result.all.map((b) => [b.id, b.sessions]));
+    expect(counts).toEqual({ morning: 1, afternoon: 1, evening: 1, lateNight: 1 });
+  });
+
+  test('returns null with only one window represented — best and worst would be the same', () => {
+    expect(calcTimeOfDayPerformance([at(20, 50), at(21, -10)])).toBeNull();
+  });
+
+  test('returns null on an empty history', () => {
+    expect(calcTimeOfDayPerformance([])).toBeNull();
+  });
+});
+
+describe('buildLeakReport — time_of_day_drag', () => {
+  const base = {
+    gameBreakdown: { all: [], best: null, worst: null },
+    dayOfWeekPerformance: null,
+    sessionLengthPerformance: null,
+    volatility: { riskLabel: 'Low' },
+  };
+
+  test('flags a losing window that is clearly worse than the best one', () => {
+    const leaks = buildLeakReport({
+      ...base,
+      timeOfDayPerformance: {
+        best: { id: 'morning', label: 'Morning', avgNet: 60, sessions: 4 },
+        worst: { id: 'lateNight', label: 'Late night', range: '12am – 6am', avgNet: -80, sessions: 5 },
+      },
+    });
+    const leak = leaks.find((l) => l.id === 'time_of_day_drag');
+    expect(leak).toBeTruthy();
+    expect(leak.block).toBe('Late night');
+    expect(leak.isLateNight).toBe(true);
+  });
+
+  test('does not flag on a thin sample', () => {
+    const leaks = buildLeakReport({
+      ...base,
+      timeOfDayPerformance: {
+        best: { id: 'morning', label: 'Morning', avgNet: 60, sessions: 4 },
+        worst: { id: 'lateNight', label: 'Late night', range: '12am – 6am', avgNet: -80, sessions: 2 },
+      },
+    });
+    expect(leaks.map((l) => l.id)).not.toContain('time_of_day_drag');
+  });
+
+  test('does not flag a window that is merely the least profitable', () => {
+    const leaks = buildLeakReport({
+      ...base,
+      timeOfDayPerformance: {
+        best: { id: 'morning', label: 'Morning', avgNet: 90, sessions: 5 },
+        worst: { id: 'evening', label: 'Evening', range: '6pm – 12am', avgNet: 12, sessions: 6 },
+      },
+    });
+    expect(leaks.map((l) => l.id)).not.toContain('time_of_day_drag');
   });
 });

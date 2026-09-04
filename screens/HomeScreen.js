@@ -169,6 +169,10 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
         ? 'Poker'
         : session.gameType === 'Sports Betting'
         ? 'SportsBetting'
+        : session.gameType === 'Roulette'
+        ? 'Roulette'
+        : session.gameType === 'Baccarat'
+        ? 'Baccarat'
         : session.gameType === 'General'
         ? 'GeneralTracker'
         : 'Blackjack';

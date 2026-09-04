@@ -12,36 +12,104 @@ import {
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import ConfirmModal from '../components/ConfirmModal';
+import { hapticSuccess } from '../utils/haptics';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { PLUS_NAME } from '../constants/brand';
 import Toggle from '../components/Toggle';
+import CountUp from '../components/CountUp';
+import ReorderableGameList from '../components/ReorderableGameList';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences, DEFAULT_QUICK_CHIP_PRESETS } from '../context/PreferencesContext';
+import { DEFAULT_GAME_ORDER, sanitizeGameOrder } from '../constants/games';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { getOrCreateDeviceId } from '../services/storageService';
 
+// Ordered by how likely they are to be picked rather than alphabetically, so
+// the common four stay at the top of a long list. Dollar-family currencies
+// that are written as a bare "$" locally keep it; the ones conventionally
+// disambiguated (HK$, S$, R$) use their real prefix. The code and full name
+// in each row are what actually tell them apart.
 const CURRENCY_OPTIONS = [
   { id: 'USD', name: 'US Dollar', symbol: '$' },
   { id: 'EUR', name: 'Euro', symbol: '€' },
   { id: 'GBP', name: 'British Pound', symbol: '£' },
   { id: 'CAD', name: 'Canadian Dollar', symbol: '$' },
+  { id: 'AUD', name: 'Australian Dollar', symbol: '$' },
+  { id: 'NZD', name: 'New Zealand Dollar', symbol: '$' },
+  { id: 'CHF', name: 'Swiss Franc', symbol: 'CHF' },
+  { id: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+  { id: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+  { id: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$' },
+  { id: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
+  { id: 'KRW', name: 'South Korean Won', symbol: '₩' },
+  { id: 'INR', name: 'Indian Rupee', symbol: '₹' },
+  { id: 'PHP', name: 'Philippine Peso', symbol: '₱' },
+  { id: 'THB', name: 'Thai Baht', symbol: '฿' },
+  { id: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM' },
+  { id: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp' },
+  { id: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
+  { id: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
+  { id: 'MXN', name: 'Mexican Peso', symbol: '$' },
+  { id: 'ARS', name: 'Argentine Peso', symbol: '$' },
+  { id: 'CLP', name: 'Chilean Peso', symbol: '$' },
+  { id: 'COP', name: 'Colombian Peso', symbol: '$' },
+  { id: 'PEN', name: 'Peruvian Sol', symbol: 'S/' },
+  { id: 'SEK', name: 'Swedish Krona', symbol: 'kr' },
+  { id: 'NOK', name: 'Norwegian Krone', symbol: 'kr' },
+  { id: 'DKK', name: 'Danish Krone', symbol: 'kr' },
+  { id: 'PLN', name: 'Polish Złoty', symbol: 'zł' },
+  { id: 'CZK', name: 'Czech Koruna', symbol: 'Kč' },
+  { id: 'HUF', name: 'Hungarian Forint', symbol: 'Ft' },
+  { id: 'RON', name: 'Romanian Leu', symbol: 'lei' },
+  { id: 'TRY', name: 'Turkish Lira', symbol: '₺' },
+  { id: 'ZAR', name: 'South African Rand', symbol: 'R' },
+  { id: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
+  { id: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' },
+  { id: 'GHS', name: 'Ghanaian Cedi', symbol: '₵' },
+  { id: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
+  { id: 'ILS', name: 'Israeli Shekel', symbol: '₪' },
 ];
+
+const SUPPORT_EMAIL = 'tncante1008@gmail.com';
+
+// expo-file-system and expo-sharing are native modules, so they only exist in
+// a binary that was built after they were added to package.json. Importing
+// them at the top of this file makes a dev client built before that throw
+// "Cannot find native module 'ExpoSharing'" on every render — so they're
+// required on demand instead, and export falls back to the clipboard when
+// they aren't there. Rebuilding the app (npx expo run:android / eas build)
+// is what turns the file-share path back on.
+const loadFileModules = () => {
+  try {
+    const fs = require('expo-file-system');
+    const sharing = require('expo-sharing');
+    if (!fs?.File || !fs?.Paths || !sharing?.shareAsync) return null;
+    return { File: fs.File, Paths: fs.Paths, Sharing: sharing };
+  } catch {
+    return null;
+  }
+};
 
 const CHIP_PRESET_GAMES = [
   { id: 'blackjack', label: 'Blackjack', count: 5 },
   { id: 'poker', label: 'Poker', count: 6 },
   { id: 'sports', label: 'Sports', count: 5 },
+  { id: 'roulette', label: 'Roulette', count: 5 },
+  { id: 'baccarat', label: 'Baccarat', count: 5 },
 ];
 
 export default function ProfileScreen({ navigation }) {
-  const { sessionHistory } = useVisibleSessionHistory();
+  // clearAllSessions comes through useVisibleSessionHistory's passthrough.
+  const { sessionHistory, clearAllSessions } = useVisibleSessionHistory();
   const {
     user,
     profile,
@@ -56,6 +124,7 @@ export default function ProfileScreen({ navigation }) {
     isPro,
     isLoading: purchasesLoading,
     customerInfo,
+    restorePurchases,
   } = usePurchases();
   const insets = useSafeAreaInsets();
   const {
@@ -64,11 +133,13 @@ export default function ProfileScreen({ navigation }) {
     currencySymbol = '$',
     currency = 'USD ($)',
     privacyMode = false,
+    hapticsEnabled = true,
     stopLossAlert = false,
     stopLossAmount = 250,
     updatePreferences,
     quickChipPresets = DEFAULT_QUICK_CHIP_PRESETS,
     setQuickChipPreset,
+    gameOrder = DEFAULT_GAME_ORDER,
   } = usePreferences();
 
   const [deviceId, setDeviceId] = useState('ante_vault_seed');
@@ -78,6 +149,7 @@ export default function ProfileScreen({ navigation }) {
   const [chipPresetModalVisible, setChipPresetModalVisible] = useState(false);
   const [chipPresetGame, setChipPresetGame] = useState('blackjack');
   const [tempChips, setTempChips] = useState([]);
+  const [gameOrderModalVisible, setGameOrderModalVisible] = useState(false);
 
   // Temporary local state for modal controls
   const [tempStopLossAlert, setTempStopLossAlert] = useState(stopLossAlert);
@@ -97,6 +169,10 @@ export default function ProfileScreen({ navigation }) {
   const [accountBusy, setAccountBusy] = useState(false);
   const [accountError, setAccountError] = useState(null);
   const [accountNotice, setAccountNotice] = useState(null);
+
+  const [restoring, setRestoring] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [dataModal, setDataModal] = useState(null);
 
   const openUsernameModal = () => {
     setTempUsername(profile?.username || '');
@@ -202,6 +278,138 @@ export default function ProfileScreen({ navigation }) {
 
   const handleUpgradePress = () => {
     navigation.navigate('AntePlus');
+  };
+
+  // Apple requires a visible restore path for any app selling subscriptions,
+  // and it's the only way back for someone reinstalling or on a new device.
+  const handleRestore = async () => {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      const result = await restorePurchases();
+      if (!result.success) {
+        setDataModal({
+          variant: 'warning',
+          icon: 'alert-circle-outline',
+          title: "Couldn't restore",
+          message:
+            "We couldn't reach the store to check for previous purchases. Check your connection and try again.",
+          confirmText: 'Got It',
+          showCancel: false,
+          onConfirm: () => setDataModal(null),
+        });
+      } else {
+        flashNotice(
+          result.isPro ? `${PLUS_NAME} restored.` : 'No previous purchases found on this account.'
+        );
+      }
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  // CSV rather than JSON — it opens in Sheets or Excel, which is what people
+  // actually want this for (their own records, or handing it to an accountant).
+  const buildCsv = () => {
+    const head = [
+      'Date',
+      'Game',
+      'Mode',
+      'Duration',
+      'Buy-in',
+      'Cash-out',
+      'Hands/Bets',
+      'Wins',
+      'Losses',
+      'Pushes',
+      'Net',
+    ];
+    const rows = sessionHistory.map((s) => [
+      s.rawDate || new Date(s.startTime).toISOString(),
+      s.gameType || '',
+      s.mode || '',
+      s.durationFormatted || '',
+      s.buyIn ?? '',
+      s.cashOut ?? '',
+      s.totalHands ?? 0,
+      s.wins ?? 0,
+      s.losses ?? 0,
+      s.pushes ?? 0,
+      (s.netProfit ?? 0).toFixed(2),
+    ]);
+    const escape = (v) => {
+      const str = String(v ?? '');
+      return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    };
+    return [head, ...rows].map((r) => r.map(escape).join(',')).join('\n');
+  };
+
+  const handleExport = async () => {
+    if (exporting) return;
+    if (sessionHistory.length === 0) {
+      flashNotice('No sessions to export yet.');
+      return;
+    }
+    setExporting(true);
+    try {
+      const csv = buildCsv();
+      const native = loadFileModules();
+
+      if (native) {
+        const stamp = new Date().toISOString().slice(0, 10);
+        // expo-file-system v19 (SDK 54) replaced writeAsStringAsync and
+        // cacheDirectory with the File/Paths classes; the old helpers moved
+        // to `expo-file-system/legacy`.
+        const file = new native.File(native.Paths.cache, `ante-sessions-${stamp}.csv`);
+        file.create({ overwrite: true });
+        file.write(csv);
+
+        if (await native.Sharing.isAvailableAsync()) {
+          await native.Sharing.shareAsync(file.uri, {
+            mimeType: 'text/csv',
+            dialogTitle: 'Export session history',
+            UTI: 'public.comma-separated-values-text',
+          });
+          return;
+        }
+      }
+
+      // No native file/share modules in this binary — still give them the data.
+      await Clipboard.setStringAsync(csv);
+      flashNotice(
+        native ? 'Copied to clipboard.' : 'Copied to clipboard — rebuild the app to share a file.'
+      );
+    } catch (err) {
+      console.error('ProfileScreen: export failed', err);
+      flashNotice("Export failed. Try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleClearData = () => {
+    setDataModal({
+      variant: 'danger',
+      icon: 'trash-outline',
+      title: 'Erase all session data?',
+      message: `This permanently deletes all ${sessionHistory.length} recorded sessions from this device${user ? ' and from your account' : ''}. Your preferences and ${PLUS_NAME} membership are not affected. This cannot be undone.`,
+      confirmText: 'Erase Everything',
+      cancelText: 'Cancel',
+      onConfirm: () => {
+        clearAllSessions();
+        setDataModal(null);
+        flashNotice('All session data erased.');
+      },
+      onCancel: () => setDataModal(null),
+    });
+  };
+
+  const handleSendFeedback = () => {
+    const body = `\n\n---\nAnte v1.0.0 · ${Platform.OS}\n`;
+    const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Ante feedback')}&body=${encodeURIComponent(body)}`;
+    Linking.openURL(url).catch(() => {
+      flashNotice(`Reach us at ${SUPPORT_EMAIL}`);
+    });
   };
 
   const handleSignOut = async () => {
@@ -326,6 +534,15 @@ export default function ProfileScreen({ navigation }) {
     setChipPresetModalVisible(false);
   };
 
+  // Called once a drag settles into its final slot — saves immediately,
+  // same as every other live preference here, since the Start Session sheet
+  // just reads whatever's saved the next time it opens. The drag itself
+  // already ticks on pickup and on every swap, so this doesn't add another
+  // haptic on top.
+  const handleGameOrderChange = (next) => {
+    updatePreferences?.({ gameOrder: next });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
@@ -359,7 +576,9 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={styles.profileMeta}>
             <View style={styles.userNameRow}>
-              <Text style={styles.userName}>{user ? (profile?.username || 'Ante Highroller') : 'Guest'}</Text>
+              <Text style={styles.userName}>
+                {user ? profile?.username || user?.email?.split('@')[0] || 'Player' : 'Guest'}
+              </Text>
               {!!user && (
                 <Ionicons name="checkmark-circle" size={16} color={COLORS.accentCyan} style={{ marginLeft: 5 }} />
               )}
@@ -470,7 +689,10 @@ export default function ProfileScreen({ navigation }) {
                 color={stats.totalNet >= 0 ? COLORS.success : COLORS.danger}
               />
             </View>
-            <Text
+            <CountUp
+              value={stats.totalNet}
+              format={(v) => formatAmount(v, true)}
+              animate={!privacyMode}
               style={[
                 styles.gridCardValue,
                 {
@@ -484,9 +706,7 @@ export default function ProfileScreen({ navigation }) {
               ]}
               numberOfLines={1}
               adjustsFontSizeToFit
-            >
-              {formatAmount(stats.totalNet, true)}
-            </Text>
+            />
             <Text style={styles.gridCardFoot}>
               {stats.totalNet >= 0 ? 'Profit realized' : 'Total variance'}
             </Text>
@@ -574,6 +794,32 @@ export default function ProfileScreen({ navigation }) {
               <Text style={styles.proActionBtnText}>See Plans</Text>
             </TouchableOpacity>
           )}
+
+          <View style={styles.menuDivider} />
+
+          {/* Required by Apple for any app selling subscriptions, and the only
+              way back for someone reinstalling or on a new device. */}
+          <TouchableOpacity
+            style={styles.menuRow}
+            activeOpacity={0.7}
+            onPress={handleRestore}
+            disabled={restoring}
+          >
+            <View style={styles.menuIconCircle}>
+              <Ionicons name="refresh-outline" size={moderateScale(18)} color={COLORS.icon} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Restore Purchases</Text>
+              <Text style={styles.menuSubtitle}>
+                Already subscribed? Bring it back on this device
+              </Text>
+            </View>
+            {restoring ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Section 1: Gameplay Preferences */}
@@ -597,6 +843,35 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={styles.menuDivider} />
 
+          <View style={styles.menuRow}>
+            <View style={styles.menuIconCircle}>
+              <Ionicons
+                name="phone-portrait-outline"
+                size={moderateScale(18)}
+                color={COLORS.icon}
+              />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Haptic Feedback</Text>
+              <Text style={styles.menuSubtitle}>Vibration on taps, wins, and session actions</Text>
+            </View>
+            <Toggle
+              value={hapticsEnabled}
+              onValueChange={(val) => {
+                updatePreferences?.({ hapticsEnabled: val });
+                // Fire a deliberately strong buzz when switching on, so the
+                // setting proves itself. Deferred a tick because the value
+                // reaches utils/haptics through an effect, which hasn't run
+                // yet at this point. If nothing is felt here, haptics are off
+                // at the OS level rather than in the app.
+                if (val) setTimeout(hapticSuccess, 0);
+              }}
+              accessibilityLabel="Haptic feedback"
+            />
+          </View>
+
+          <View style={styles.menuDivider} />
+
           {/* Quick Chip Presets */}
           <TouchableOpacity
             style={styles.menuRow}
@@ -609,7 +884,27 @@ export default function ProfileScreen({ navigation }) {
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Quick Chip Presets</Text>
               <Text style={styles.menuSubtitle}>
-                Set the chip amounts for Blackjack, Poker & Sports
+                Set the chip amounts per game
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          {/* Game Order */}
+          <TouchableOpacity
+            style={styles.menuRow}
+            activeOpacity={0.7}
+            onPress={() => setGameOrderModalVisible(true)}
+          >
+            <View style={styles.menuIconCircle}>
+              <Ionicons name="reorder-three-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Game Order</Text>
+              <Text style={styles.menuSubtitle}>
+                Choose which games lead the Start Session sheet
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
@@ -630,10 +925,7 @@ export default function ProfileScreen({ navigation }) {
               <Text style={styles.menuTitle}>Display Currency</Text>
               <Text style={styles.menuSubtitle}>Currently formatted in {currency}</Text>
             </View>
-            <View style={styles.chevronContainer}>
-              <Text style={styles.currencyBadgeText}>{currencySymbol}</Text>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
-            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
 
           <View style={styles.menuDivider} />
@@ -732,6 +1024,65 @@ export default function ProfileScreen({ navigation }) {
               </Text>
             </View>
           </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          {/* CSV, because the point of exporting is to open it in a spreadsheet. */}
+          <TouchableOpacity
+            style={styles.menuRow}
+            activeOpacity={0.7}
+            onPress={handleExport}
+            disabled={exporting}
+          >
+            <View style={styles.menuIconCircle}>
+              <Ionicons
+                name="download-outline"
+                size={moderateScale(18)}
+                color={COLORS.accentCyan}
+              />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Export Session History</Text>
+              <Text style={styles.menuSubtitle}>
+                {sessionHistory.length > 0
+                  ? `${sessionHistory.length} session${sessionHistory.length === 1 ? '' : 's'} as a CSV file`
+                  : 'Nothing recorded yet'}
+              </Text>
+            </View>
+            {exporting ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity style={styles.menuRow} activeOpacity={0.7} onPress={handleClearData}>
+            <View style={[styles.menuIconCircle, styles.menuIconCircleDanger]}>
+              <Ionicons name="trash-outline" size={moderateScale(18)} color={COLORS.danger} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Erase All Data</Text>
+              <Text style={styles.menuSubtitle}>Permanently delete every recorded session</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Section: Support */}
+        <Text style={styles.sectionTitle}>SUPPORT</Text>
+        <View style={[styles.menuCard, SHADOWS.card]}>
+          <TouchableOpacity style={styles.menuRow} activeOpacity={0.7} onPress={handleSendFeedback}>
+            <View style={styles.menuIconCircle}>
+              <Ionicons name="mail-outline" size={moderateScale(18)} color={COLORS.accentViolet} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Send Feedback</Text>
+              <Text style={styles.menuSubtitle}>Report a bug or ask for a feature</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         {/* Section 4: Legal */}
@@ -777,6 +1128,8 @@ export default function ProfileScreen({ navigation }) {
         </View>
       </ScrollView>
 
+      <ConfirmModal visible={!!dataModal} {...dataModal} />
+
       {/* CHANGE USERNAME MODAL */}
       <Modal
         visible={accountModal === 'username'}
@@ -808,7 +1161,6 @@ export default function ProfileScreen({ navigation }) {
                     style={styles.textInput}
                     value={tempUsername}
                     onChangeText={setTempUsername}
-                    placeholder="Ante Highroller"
                     placeholderTextColor={COLORS.textMuted}
                     autoCapitalize="words"
                     autoCorrect={false}
@@ -991,6 +1343,13 @@ export default function ProfileScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
+              {/* Long enough now that it has to scroll inside the sheet
+                  rather than pushing it off the screen. */}
+              <ScrollView
+                style={styles.currencyList}
+                contentContainerStyle={styles.currencyListContent}
+                showsVerticalScrollIndicator={false}
+              >
               {CURRENCY_OPTIONS.map((item) => {
                 const isSelected = currency ? currency.startsWith(item.id) : currencySymbol === item.symbol;
                 return (
@@ -1023,6 +1382,7 @@ export default function ProfileScreen({ navigation }) {
                   </TouchableOpacity>
                 );
               })}
+              </ScrollView>
             </TouchableOpacity>
           </View>
         </TouchableWithoutFeedback>
@@ -1230,6 +1590,59 @@ export default function ProfileScreen({ navigation }) {
             </View>
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* GAME ORDER MODAL — press and drag a row by its handle to reorder.
+          Remounted fresh each time it opens (the `visible &&` below, not
+          just Modal's own `visible` prop) so its internal drag state — and
+          the order it seeds from — starts from whatever's actually saved,
+          rather than whatever gameOrder happened to be the first time this
+          screen ever mounted. */}
+      <Modal
+        visible={gameOrderModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setGameOrderModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setGameOrderModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={[styles.modalSheet, SHADOWS.card]}
+            >
+              <View style={styles.modalHeaderRow}>
+                <Text style={styles.modalTitle}>Game Order</Text>
+                <TouchableOpacity
+                  onPress={() => setGameOrderModalVisible(false)}
+                  hitSlop={TOUCH_TARGET.hitSlop}
+                >
+                  <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.limitSub}>
+                Press and drag a row by its handle to set the order game cards
+                appear in on the Start Session sheet.
+              </Text>
+
+              {gameOrderModalVisible && (
+                <ReorderableGameList
+                  initialOrder={sanitizeGameOrder(gameOrder)}
+                  onChange={handleGameOrderChange}
+                />
+              )}
+
+              <TouchableOpacity
+                style={[styles.saveModalBtn, { marginTop: SPACING.md }]}
+                activeOpacity={0.85}
+                onPress={() => setGameOrderModalVisible(false)}
+              >
+                <Text style={styles.saveModalBtnText}>Done</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );
@@ -1499,11 +1912,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  currencyBadgeText: {
-    fontSize: fluidFont(13),
-    fontWeight: '700',
-    color: COLORS.accentCyan,
-  },
+  currencyList: { maxHeight: moderateScale(400) },
+  currencyListContent: { paddingBottom: 2 },
   copyBadge: {
     flexDirection: 'row',
     alignItems: 'center',

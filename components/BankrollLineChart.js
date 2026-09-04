@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path, Line, Circle, ClipPath, Rect, Defs, Text as SvgText, G } from 'react-native-svg';
 import { COLORS } from '../constants/theme';
 import { fluidFont } from '../constants/layout';
+import { useReduceMotion } from './ui';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
@@ -24,11 +25,18 @@ const fmtDate = (ts) => new Date(ts).toLocaleDateString('en-US', { month: 'short
 function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false }) {
   const [containerWidth, setContainerWidth] = useState(0);
 
+  const reduced = useReduceMotion();
   const animReveal = useRef(new Animated.Value(0)).current;
   const animIndicators = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (containerWidth > 0 && sessions.length >= 2) {
+      // Reduced motion: land on the finished chart rather than wiping to it.
+      if (reduced) {
+        animReveal.setValue(1);
+        animIndicators.setValue(1);
+        return;
+      }
       animReveal.setValue(0);
       animIndicators.setValue(0);
       Animated.sequence([
@@ -45,7 +53,7 @@ function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false
         }),
       ]).start();
     }
-  }, [containerWidth, sessions]);
+  }, [containerWidth, sessions, reduced]);
 
   // The geometry pass (cumulative series, SVG path strings, peak/trough
   // scan) only needs to redo when the sessions themselves or the measured

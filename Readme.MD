@@ -7,7 +7,7 @@
 <p align="center">
   <b>The bankroll tracker that tells you the truth about your gambling.</b><br/>
   Live session tracking, a real analytics engine, and a leak detector that names<br/>
-  the habit costing you money — for Blackjack, Poker, Sports Betting, and everything else.
+  the habit costing you money — for Blackjack, Poker, Sports Betting, Roulette, Baccarat, and everything else.
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@ It never touches real money, never places a wager, and has no connection to any 
 
 ## What it does
 
-### Four purpose-built trackers
+### Six purpose-built trackers
 
 Every game gets a tracker shaped around how that game actually works, rather than one generic form with the labels swapped.
 
@@ -38,6 +38,8 @@ Every game gets a tracker shaped around how that game actually works, rather tha
 | **Blackjack** | Bet size with tap-to-add chips, doubles, splits, naturals, win/loss/push |
 | **Poker** | Per-street, per-player betting with a derived pot — see below |
 | **Sports Betting** | Matchup, bet type, American odds, auto-calculated payout, and **pending bets** that stay open until they settle |
+| **Roulette** | Bet type — straight up, split, street, corner, dozen, column, or an even-money outside bet — with the correct odds applied automatically |
+| **Baccarat** | Player, Banker, or Tie, with the standard 5% commission on a Banker win applied automatically |
 | **General** | Buy-in and cash-out for slots, craps, a home game — anything without a template |
 
 ### Run several at once
