@@ -67,7 +67,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$' } = usePreferences();
   const { user } = useAuth();
-  const { isPro, presentPaywallIfNeeded } = usePurchases();
+  const { isPro } = usePurchases();
   const isLocked = !isPro;
   const insets = useSafeAreaInsets();
 
@@ -582,7 +582,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
       {isLocked && (
         <InsightsUnlockCta
           subtitle="Your odds edge, favorite vs. underdog splits, and leak detection — unlocked with Ante+."
-          onPress={() => presentPaywallIfNeeded()}
+          onPress={() => navigation.navigate('AntePlus')}
         />
       )}
       </View>

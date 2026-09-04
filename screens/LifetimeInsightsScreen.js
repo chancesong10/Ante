@@ -59,7 +59,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$' } = usePreferences();
   const { user } = useAuth();
-  const { isPro, presentPaywallIfNeeded } = usePurchases();
+  const { isPro } = usePurchases();
   const isLocked = !isPro;
   const insets = useSafeAreaInsets();
 
@@ -405,7 +405,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
       {isLocked && (
         <InsightsUnlockCta
           subtitle="Cross-game patterns, session streaks, and leak detection — unlocked with Ante+."
-          onPress={() => presentPaywallIfNeeded()}
+          onPress={() => navigation.navigate('AntePlus')}
         />
       )}
       </View>

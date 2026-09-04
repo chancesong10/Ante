@@ -14,7 +14,7 @@ import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import SwipeableRow from '../components/SwipeableRow';
-import { usePreferences } from '../context/PreferencesContext';
+import { usePreferences, DEFAULT_QUICK_CHIP_PRESETS } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
@@ -55,7 +55,7 @@ export default function BlackjackScreen({ navigation }) {
   const chipPreset =
     Array.isArray(quickChipPresets?.blackjack) && quickChipPresets.blackjack.length > 0
       ? quickChipPresets.blackjack
-      : ['10', '25', '50', '100', '250'];
+      : DEFAULT_QUICK_CHIP_PRESETS.blackjack;
 
   const handleChipPress = (chipValue) => {
     hapticLight();
