@@ -16,7 +16,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
-import { usePreferences } from '../context/PreferencesContext';
+import { usePreferences, DEFAULT_QUICK_CHIP_PRESETS } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 import ConfirmModal from '../components/ConfirmModal';
 import { useAuth } from '../context/AuthContext';
@@ -27,7 +27,6 @@ import { hapticLight, hapticSuccess } from '../utils/haptics';
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
 const BET_TYPES = ['Moneyline', 'Spread', 'Total', 'Parlay', 'Prop'];
 const SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'Soccer', 'MMA', 'Tennis', 'Other'];
-const DEFAULT_STAKE_CHIPS = ['5', '10', '25', '50', '100', '250', '500'];
 
 const calcPayout = (stake, americanOdds) => {
   const odds = parseFloat(americanOdds);
@@ -44,7 +43,7 @@ export default function SportsBettingScreen({ navigation }) {
   const stakeChips =
     Array.isArray(quickChipPresets?.sports) && quickChipPresets.sports.length > 0
       ? quickChipPresets.sports
-      : DEFAULT_STAKE_CHIPS;
+      : DEFAULT_QUICK_CHIP_PRESETS.sports;
   const { user } = useAuth();
   
   const {

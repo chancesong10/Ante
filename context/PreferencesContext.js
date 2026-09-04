@@ -3,10 +3,27 @@ import { loadPreferences, savePreferences } from '../services/storageService';
 
 const PreferencesContext = createContext();
 
+// Defaults follow what's actually on a table, so the first tap usually lands
+// on a real chip instead of a round number nobody stacks.
+//
+// Casino floors run a near-universal colour ladder: $1 white, $5 red, $25
+// green, $100 black, $500 purple, $1,000 orange. $50 and $250 — which these
+// presets used to lead with — aren't part of it; you make $50 with two greens.
+//
+// Sports betting isn't chips at all, it's cash stakes, so it gets its own
+// ladder. Standard bankroll guidance is 1–3% of roll per bet, and recreational
+// rolls sit around $200–$1,000, which puts the common stake between $5 and
+// $25 with $50/$100 for bigger plays.
+//
+// All of it is editable in Profile → Quick Chip Presets; this is only the
+// starting point.
 export const DEFAULT_QUICK_CHIP_PRESETS = {
-  blackjack: ['10', '25', '50', '100', '250'],
-  sports: ['10', '25', '50', '100', '250'],
-  poker: ['1', '5', '25', '50', '100', '500'],
+  // The classic five-colour ladder. Bets are built by stacking these.
+  blackjack: ['1', '5', '25', '100', '500'],
+  // Same ladder plus the orange $1,000 for the sixth slot.
+  poker: ['1', '5', '25', '100', '500', '1000'],
+  // Cash stakes, not chips — round numbers around a typical unit size.
+  sports: ['5', '10', '25', '50', '100'],
 };
 
 const DEFAULT_PREFERENCES = {

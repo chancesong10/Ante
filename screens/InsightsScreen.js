@@ -65,7 +65,7 @@ export default function InsightsScreen({ route, navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$' } = usePreferences();
   const { user } = useAuth();
-  const { isPro, presentPaywallIfNeeded } = usePurchases();
+  const { isPro } = usePurchases();
   const insets = useSafeAreaInsets();
   const isLocked = !isPro;
 
@@ -646,7 +646,7 @@ export default function InsightsScreen({ route, navigation }) {
         {isLocked && (
           <InsightsUnlockCta
             subtitle="Conditional win rates, doubling performance, and leak detection — unlocked with Ante+."
-            onPress={() => presentPaywallIfNeeded()}
+            onPress={() => navigation.navigate('AntePlus')}
           />
         )}
       </View>

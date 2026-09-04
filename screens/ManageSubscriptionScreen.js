@@ -96,7 +96,7 @@ function ActionRow({ icon, title, subtitle, onPress, danger }) {
 
 export default function ManageSubscriptionScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { customerInfo, packages, presentPaywall, refreshCustomerInfo } = usePurchases();
+  const { customerInfo, packages, refreshCustomerInfo } = usePurchases();
   const [busy, setBusy] = useState(false);
 
   // Re-pull entitlement state whenever the screen comes back into focus, so
@@ -209,7 +209,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
             <TouchableOpacity
               style={styles.primaryBtn}
               activeOpacity={0.85}
-              onPress={() => presentPaywall()}
+              onPress={() => navigation.navigate('AntePlus')}
             >
               <Ionicons
                 name="sparkles"

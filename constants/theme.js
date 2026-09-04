@@ -6,7 +6,7 @@ export const COLORS = {
   cardElevated: '#27272A', // Zinc 800
   cardBorder: '#27272A', // Subtle border
   cardBorderHighlight: '#3F3F46',
-  
+
   // Sharp Accent (Clean white as primary for a high-end feel)
   primary: '#FAFAFA',
   // Emphasis border for surfaces that should read as lifted above a plain

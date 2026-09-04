@@ -6,126 +6,116 @@
 
 <p align="center">
   <b>The bankroll tracker that tells you the truth about your gambling.</b><br/>
-  Live session tracking, a real analytics engine, and behavioral insights — for Blackjack, Poker, Sports Betting, and anything else you'd throw money at.
+  Live session tracking, a real analytics engine, and a leak detector that names<br/>
+  the habit costing you money — for Blackjack, Poker, Sports Betting, and everything else.
 </p>
 
 <p align="center">
-  <img alt="platform" src="https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20Web-3B82F6" />
-  <img alt="status" src="https://img.shields.io/badge/status-active%20development-10B981" />
+  <img alt="platform" src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-27272A" />
+  <img alt="status" src="https://img.shields.io/badge/status-in%20testing-FBBF24" />
 </p>
 
 ---
 
-## The problem
+## Why Ante exists
 
-Ask any regular gambler how they're doing lifetime and you'll get a vibe, not a number. Memory overweights the one big win from three months ago and quietly erases the twenty small losses that got you there. Casinos and sportsbooks know your exact numbers, down to the cent. You don't.
+Ask any regular gambler how they're doing lifetime and you'll get a vibe, not a number. Memory overweights the one big win from three months ago and quietly erases the twenty small losses that got you there.
 
-**Ante is the ledger for the other side of the table.** Log every hand, every bet, every buy-in and cash-out, in real time — and let the app do the arithmetic your brain is bad at: net result, win rate, variance, and whether your own habits are actually working for you or against you.
+The house doesn't have that problem. Casinos and sportsbooks know your exact numbers, down to the cent. You don't.
 
-It's not a betting app. It never touches real money, never places a wager, and never talks to a sportsbook or casino. It's a notebook with a statistician built in.
+**Ante is the ledger for the other side of the table.** Log every hand, every bet, every buy-in and cash-out as it happens — and let the app do the arithmetic your brain is bad at.
+
+It never touches real money, never places a wager, and has no connection to any casino or sportsbook. It's a notebook with a statistician built in.
 
 ## What it does
 
-### Live session tracking, per game
+### Four purpose-built trackers
 
-Tap **Start a Session**, pick a game, and log as you play. Every game gets a purpose-built tracker instead of a generic form:
+Every game gets a tracker shaped around how that game actually works, rather than one generic form with the labels swapped.
 
-| Game | What you track |
+| | What you log |
 |---|---|
-| 🂡 **Blackjack** | Bet size (with tappable quick-chips), double down, natural blackjack, split hands, win/loss/push |
-| 🃏 **Poker** | Full per-street, per-player betting — see below |
-| 🏀 **Sports Betting** | Matchup, bet type (Moneyline / Spread / Total), American odds, auto-calculated payout, win/loss/push |
-| 🎲 **General** | Simple buy-in / cash-out for anything else — slots, craps, a home game, whatever doesn't fit a template |
+| **Blackjack** | Bet size with tap-to-add chips, doubles, splits, naturals, win/loss/push |
+| **Poker** | Per-street, per-player betting with a derived pot — see below |
+| **Sports Betting** | Matchup, bet type, American odds, auto-calculated payout, and **pending bets** that stay open until they settle |
+| **General** | Buy-in and cash-out for slots, craps, a home game — anything without a template |
 
-Every tracker shares the same live session experience: a running net-outcome banner, hand/bet counters, swipe-to-delete on any logged entry, and a single **End Session** action that commits the session to history and updates your lifetime stats.
+### Run several at once
+
+A blackjack session lasts an evening. A sports slip can sit unsettled for three days. Ante runs **one live session per game**, all at the same time, so a pending parlay never blocks you from logging a poker night. Home shows what's running; tap in to resume any of them, or stop one from the list.
 
 ### Poker, done properly
 
-Poker is the deepest tracker in the app, because poker math is the hardest to reconstruct from memory. Setup asks two things before you deal a single hand:
+Poker math is the hardest to reconstruct from memory, so it gets the deepest tracker. Set the table size and the blinds in play, then every hand walks Pre-Flop → Flop → Turn → River → Showdown:
 
-1. **How many players are at the table** (2–10, including you).
-2. **What blinds are live** — no blinds, big blind only, or small + big blind, typed in as whatever stakes you're actually playing.
+- A bet card for you **and every other player**, renameable and remembered for the session
+- Quick-chips include your actual **SB** and **BB**, so posting a blind is one tap
+- **Call** on every card, greyed out until there's a bet to match
+- Fold anyone mid-street — their money stays in the pot as dead money, and it's reversible
+- The pot is **fully derived** from what's been entered; nothing to babysit
+- You can't advance a street with mismatched bets — Ante blocks it and shows who owes what, instead of letting a hand's math quietly go wrong
 
-From there, every hand walks through Pre-Flop → Flop → Turn → River → Showdown. On each betting street:
+At Showdown, mark it Won / Split / Lost and Ante works out your net, N-way chops included.
 
-- **You get a bet card, and so does every other player at the table** — optionally renamed from "Player 1, 2, 3…" to real names, remembered for the rest of the session.
-- Quick-chip buttons include your **SB** and **BB** amounts alongside your own custom denominations, so posting a blind or a standard raise is one tap.
-- A **Call** button sits on every player's card, always visible, greyed out until there's actually a bet to match — tap it to instantly match the table's current high bet.
-- Anyone can be **folded** mid-street; their last-entered bet stays counted as dead money in the pot, and folding is reversible if you tap it by mistake.
-- The pot is **fully derived** from what's actually been entered — no manual pot override, no separate player counter to babysit.
-- You can't advance to the next street with mismatched bets among players still in the hand — Ante checks and blocks you with a clear breakdown of who owes what, instead of letting a hand's math quietly go wrong.
+### The leak detector
 
-At Showdown, mark the hand as **Won / Split / Lost** and Ante calculates your net result — including N-way chops — automatically.
+This is the part you can't get anywhere else. Ante doesn't just total your losses — it names the *pattern* costing you money, and tells you what it costs.
 
-### Session history
+- **Loss chasing** — betting measurably bigger after a loss than after a win
+- **Bluff catching** — how often you folded the best hand, and the pot you left behind
+- **Tilt index** — whether getting bluffed changes how you play the very next hand
+- **Odds edge** — your real win rate against the price the book actually gave you
+- **Session fatigue** — whether your judgment erodes in the back half of a session
+- **Volatility**, **conditional win rates**, **bet-tier drop-off**, **bb/100**, day-of-week and session-length patterns
 
-Every completed session lands in **History** — filterable by All / Wins / Losses, sorted newest-first, swipe-to-delete with a clean confirmation. Tap a session to expand its full breakdown: buy-in/cash-out or hand-by-hand record, win/loss/push counts, and duration.
+Every finding carries its sample size, so you know when to trust it. Nothing is asserted from four hands.
 
-### Analytics dashboard
+### History and analytics
 
-The **Analytics** tab rolls every session you've ever logged into one lifetime view: net outcome, total wagered, win rate, hands/bets logged, best and worst single session, average session net, and a **profit factor** (gross wins ÷ gross losses — the same metric professional traders use to judge whether a strategy is actually working). Privacy mode masks every dollar figure with dots when someone's looking over your shoulder.
+Every finished session lands in History — filterable, expandable to a hand-by-hand breakdown, swipe to delete. Analytics rolls all of it into a lifetime view: net outcome, total wagered, win rate, a bankroll-over-time chart, best and worst sessions, profit factor, and a per-game breakdown showing which game is actually making or costing you money.
 
-### Behavioral insights engine
+Privacy mode masks every figure behind dots when someone's looking over your shoulder.
 
-This is Ante's real edge. Once you've logged at least 5 hands of a given game, an **Insights** screen unlocks statistics most players never get real numbers for:
+### Responsible gaming, not a checkbox
 
-- **Conditional win rates** — your actual win rate after a win, after a loss, after two in a row of either. Real transition probabilities, with sample size shown so you know when to trust them.
-- **Loss-chasing detection** — flags it when you're measurably betting bigger after a loss than after a win.
-- **Doubling performance** (Blackjack) — win rate and ROI specifically on hands where you doubled down.
-- **Natural blackjack frequency** — your actual blackjack rate vs. the statistical baseline (4.8%), a quick luck-vs-skill check.
-- **Win rate by bet-size tier** — splits your betting history into thirds based on *your own* range and shows win rate per tier.
-- **Volatility / consistency score** — a 0–100 read on how consistent your bet-sizing and results actually are.
-- **Best/worst day of week** and **performance by session length** — pattern detection across time that's essentially impossible to track by memory.
+Set a stop-loss threshold and Ante interrupts a live session that crosses it — full screen, with your live net, duration, hand count, a one-tap **End Session**, and the National Council on Problem Gambling helpline.
 
-### Vault profile & preferences
-
-The **Profile** tab is your lifetime dashboard: net outcome, total wagered, win rate, and bets logged across everything, plus a per-game breakdown so you can see which game is actually making or costing you money. From here you can also adjust currency, toggle privacy mode and quick-chip buttons, export your full history, or wipe it clean.
-
-### Responsible gaming, built in
-
-Ante includes an opt-in **stop-loss alert**: set a dollar threshold, and if a live session's net result crosses it, a full-screen alert interrupts play with your live outcome, session duration, hand count, an **End Session & Protect Bankroll** action, and a direct line to the National Council on Problem Gambling helpline. Alerts are tiered — dismissing one only silences it until your losses deepen *further* past the next threshold, so it can't be swiped away and forgotten. This isn't a checkbox feature; it's core to the product.
+Alerts are **tiered**: dismissing one only silences it until your losses deepen past the *next* threshold, so it can't be swiped away and forgotten. With several sessions running, each is watched independently — a quiet table can't mask a bad one.
 
 ### Design
 
-A dark "midnight sportsbook" theme — deep navy backgrounds, electric blue/cyan accents, green strictly reserved for wins — fully responsive from a small phone to a tablet. Every confirmation and warning in the app uses a custom-designed dialog matching Ante's own visual language, not a generic OS popup, down to swipe-to-delete gestures that animate smoothly instead of snapping.
+A dark, near-monochrome interface where colour is information, not decoration. Green and red mean money moved. Amber means a live warning. Red means a session is recording. Everything else stays out of the way, so the numbers are the loudest thing on screen.
 
-## Your data stays yours
+## Ante+
 
-Everything Ante tracks lives on your device — there's no account required and no third-party analytics or ad tracking inside the app. You can export your full session history at any time, or wipe it completely, from **Profile → Data Vault**. Today's local-first data is designed to carry forward cleanly into optional cloud sync down the line, without you losing anything or needing to redo it.
+Ante is free to track with. **Ante+** unlocks the behavioural layer — the leak detector, conditional win rates, streak analysis, and every insights page across all four games, plus lifetime cross-game patterns.
 
-## Try it
+Available monthly, annually, or as a one-time lifetime purchase. Billed through the App Store or Google Play; cancel any time from your store account.
 
-Ante runs on iOS, Android, and web via Expo.
+## Your data
 
-```bash
-git clone https://github.com/chancesong10/Ante.git
-cd Ante
-npm install
-npm start
-```
+Ante is **local-first**. Everything works fully offline, and an account is optional.
 
-Scan the QR code with the [Expo Go](https://expo.dev/go) app, or run `npm run ios` / `npm run android` / `npm run web` directly. No accounts, no API keys, no backend to stand up — it works fully offline out of the box.
+- **No account?** Your sessions live on your device and go nowhere else.
+- **Signed in?** Completed sessions also sync to your account so they survive a new phone, and follow you across devices. Live sessions stay on-device and end when you close the app.
+- **No third-party analytics or ad tracking** is embedded in the app.
+- Subscription status is handled by RevenueCat; the payment itself is processed by Apple or Google, and card details never reach us.
 
-## Roadmap
+Full detail in the [Privacy Policy](https://chancesong10.github.io/Ante/privacy-policy.html) and [Terms of Service](https://chancesong10.github.io/Ante/terms-of-service.html).
 
-Ante is under active development. Roughly in priority order:
+## What's next
 
-- [ ] **Charts in Analytics** — bankroll-over-time line chart, win/loss distribution, session net histogram
-- [ ] **Optional cloud backup & multi-device sync**
-- [ ] **CSV / PDF export** alongside the existing JSON export, for tax-adjacent recordkeeping
-- [ ] **More games**: Roulette, Craps, Daily Fantasy, custom table games
-- [ ] **Bankroll goals & budgeting** — set a session or monthly loss limit and a target, not just a stop-loss alert
-- [ ] **Deeper Poker analytics** — position-aware stats, bluff success rate over time, leak detection
-- [ ] **Light theme**
-- [ ] **Home screen widgets** (iOS/Android) showing live session net without opening the app
-- [ ] **Biometric app lock** for an extra layer of privacy on shared devices
-- [ ] **Multi-currency support** with live conversion
-- [ ] **AI-assisted insight summaries** — plain-language takeaways generated from your own stats ("You're chasing losses on Fridays — down 23% more per session than your average")
+Deeper poker analytics with position-aware stats, CSV export for tax-adjacent recordkeeping, bankroll goals and budgeting beyond the stop-loss alert, home-screen widgets showing live session net, and biometric app lock for shared devices.
 
 ## Responsible gambling
 
-Ante is a **tracking and analytics tool only**. It does not facilitate, process, or place any real-money wager, and it has no connection to any casino, sportsbook, or gambling operator. If gambling stops being fun, or you're worried about your own play, Ante's in-app stop-loss alerts point to the National Council on Problem Gambling 24/7 helpline: **1-800-522-4700**. If you're outside the US, please look up your local equivalent — the intent is the same everywhere: track honestly, and stop when the numbers tell you to.
+Ante is a **tracking and analytics tool only**. It does not facilitate, process, or place any real-money wager, and has no relationship with any casino, sportsbook, or gambling operator.
+
+If gambling stops being fun, the National Council on Problem Gambling runs a free, confidential 24/7 helpline: **1-800-522-4700**. Outside the US, please look up your local equivalent. The intent is the same everywhere — track honestly, and stop when the numbers tell you to.
 
 ---
 
-<p align="center"><sub>© 2026 Ante. Track the truth, not the vibe.</sub></p>
+<p align="center">
+  <sub>© 2026 Tnc, Inc. · Track the truth, not the vibe.</sub><br/>
+  <sub><a href="mailto:tncante1008@gmail.com">tncante1008@gmail.com</a></sub>
+</p>

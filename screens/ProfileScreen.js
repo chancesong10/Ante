@@ -56,7 +56,6 @@ export default function ProfileScreen({ navigation }) {
     isPro,
     isLoading: purchasesLoading,
     customerInfo,
-    presentPaywall,
   } = usePurchases();
   const insets = useSafeAreaInsets();
   const {
@@ -201,8 +200,8 @@ export default function ProfileScreen({ navigation }) {
       : 'Lifetime access'
     : null;
 
-  const handleUpgradePress = async () => {
-    await presentPaywall();
+  const handleUpgradePress = () => {
+    navigation.navigate('AntePlus');
   };
 
   const handleSignOut = async () => {

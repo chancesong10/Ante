@@ -27,6 +27,7 @@ import SportsBettingInsightsScreen from './screens/SportsBettingInsightsScreen';
 import LifetimeInsightsScreen from './screens/LifetimeInsightsScreen';
 import LegalScreen from './screens/LegalScreen';
 import ManageSubscriptionScreen from './screens/ManageSubscriptionScreen';
+import AntePlusScreen from './screens/AntePlusScreen';
 import AuthScreen from './screens/AuthScreen';
 
 import StartSessionModal from './components/StartSessionModal';
@@ -403,6 +404,7 @@ function AppContent({ navigationRef }) {
           <Stack.Screen name="LifetimeInsights" component={LifetimeInsightsScreen} />
           <Stack.Screen name="Legal" component={LegalScreen} />
           <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
+          <Stack.Screen name="AntePlus" component={AntePlusScreen} />
           <Stack.Screen name="Auth" component={AuthScreen} options={{ presentation: 'modal' }} />
         </Stack.Navigator>
       </NavigationContainer>

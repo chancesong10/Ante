@@ -62,7 +62,7 @@ export default function PokerInsightsScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
   const { currencySymbol = '$' } = usePreferences();
   const { user } = useAuth();
-  const { isPro, presentPaywallIfNeeded } = usePurchases();
+  const { isPro } = usePurchases();
   const isLocked = !isPro;
   const insets = useSafeAreaInsets();
 
@@ -220,7 +220,7 @@ export default function PokerInsightsScreen({ navigation }) {
 
   const handleCopyReport = async () => {
     if (isLocked) {
-      presentPaywallIfNeeded();
+      navigation.navigate('AntePlus');
       return;
     }
     await Clipboard.setStringAsync(buildReportText());
@@ -655,7 +655,7 @@ export default function PokerInsightsScreen({ navigation }) {
       {isLocked && (
         <InsightsUnlockCta
           subtitle="Your bluff-catcher score, tilt index, and leak detection — unlocked with Ante+."
-          onPress={() => presentPaywallIfNeeded()}
+          onPress={() => navigation.navigate('AntePlus')}
         />
       )}
       </View>

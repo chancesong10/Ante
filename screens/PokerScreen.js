@@ -17,7 +17,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
-import { usePreferences } from '../context/PreferencesContext';
+import { usePreferences, DEFAULT_QUICK_CHIP_PRESETS } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import SwipeableRow from '../components/SwipeableRow';
 import ConfirmModal from '../components/ConfirmModal';
@@ -68,7 +68,7 @@ export default function PokerScreen({ navigation }) {
   const [smallBlind, setSmallBlind] = useState('1');
   const [bigBlind, setBigBlind] = useState('2');
   const [blindMode, setBlindMode] = useState('both'); // 'none' | 'big' | 'both'
-  const [chipDenominations, setChipDenominations] = useState(['1', '5', '25', '50', '100', '500']);
+  const [chipDenominations, setChipDenominations] = useState(DEFAULT_QUICK_CHIP_PRESETS.poker);
   // Seeds the setup form from the player's saved poker chip preset once
   // preferences have hydrated, unless an in-progress session already carries
   // its own denominations.
