@@ -14,7 +14,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { useActiveSession } from '../context/SessionContext';
+import { useActiveSession, formatDuration } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -23,10 +23,12 @@ import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { GameIconTile } from '../components/GameIcon';
 import ActiveSessionsModal from '../components/ActiveSessionsModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { liveNetOf, liveCountOf } from '../components/ActiveSessionSlip';
 import { useCommitPress } from '../components/CommitAnimation';
 import { useReduceMotion } from '../components/ui';
 import { hapticLight } from '../utils/haptics';
+import { formatMoney } from '../utils/format';
 
 // One recent-session row. Plays the same commit beat as the start-session
 // sheet's game cards — press-in, the tile flooding with the game's colour, a
@@ -120,7 +122,14 @@ function RecentSessionCard({
 }
 
 export default function HomeScreen({ navigation, onOpenAddModal }) {
-  const { activeSessionList, activeSessionCount, endActiveSession } = useActiveSession();
+  const {
+    activeSessionList,
+    activeSessionCount,
+    endActiveSession,
+    staleSessions,
+    resumeStaleSession,
+    closeOutStaleSession,
+  } = useActiveSession();
   const { endSessionWithFx } = useSessionEndFx();
   const [sessionsModalVisible, setSessionsModalVisible] = useState(false);
   const reduced = useReduceMotion();
@@ -201,6 +210,42 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
     }
   };
 
+  // --- Sessions the app died on ---
+  //
+  // These were restored from storage, but the app was dead long enough that
+  // the session probably ended in real life too. Rather than guess, ask — one
+  // at a time, since needing more than one prompt means two games were live
+  // when the app died, which is rare enough not to warrant its own list UI.
+  const stale = staleSessions[0] || null;
+
+  // General and Sports Betting can't be closed out from here: General has no
+  // net until a cash-out is typed, and Sports Betting has its own pending-bet
+  // confirmation to run first. Same carve-out the sessions list already makes
+  // for its stop button.
+  const staleNeedsTracker =
+    !!stale && (stale.gameType === 'General' || stale.gameType === 'Sports Betting');
+
+  const staleMessage = stale
+    ? `Your ${stale.gameType} session was still running when Ante last closed, about ${formatDuration(
+        stale.staleSince,
+        Date.now()
+      )} ago — ${liveCountOf(stale)} logged, ${formatMoney(
+        liveNetOf(stale),
+        currencySymbol,
+        privacyMode
+      )}.\n\nNothing has been lost either way. Time the app spent closed won't be counted as time played.`
+    : '';
+
+  const handleStaleConfirm = () => {
+    if (!stale) return;
+    if (staleNeedsTracker) {
+      resumeStaleSession(stale.gameType);
+      resumeSession(stale);
+      return;
+    }
+    closeOutStaleSession(stale.gameType);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ActiveSessionsModal
@@ -211,6 +256,17 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
         onClose={() => setSessionsModalVisible(false)}
         onResume={resumeSession}
         onEnd={endSessionFromList}
+      />
+      <ConfirmModal
+        visible={!!stale}
+        variant="warning"
+        icon="time-outline"
+        title="Still at the table?"
+        message={staleMessage}
+        confirmText={staleNeedsTracker ? 'Open Tracker' : 'Save to History'}
+        cancelText="Keep Playing"
+        onConfirm={handleStaleConfirm}
+        onCancel={() => stale && resumeStaleSession(stale.gameType)}
       />
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <ScrollView

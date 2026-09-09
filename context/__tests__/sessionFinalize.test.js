@@ -11,11 +11,12 @@ jest.mock('expo-crypto', () => ({
 jest.mock('../../services/storageService', () => ({
   loadSessionHistory: jest.fn(async () => []),
   saveSessionHistory: jest.fn(async () => true),
-  loadActiveSession: jest.fn(async () => null),
-  saveActiveSession: jest.fn(async () => true),
+  loadActiveSessions: jest.fn(async () => ({})),
+  saveActiveSessions: jest.fn(async () => true),
+  clearLegacyActiveSession: jest.fn(async () => true),
 }));
 
-const { sessionHasContent, finalizeSession } = require('../SessionContext');
+const { sessionHasContent, finalizeSession, sanitizeSessionRecord } = require('../SessionContext');
 
 const baseSession = (over = {}) => ({
   id: 's1',
@@ -78,5 +79,42 @@ describe('finalizeSession still produces a valid record when there IS content', 
     expect(rec.mode).toBe('hands');
     expect(rec.totalHands).toBe(2);
     expect(rec.netProfit).toBe(15);
+  });
+});
+
+
+// A malformed record reaching a screen is a render throw, and because these
+// records are persisted, that throw repeats on every launch. The boundary in
+// components/AppErrorBoundary catches it; this keeps it from happening.
+describe('sanitizeSessionRecord', () => {
+  const valid = {
+    id: 'abc',
+    gameType: 'Poker',
+    startTime: 1700000000000,
+    hands: [{ id: 'h1', netChange: 5 }],
+  };
+
+  test('passes a well-formed record through untouched', () => {
+    expect(sanitizeSessionRecord(valid)).toBe(valid);
+  });
+
+  test.each([
+    ['null', null],
+    ['a non-object', 'nope'],
+    ['no id', { ...valid, id: undefined }],
+    ['an empty id', { ...valid, id: '' }],
+    ['no startTime', { ...valid, startTime: undefined }],
+    ['a non-numeric startTime', { ...valid, startTime: 'yesterday' }],
+    ['no gameType', { ...valid, gameType: undefined }],
+  ])('rejects a record with %s', (_label, record) => {
+    expect(sanitizeSessionRecord(record)).toBeNull();
+  });
+
+  test('normalizes a missing hands array rather than dropping the record', () => {
+    // Screens call .map on this directly, but the record is still the user's.
+    const out = sanitizeSessionRecord({ ...valid, hands: undefined });
+    expect(out).not.toBeNull();
+    expect(out.hands).toEqual([]);
+    expect(out.id).toBe('abc');
   });
 });

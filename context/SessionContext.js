@@ -3,8 +3,9 @@ import * as Crypto from 'expo-crypto';
 import {
   loadSessionHistory,
   saveSessionHistory,
-  loadActiveSession,
-  saveActiveSession,
+  loadActiveSessions,
+  saveActiveSessions,
+  clearLegacyActiveSession,
 } from '../services/storageService';
 
 // Split into two contexts by update frequency:
@@ -67,11 +68,26 @@ export function formatDuration(startTime, endTime) {
   }
 }
 
-export function finalizeSession(activeSession, overrideBuyIn = null, overrideCashOut = null) {
+export function finalizeSession(
+  activeSession,
+  overrideBuyIn = null,
+  overrideCashOut = null,
+  { endTime: endTimeOverride = null } = {}
+) {
   if (!activeSession) return null;
 
-  const endTime = Date.now();
+  // `endTimeOverride` exists for one caller: closing out a session the app
+  // died on. That session ends at the last moment the app was known to be
+  // alive, not at whatever time the user happens to relaunch.
+  const endTime = endTimeOverride ?? Date.now();
   const startTime = activeSession.startTime;
+
+  // Time the app spent dead between a session being persisted and the user
+  // resuming it isn't time spent at the table. Subtracting it matters beyond
+  // display: session length feeds the fatigue and session-length patterns in
+  // the insights engines, so an overnight gap left in would read as a
+  // marathon session and skew the leak detector.
+  const durationFormatted = formatDuration(startTime, endTime - (activeSession.pausedMs || 0));
 
   const finalBuyIn = overrideBuyIn !== null ? overrideBuyIn : activeSession.buyIn;
   const finalCashOut = overrideCashOut !== null ? overrideCashOut : activeSession.cashOut;
@@ -89,7 +105,7 @@ export function finalizeSession(activeSession, overrideBuyIn = null, overrideCas
       endTime,
       formattedDate: formatSessionDateTime(startTime),
       rawDate: new Date(startTime).toISOString(),
-      durationFormatted: formatDuration(startTime, endTime),
+      durationFormatted,
       mode: 'buyInCashOut',
       // What the General tracker was actually tracking ("Craps", "Keno").
       // Undefined for the templated games, which don't ask.
@@ -132,7 +148,7 @@ export function finalizeSession(activeSession, overrideBuyIn = null, overrideCas
       endTime,
       formattedDate: formatSessionDateTime(startTime),
       rawDate: new Date(startTime).toISOString(),
-      durationFormatted: formatDuration(startTime, endTime),
+      durationFormatted,
       mode: 'hands',
       hands,
       totalHands,
@@ -169,6 +185,83 @@ export function sessionHasContent(session, overrideBuyIn = null, overrideCashOut
   return Number.isFinite(buyIn) && Number.isFinite(cashOut);
 }
 
+// The minimum a completed session needs before the app will render it or feed
+// it to the stats engines. Applied to everything arriving from outside this
+// process — the cloud's `data` column holds whatever some client wrote there,
+// possibly a build several versions old — because a single malformed record
+// reaching a screen is a render throw, and a render throw on data that is
+// *persisted* repeats on every launch.
+//
+// Missing `hands` is normalized rather than rejected: plenty of screens call
+// `.map` on it directly, but a record that's otherwise sound is still the
+// user's, and throwing it away to avoid a crash would be its own data loss.
+export function sanitizeSessionRecord(session) {
+  if (!session || typeof session !== 'object') return null;
+  if (typeof session.id !== 'string' || !session.id) return null;
+  if (!Number.isFinite(session.startTime)) return null;
+  if (typeof session.gameType !== 'string' || !session.gameType) return null;
+  return Array.isArray(session.hands) ? session : { ...session, hands: [] };
+}
+
+// Worth carrying across a restart. Deliberately looser than
+// `sessionHasContent`, which gates what may enter History: a General session
+// with a buy-in typed but no cash-out yet has nothing to finalize, but the
+// figure the user entered is still theirs and must survive the app dying.
+export function sessionWorthRestoring(session) {
+  if (!session) return false;
+  if (Array.isArray(session.hands) && session.hands.length > 0) return true;
+  return Number.isFinite(session.buyIn) || Number.isFinite(session.cashOut);
+}
+
+// How long the app may be dead before a restored session is put to the user
+// rather than silently resumed. Sports betting is the exception by an order of
+// magnitude: a slip legitimately sits open for days waiting on results, so the
+// gap that makes a blackjack session suspicious is normal there.
+const DEFAULT_STALE_AFTER_MS = 8 * 60 * 60 * 1000;
+const STALE_AFTER_MS = { 'Sports Betting': 7 * 24 * 60 * 60 * 1000 };
+
+export function staleThresholdFor(gameType) {
+  return STALE_AFTER_MS[gameType] ?? DEFAULT_STALE_AFTER_MS;
+}
+
+// Rebuilds the live-session map from what was persisted. Two decisions live
+// here rather than at the call site:
+//
+//   - Anything with nothing in it is dropped, so a tracker that was opened and
+//     abandoned doesn't come back as a running session on the next launch.
+//   - Anything the app has been dead longer than its game's threshold is
+//     restored but marked `staleSince`. Nine hours of downtime almost always
+//     means the session ended in real life, and resuming it silently would
+//     report a duration counting hours the app wasn't even running. Home puts
+//     it to the user instead — the data is kept either way.
+export function restoreActiveSessions(stored, now = Date.now()) {
+  const restored = {};
+  Object.entries(stored || {}).forEach(([gameType, session]) => {
+    if (!session || typeof session !== 'object') return;
+    if (!session.id || !session.startTime) return;
+    if (!sessionWorthRestoring(session)) return;
+
+    // Falling back to startTime covers a blob written before lastActiveAt
+    // existed; it can only over-estimate the gap, which errs toward asking.
+    const lastActiveAt = session.lastActiveAt || session.startTime;
+    const deadFor = Math.max(0, now - lastActiveAt);
+    restored[gameType] =
+      deadFor > staleThresholdFor(session.gameType || gameType)
+        ? { ...session, staleSince: lastActiveAt }
+        : session;
+  });
+  return restored;
+}
+
+// Folds the stretch the app spent dead into `pausedMs` and clears the flag.
+// Shared by Home's prompt and by simply opening the tracker, because those are
+// the same act: the user has decided the session is still going.
+export function resumeStale(session, now = Date.now()) {
+  if (!session?.staleSince) return session;
+  const { staleSince, ...rest } = session;
+  return { ...rest, pausedMs: (session.pausedMs || 0) + Math.max(0, now - staleSince) };
+}
+
 export function SessionProvider({ children }) {
   // Live sessions, keyed by game type — at most one per game, so Blackjack,
   // Poker, Sports Betting and General can all be running at once. Keying by
@@ -189,22 +282,27 @@ export function SessionProvider({ children }) {
     activeSessionsRef.current = activeSessions;
   }, [activeSessions]);
 
-  // Load persisted history once on app start.
+  // Load persisted history and any live sessions once on app start.
   //
-  // Live sessions are deliberately NOT persisted: closing the app ends them.
-  // Worth knowing that on the next launch the OS can't tell a deliberate
-  // force-quit from a low-memory kill, so a backgrounded session can be lost
-  // the same way. Re-enabling recovery means restoring a write here and
-  // finalising whatever `sessionHasContent` approves on the way back in.
+  // Live sessions are restored rather than discarded because the OS can't tell
+  // a deliberate force-quit from a low-memory kill, and a bankroll tracker's
+  // normal life is sitting backgrounded for hours while its owner is actually
+  // playing — so "the app closed" is a terrible proxy for "the session ended".
+  // `restoreActiveSessions` decides what comes back and what gets flagged for
+  // the user to confirm.
   useEffect(() => {
     if (hasLoadedOnce.current) return;
     hasLoadedOnce.current = true;
 
     (async () => {
-      const storedHistory = await loadSessionHistory();
-      // Clears anything a previous build left behind under the old key.
-      await saveActiveSession(null);
-      setSessionHistory(storedHistory);
+      const [storedHistory, storedActive] = await Promise.all([
+        loadSessionHistory(),
+        loadActiveSessions(),
+      ]);
+      // Sweeps anything a pre-multi-session build left under the old key.
+      await clearLegacyActiveSession();
+      setSessionHistory(storedHistory.map(sanitizeSessionRecord).filter(Boolean));
+      setActiveSessions(restoreActiveSessions(storedActive));
       setIsLoaded(true);
     })();
   }, []);
@@ -214,6 +312,40 @@ export function SessionProvider({ children }) {
     if (!isLoaded) return;
     saveSessionHistory(sessionHistory);
   }, [sessionHistory, isLoaded]);
+
+  // Persist live sessions on every change, debounced.
+  //
+  // Debouncing matters more here than anywhere else in the app: this is the
+  // hottest update path there is — a poker hand fires several updates a second
+  // — and an undebounced write would put an AsyncStorage round-trip behind
+  // each one, competing with the commit animation on the same JS thread.
+  //
+  // `lastActiveAt` is stamped at write time rather than held on the session in
+  // state, where it would retrigger this effect forever. It records the last
+  // moment the app was known to be alive, which is both what the dead gap is
+  // measured against on the way back in and what a stale session is finalized
+  // at — so a session the app died on is never credited with the hours it
+  // spent not running.
+  useEffect(() => {
+    if (!isLoaded) return undefined;
+    const t = setTimeout(() => {
+      const now = Date.now();
+      const toPersist = {};
+      Object.entries(activeSessions).forEach(([gameType, session]) => {
+        if (!sessionWorthRestoring(session)) return;
+        const { staleSince, ...rest } = session;
+        // A session still waiting on the user's answer keeps the timestamp it
+        // was last genuinely alive at, so dying a second time before they
+        // answer doesn't reset the gap to zero and make it look freshly
+        // active. `staleSince` itself is never persisted — it's rederived
+        // from `lastActiveAt` on the way back in, which is where the
+        // threshold lives.
+        toPersist[gameType] = { ...rest, lastActiveAt: staleSince ?? now };
+      });
+      saveActiveSessions(toPersist);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [activeSessions, isLoaded]);
 
   // Applies `fn` to one game's live session, leaving the others untouched.
   const patchSession = useCallback((gameType, fn) => {
@@ -242,9 +374,17 @@ export function SessionProvider({ children }) {
       buyIn: null,
       cashOut: null,
     };
-    // Never clobber a session already running for this game — the tracker
-    // screens call this on mount, so returning to one has to be a no-op.
-    setActiveSessions((prev) => (prev[gameType] ? prev : { ...prev, [gameType]: newSession }));
+    setActiveSessions((prev) => {
+      const current = prev[gameType];
+      // Never clobber a session already running for this game — the tracker
+      // screens call this on mount, so returning to one has to be a no-op.
+      if (!current) return { ...prev, [gameType]: newSession };
+      // Opening the tracker on a session the app died on *is* the user
+      // resuming it, so discount the gap here too rather than waiting for
+      // Home's prompt to be answered.
+      const resumed = resumeStale(current);
+      return resumed === current ? prev : { ...prev, [gameType]: resumed };
+    });
     return newSession;
   }, []);
 
@@ -280,7 +420,7 @@ export function SessionProvider({ children }) {
   );
 
   const endActiveSession = useCallback(
-    (gameType, overrideBuyIn = null, overrideCashOut = null) => {
+    (gameType, overrideBuyIn = null, overrideCashOut = null, options = {}) => {
       const session = activeSessionsRef.current[gameType];
       if (!session) return null;
 
@@ -293,7 +433,7 @@ export function SessionProvider({ children }) {
         return null;
       }
 
-      const completedRecord = finalizeSession(session, overrideBuyIn, overrideCashOut);
+      const completedRecord = finalizeSession(session, overrideBuyIn, overrideCashOut, options);
       setSessionHistory((prev) => [completedRecord, ...prev]);
       dropSession(gameType);
       return completedRecord;
@@ -302,6 +442,27 @@ export function SessionProvider({ children }) {
   );
 
   const discardActiveSession = useCallback((gameType) => dropSession(gameType), [dropSession]);
+
+  // --- Restored sessions the app died on ---
+  //
+  // Both sides of the question Home asks. Resuming folds the dead gap into
+  // `pausedMs` so the hours the app wasn't running don't get counted as time
+  // played; closing out finalizes at `staleSince`, the last moment the app was
+  // known to be alive, rather than at whenever the user happened to relaunch.
+
+  const resumeStaleSession = useCallback(
+    (gameType) => patchSession(gameType, (s) => resumeStale(s)),
+    [patchSession]
+  );
+
+  const closeOutStaleSession = useCallback(
+    (gameType) => {
+      const session = activeSessionsRef.current[gameType];
+      if (!session) return null;
+      return endActiveSession(gameType, null, null, { endTime: session.staleSince ?? null });
+    },
+    [endActiveSession]
+  );
 
   // Stars ride on the session record itself, so they persist and sync with
   // everything else — no separate store to keep in step. `starredAt` isn't
@@ -324,6 +485,11 @@ export function SessionProvider({ children }) {
   const clearAllSessions = useCallback(() => {
     setActiveSessions({});
     setSessionHistory([]);
+    // The state change alone would reach storage, but only after the persist
+    // effect's 500ms debounce. "Erase everything" is the one action that must
+    // not leave a window where the app can be killed and come back with the
+    // data still on disk, so write the empty map straight through as well.
+    saveActiveSessions({});
   }, []);
 
   // Unions cloud sessions pulled for the current account into local history,
@@ -335,10 +501,14 @@ export function SessionProvider({ children }) {
   // like this one carries it back in.
   const mergeSessionsFromCloud = useCallback((cloudSessions) => {
     if (!cloudSessions?.length) return;
+    // Rows come back as whatever was written into the `data` column, so they
+    // are validated before anything downstream is allowed to see them.
+    const incoming = cloudSessions.map(sanitizeSessionRecord).filter(Boolean);
+    if (!incoming.length) return;
     setSessionHistory((prev) => {
       const localById = new Map(prev.map((s) => [s.id, s]));
-      const cloudById = new Map(cloudSessions.map((s) => [s.id, s]));
-      const additions = cloudSessions.filter((s) => !localById.has(s.id));
+      const cloudById = new Map(incoming.map((s) => [s.id, s]));
+      const additions = incoming.filter((s) => !localById.has(s.id));
 
       let starChanged = false;
       const reconciled = prev.map((s) => {
@@ -373,11 +543,20 @@ export function SessionProvider({ children }) {
     [activeSessions]
   );
 
+  // Restored sessions still awaiting the user's call on whether they're over.
+  // They stay in `activeSessions` throughout — they are real sessions with
+  // real data — so this is a view onto that list, not a separate store.
+  const staleSessions = useMemo(
+    () => activeSessionList.filter((s) => s.staleSince),
+    [activeSessionList]
+  );
+
   const activeSessionValue = useMemo(
     () => ({
       activeSessions,
       activeSessionList,
       activeSessionCount: activeSessionList.length,
+      staleSessions,
       startSession,
       updateActiveSessionMetadata,
       logHandToActiveSession,
@@ -386,10 +565,13 @@ export function SessionProvider({ children }) {
       setSessionBuyInCashOut,
       endActiveSession,
       discardActiveSession,
+      resumeStaleSession,
+      closeOutStaleSession,
     }),
     [
       activeSessions,
       activeSessionList,
+      staleSessions,
       startSession,
       updateActiveSessionMetadata,
       logHandToActiveSession,
@@ -398,6 +580,8 @@ export function SessionProvider({ children }) {
       setSessionBuyInCashOut,
       endActiveSession,
       discardActiveSession,
+      resumeStaleSession,
+      closeOutStaleSession,
     ]
   );
 
