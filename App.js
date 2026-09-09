@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -35,6 +35,7 @@ import AuthScreen from './screens/AuthScreen';
 import StartSessionModal from './components/StartSessionModal';
 import ResponsibleGamingAlertModal from './components/ResponsibleGamingAlertModal';
 import AnimatedLoadingScreen from './components/AnimatedLoadingScreen';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import { COLORS } from './constants/theme';
 import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useActiveSession, useSessionHistory } from './context/SessionContext';
@@ -48,68 +49,8 @@ function EmptyAddSlot() {
   return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
 }
 
-// Blank "in-between" screen shown briefly while switching tabs, so the
-// next screen's heavy layout/render work happens hidden behind a spinner
-// instead of jumping visibly (mirrors the Wealthsimple-style tab transition).
-function TabTransitionOverlay({ visible }) {
-  if (!visible) return null;
-  return (
-    <View style={styles.transitionOverlay} pointerEvents="auto">
-      <ActivityIndicator size="large" color={COLORS.textSecondary} />
-    </View>
-  );
-}
-
 function MainTabNavigator({ onOpenAddModal }) {
   const insets = useSafeAreaInsets();
-  const [transitioning, setTransitioning] = useState(false);
-  const rafIds = useRef([]);
-  // Track which tabs have been visited so we only show the loading screen the first time.
-  // 'Home' is the initial route so it's already loaded.
-  const loadedTabs = useRef(new Set(['Home']));
-
-  useEffect(() => {
-    return () => {
-      rafIds.current.forEach((id) => cancelAnimationFrame(id));
-    };
-  }, []);
-
-  // Intercepts a tab press, shows the blank spinner overlay, then performs
-  // the actual navigation on the next frame so it happens hidden underneath.
-  // The overlay is dismissed as soon as the new screen has actually painted
-  // (nested rAF), rather than after a guessed fixed delay — so it's exactly
-  // as short as each screen needs, never longer.
-  const withTabTransition = (navigation, route) => (e) => {
-    const state = navigation.getState();
-    const activeRoute = state.routes[state.index];
-    if (activeRoute.key === route.key) return; // already on this tab
-
-    // If the tab has already been loaded, just navigate immediately without overlay
-    if (loadedTabs.current.has(route.name)) {
-      e.preventDefault();
-      navigation.navigate(route.name);
-      return;
-    }
-
-    // Mark tab as loaded for future visits
-    loadedTabs.current.add(route.name);
-
-    e.preventDefault();
-    setTransitioning(true);
-    const id1 = requestAnimationFrame(() => {
-      navigation.navigate(route.name);
-      // First rAF: fires once the navigation render has committed.
-      // Second rAF: fires after that frame has actually painted.
-      const id2 = requestAnimationFrame(() => {
-        const id3 = requestAnimationFrame(() => {
-          setTransitioning(false);
-        });
-        rafIds.current.push(id3);
-      });
-      rafIds.current.push(id2);
-    });
-    rafIds.current.push(id1);
-  };
 
   // Dynamic calculation for bottom floating tab bar across iOS home indicators & Android gesture/button bars
   const bottomOffset = insets.bottom > 0 ? insets.bottom + moderateScale(4) : moderateScale(16);
@@ -123,6 +64,19 @@ function MainTabNavigator({ onOpenAddModal }) {
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
+        // Mount every tab up front instead of on first visit. These screens
+        // are big (Profile ~2.2k lines, History and Analytics ~1k each), so
+        // lazily mounting them meant paying that cost as a visible stall the
+        // first time you opened each one. Doing it eagerly moves the work
+        // behind the startup loading screen, which is already waiting on
+        // storage anyway — so it costs nothing the user can see, and every
+        // tab switch afterwards is instant.
+        lazy: false,
+        // The flip side of keeping all four mounted: without this they'd all
+        // re-render on every session-history change, even the three you
+        // can't see. Freezing blurred tabs suspends that until they're
+        // focused again.
+        freezeOnBlur: true,
         tabBarStyle: [
           styles.tabBar,
           {
@@ -159,9 +113,6 @@ function MainTabNavigator({ onOpenAddModal }) {
             />
           ),
         }}
-        listeners={({ navigation, route }) => ({
-          tabPress: withTabTransition(navigation, route),
-        })}
       />
 
       {/* 2. Analytics */}
@@ -178,9 +129,6 @@ function MainTabNavigator({ onOpenAddModal }) {
             />
           ),
         }}
-        listeners={({ navigation, route }) => ({
-          tabPress: withTabTransition(navigation, route),
-        })}
       />
 
       {/* 3. Center Prominent & Ergonomic Action Button */}
@@ -236,18 +184,12 @@ function MainTabNavigator({ onOpenAddModal }) {
             />
           ),
         }}
-        listeners={({ navigation, route }) => ({
-          tabPress: withTabTransition(navigation, route),
-        })}
       />
 
       {/* 5. Profile */}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        listeners={({ navigation, route }) => ({
-          tabPress: withTabTransition(navigation, route),
-        })}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color, focused }) => (
@@ -260,7 +202,6 @@ function MainTabNavigator({ onOpenAddModal }) {
         }}
       />
     </Tab.Navigator>
-    <TabTransitionOverlay visible={transitioning} />
     </View>
   );
 }
@@ -457,15 +398,22 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <PurchasesProvider>
-            <PreferencesProvider>
-              <SessionProvider>
-                <AppShell />
-              </SessionProvider>
-            </PreferencesProvider>
-          </PurchasesProvider>
-        </AuthProvider>
+        {/* Inside SafeAreaProvider so the crash screen can inset itself, but
+            above every other provider so a throw in one of them is caught
+            too — a malformed session record reaching SessionProvider is the
+            most likely cause of a crash here, and a boundary underneath it
+            would miss exactly that. */}
+        <AppErrorBoundary>
+          <AuthProvider>
+            <PurchasesProvider>
+              <PreferencesProvider>
+                <SessionProvider>
+                  <AppShell />
+                </SessionProvider>
+              </PreferencesProvider>
+            </PurchasesProvider>
+          </AuthProvider>
+        </AppErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -475,13 +423,6 @@ const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  transitionOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 500,
   },
   tabBar: {
     position: 'absolute',

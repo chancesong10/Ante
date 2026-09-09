@@ -32,6 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { getOrCreateDeviceId } from '../services/storageService';
+import { exportSessionsCsv } from '../utils/exportSessions';
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
 // the common four stay at the top of a long list. Dollar-family currencies
@@ -81,23 +82,6 @@ const CURRENCY_OPTIONS = [
 
 const SUPPORT_EMAIL = 'tncante1008@gmail.com';
 
-// expo-file-system and expo-sharing are native modules, so they only exist in
-// a binary that was built after they were added to package.json. Importing
-// them at the top of this file makes a dev client built before that throw
-// "Cannot find native module 'ExpoSharing'" on every render — so they're
-// required on demand instead, and export falls back to the clipboard when
-// they aren't there. Rebuilding the app (npx expo run:android / eas build)
-// is what turns the file-share path back on.
-const loadFileModules = () => {
-  try {
-    const fs = require('expo-file-system');
-    const sharing = require('expo-sharing');
-    if (!fs?.File || !fs?.Paths || !sharing?.shareAsync) return null;
-    return { File: fs.File, Paths: fs.Paths, Sharing: sharing };
-  } catch {
-    return null;
-  }
-};
 
 const CHIP_PRESET_GAMES = [
   { id: 'blackjack', label: 'Blackjack', count: 5 },
@@ -308,80 +292,12 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  // CSV rather than JSON — it opens in Sheets or Excel, which is what people
-  // actually want this for (their own records, or handing it to an accountant).
-  const buildCsv = () => {
-    const head = [
-      'Date',
-      'Game',
-      'Mode',
-      'Duration',
-      'Buy-in',
-      'Cash-out',
-      'Hands/Bets',
-      'Wins',
-      'Losses',
-      'Pushes',
-      'Net',
-    ];
-    const rows = sessionHistory.map((s) => [
-      s.rawDate || new Date(s.startTime).toISOString(),
-      s.gameType || '',
-      s.mode || '',
-      s.durationFormatted || '',
-      s.buyIn ?? '',
-      s.cashOut ?? '',
-      s.totalHands ?? 0,
-      s.wins ?? 0,
-      s.losses ?? 0,
-      s.pushes ?? 0,
-      (s.netProfit ?? 0).toFixed(2),
-    ]);
-    const escape = (v) => {
-      const str = String(v ?? '');
-      return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
-    };
-    return [head, ...rows].map((r) => r.map(escape).join(',')).join('\n');
-  };
-
   const handleExport = async () => {
     if (exporting) return;
-    if (sessionHistory.length === 0) {
-      flashNotice('No sessions to export yet.');
-      return;
-    }
     setExporting(true);
     try {
-      const csv = buildCsv();
-      const native = loadFileModules();
-
-      if (native) {
-        const stamp = new Date().toISOString().slice(0, 10);
-        // expo-file-system v19 (SDK 54) replaced writeAsStringAsync and
-        // cacheDirectory with the File/Paths classes; the old helpers moved
-        // to `expo-file-system/legacy`.
-        const file = new native.File(native.Paths.cache, `ante-sessions-${stamp}.csv`);
-        file.create({ overwrite: true });
-        file.write(csv);
-
-        if (await native.Sharing.isAvailableAsync()) {
-          await native.Sharing.shareAsync(file.uri, {
-            mimeType: 'text/csv',
-            dialogTitle: 'Export session history',
-            UTI: 'public.comma-separated-values-text',
-          });
-          return;
-        }
-      }
-
-      // No native file/share modules in this binary — still give them the data.
-      await Clipboard.setStringAsync(csv);
-      flashNotice(
-        native ? 'Copied to clipboard.' : 'Copied to clipboard — rebuild the app to share a file.'
-      );
-    } catch (err) {
-      console.error('ProfileScreen: export failed', err);
-      flashNotice("Export failed. Try again.");
+      const { message } = await exportSessionsCsv(sessionHistory);
+      if (message) flashNotice(message);
     } finally {
       setExporting(false);
     }
