@@ -46,7 +46,7 @@ export function SessionEndFxProvider({ children, onNavigate }) {
     }
     busyRef.current = true;
     commitRef.current = next.onCommit;
-    setFx({ net: next.net, gameType: next.gameType });
+    setFx({ id: Math.random().toString(), net: next.net, gameType: next.gameType });
   }, []);
 
   // Called by a tracker screen instead of ending the session directly.
@@ -79,6 +79,7 @@ export function SessionEndFxProvider({ children, onNavigate }) {
     <SessionEndFxContext.Provider value={{ endSessionWithFx }}>
       {children}
       <SessionEndOverlay
+        key={fx?.id || 'empty'}
         fx={fx}
         currencySymbol={currencySymbol}
         privacyMode={privacyMode}

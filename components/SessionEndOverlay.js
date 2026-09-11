@@ -35,17 +35,20 @@ import { useReduceMotion } from './ui';
 //   820ms  the wash fades over 420ms — slow enough that the new row's own
 //          slide-in animation plays *through* the fade, so the last thing
 //          you see is the session landing in the list.
-const FLOOD_MS = 300;
-const RIPPLE_MS = 620;
-const REVEAL_DELAY = 200;
-const REVEAL_MS = 260;
-const COVER_AT = 340;
-const COMMIT_AT = 700;
-// 160ms of headroom after the commit before anything starts to be revealed,
-// so the re-render fan-out it causes (History, Analytics, Profile and Home
-// all read session history) is finished before the fade begins.
-const EXIT_AT = 860;
-const EXIT_MS = 420;
+const FLOOD_MS = 450;
+const RIPPLE_MS = 930;
+const REVEAL_DELAY = 300;
+const REVEAL_MS = 390;
+
+// The core fix for stuttering: Wait until ALL intro animations (ripple & reveal) 
+// are 100% finished (max 930ms) before navigating! React Navigation transitions 
+// are heavy on the UI thread, so triggering them mid-animation causes dropped frames.
+const COVER_AT = 950;
+// Wait 450ms for the navigation transition to settle before doing the heavy session save.
+const COMMIT_AT = 1400;
+// Wait 200ms after the save to ensure re-renders (History, Analytics) are done before fading out.
+const EXIT_AT = 1600;
+const EXIT_MS = 630;
 
 export default function SessionEndOverlay({
   fx,
@@ -116,8 +119,17 @@ export default function SessionEndOverlay({
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
+      Animated.timing(exit, {
+        toValue: 1,
+        duration: EXIT_MS,
+        delay: EXIT_AT,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
     ]);
-    intro.start();
+    intro.start(({ finished }) => {
+      if (finished) cbs.current.onDone?.();
+    });
 
     const at = (ms, fn) => timers.current.push(setTimeout(fn, ms));
 
@@ -125,17 +137,6 @@ export default function SessionEndOverlay({
     at(COVER_AT, () => cbs.current.onCover?.());
     // Then insert the session into a list that is already on screen.
     at(COMMIT_AT, () => cbs.current.onCommit?.());
-    // Then lift the wash, slowly enough to watch the row arrive.
-    at(EXIT_AT, () => {
-      Animated.timing(exit, {
-        toValue: 1,
-        duration: EXIT_MS,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) cbs.current.onDone?.();
-      });
-    });
 
     return () => {
       intro.stop();
