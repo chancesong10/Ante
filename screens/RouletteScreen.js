@@ -20,19 +20,44 @@ import SwipeableRow from '../components/SwipeableRow';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
+import SegmentedPicker from '../components/SegmentedPicker';
+import { SessionMoneyStrip, SessionMixCard } from '../components/TableSessionSummary';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
-import { ROULETTE_BET_TYPES, getRouletteBetType, calcRouletteNet } from '../utils/tableGameOdds';
+import {
+  ROULETTE_BET_TYPES,
+  ROULETTE_WHEELS,
+  DEFAULT_ROULETTE_WHEEL,
+  getRouletteBetType,
+  calcRouletteNet,
+  isRouletteWheel,
+  rouletteHouseEdge,
+} from '../utils/tableGameOdds';
+import { calcSessionSummary } from '../utils/tableGameStatsEngine';
 
 const BET_TYPES = ROULETTE_BET_TYPES;
 const betTypeById = getRouletteBetType;
 
+const WHEEL_OPTIONS = ['single', 'double'].map((id) => ({
+  value: id,
+  label: ROULETTE_WHEELS[id].label,
+  sub: `${(rouletteHouseEdge(id) * 100).toFixed(2)}% edge`,
+  accessibilityLabel: `${ROULETTE_WHEELS[id].label} wheel`,
+}));
+
 export default function RouletteScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { currencySymbol = '$', quickChipsEnabled, quickChipPresets } = usePreferences();
+  const {
+    currencySymbol = '$',
+    quickChipsEnabled,
+    quickChipPresets,
+    rouletteWheel,
+    updatePreferences,
+  } = usePreferences();
   const chipPreset =
     Array.isArray(quickChipPresets?.roulette) && quickChipPresets.roulette.length > 0
       ? quickChipPresets.roulette
       : DEFAULT_QUICK_CHIP_PRESETS.roulette;
+  const wheel = isRouletteWheel(rouletteWheel) ? rouletteWheel : DEFAULT_ROULETTE_WHEEL;
   const { user } = useAuth();
 
   const {
@@ -79,6 +104,9 @@ export default function RouletteScreen({ navigation }) {
       bet: parsedBet,
       outcome,
       netChange: calcRouletteNet(betType.odds, parsedBet, outcome),
+      // Recorded per spin, not per session: the wheel sets the house edge
+      // the insights measure against, and a player can move tables mid-session.
+      wheel,
       createdAt: Date.now(),
     };
 
@@ -90,6 +118,7 @@ export default function RouletteScreen({ navigation }) {
   const totalNet = spins.reduce((sum, s) => sum + (s.netChange || 0), 0);
   const wins = spins.filter((s) => s.outcome === 'win').length;
   const losses = spins.filter((s) => s.outcome === 'loss').length;
+  const summary = calcSessionSummary(spins, 'Roulette');
 
   const handleEndSessionPress = () => {
     hapticSuccess();
@@ -165,7 +194,20 @@ export default function RouletteScreen({ navigation }) {
               <Text style={styles.statPillValue}>{spins.length}</Text>
             </View>
           </View>
+
+          <SessionMoneyStrip summary={summary} currencySymbol={currencySymbol} bestLabel="Best Spin" />
         </View>
+
+        {/* WHEEL */}
+        <SegmentedPicker
+          label="Wheel"
+          options={WHEEL_OPTIONS}
+          value={wheel}
+          onChange={(id) => {
+            hapticLight();
+            updatePreferences({ rouletteWheel: id });
+          }}
+        />
 
         {/* BET TYPE SELECTOR */}
         <View style={styles.betTypeWrapper}>
@@ -254,6 +296,9 @@ export default function RouletteScreen({ navigation }) {
           </View>
         </View>
 
+        {/* SESSION BET MIX */}
+        <SessionMixCard summary={summary} currencySymbol={currencySymbol} title="Session Bet Mix" unit="spin" />
+
         {/* SPIN HISTORY */}
         {spins.length > 0 && (
           <View style={styles.historySection}>
@@ -275,6 +320,7 @@ export default function RouletteScreen({ navigation }) {
                     <View style={styles.betTypeBadge}>
                       <Text style={styles.betTypeBadgeText}>
                         {s.betLabel} · {s.odds}:1
+                        {isRouletteWheel(s.wheel) ? ` · ${ROULETTE_WHEELS[s.wheel].shortLabel} wheel` : ''}
                       </Text>
                     </View>
                     <Text style={styles.historySubtext}>
