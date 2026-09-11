@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useRef, useMemo,
 import { loadPreferences, savePreferences } from '../services/storageService';
 import { setHapticsEnabled } from '../utils/haptics';
 import { DEFAULT_GAME_ORDER, sanitizeGameOrder } from '../constants/games';
+import { DEFAULT_ROULETTE_WHEEL, BACCARAT_TIE_ODDS } from '../utils/tableGameOdds';
+import { DEFAULT_BLACKJACK_RULES } from '../utils/blackjackStrategy';
 
 const PreferencesContext = createContext();
 
@@ -44,6 +46,19 @@ const DEFAULT_PREFERENCES = {
   // rather than as sheet-local state so it's set once in Settings and just
   // shows up the next time the sheet opens.
   gameOrder: DEFAULT_GAME_ORDER,
+  // Table conditions for the roulette and baccarat trackers. Remembered
+  // between sessions because people tend to play the same room, and both
+  // change the house edge the insights measure against. Each logged hand
+  // also records the value in force when it was logged, so changing these
+  // never rewrites past sessions.
+  rouletteWheel: DEFAULT_ROULETTE_WHEEL,
+  baccaratTieOdds: BACCARAT_TIE_ODDS,
+  // Blackjack table rules: payout, dealer on soft 17, surrender, decks. The
+  // tracker normalizes this on read, so a blob missing a newer key still works.
+  blackjackRules: DEFAULT_BLACKJACK_RULES,
+  // Whether the Blackjack tracker shows card entry (dealer upcard and your two
+  // cards). Off by default, so the tracker opens as a quick bet-and-result log.
+  blackjackCardEntry: false,
 };
 
 export function PreferencesProvider({ children }) {

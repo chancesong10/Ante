@@ -25,8 +25,8 @@ import {
 // write-up this file was derived from.
 // ---------------------------------------------------------------------
 
-// Replicates BlackjackScreen.js's calcNet exactly, so mock hands carry
-// realistic netChange values the same way the real UI would produce them.
+// Mirrors calcBlackjackNet (utils/blackjackStrategy.js) at a 3:2 table, so
+// mock hands carry realistic netChange values the same way the real UI does.
 function calcNet(bet, doubledFlag, blackjackFlag, outcomeVal) {
   const stake = doubledFlag ? bet * 2 : bet;
   if (outcomeVal === 'win') return blackjackFlag ? stake * 1.5 : stake;
