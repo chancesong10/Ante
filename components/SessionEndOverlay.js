@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     elevation: 900,
   },
   content: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: moderateScale(32),

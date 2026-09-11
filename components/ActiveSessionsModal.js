@@ -91,7 +91,7 @@ export default function ActiveSessionsModal({
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.overlay,
     justifyContent: 'flex-end',
   },

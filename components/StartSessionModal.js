@@ -511,7 +511,7 @@ export default function StartSessionModal({
 
 const styles = StyleSheet.create({
     overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.overlay,
     justifyContent: 'flex-end',
   },

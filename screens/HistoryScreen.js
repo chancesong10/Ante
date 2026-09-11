@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.warningBorder,
   },
   highlightRing: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
     borderColor: COLORS.primary,
