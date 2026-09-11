@@ -12,6 +12,8 @@ import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { computeInsights } from '../utils/statsEngine';
+import { computeBlackjackDetailInsights } from '../utils/blackjackDetailEngine';
+import { actionLabel, actionPastTense } from '../utils/blackjackStrategy';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
 import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
@@ -55,6 +57,26 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
         title: 'Your Results Are Highly Volatile',
         detail: `Your net result per hand swings about ${leak.volatilityRatio.toFixed(1)}x your average bet, hand to hand. Big swings add variance risk on top of whatever edge basic strategy gives you.`,
       };
+    case 'strategy_mistakes':
+      return {
+        title: 'Basic Strategy Mistakes Are Costing You',
+        detail: `Your play matched basic strategy on ${fmtPct(leak.rate)} of ${leak.judged} hands logged with cards. Your most common miss: ${leak.topMistake.situation}, where you ${actionPastTense(leak.topMistake.action)} ${leak.topMistake.count} time${leak.topMistake.count === 1 ? '' : 's'} — basic strategy says ${actionLabel(leak.topMistake.recommended).toLowerCase()}.`,
+      };
+    case 'missed_doubles':
+      return {
+        title: "You're Skipping Doubles Basic Strategy Calls For",
+        detail: `Of ${leak.chances} hands where basic strategy says to double, you doubled ${fmtPct(leak.takenRate)}, missing ${leak.missed}. Those are the hands where you have the edge, so passing on them gives up real long-run money.`,
+      };
+    case 'insurance':
+      return {
+        title: 'Insurance Is a Losing Side Bet',
+        detail: `You took insurance ${leak.taken} of the ${leak.offered} times the dealer showed an Ace, for a net ${leak.net >= 0 ? '+' : '-'}${fmtDollar(Math.abs(leak.net))}. Basic strategy never takes it: it carries about a 7% house edge in a six-deck game.`,
+      };
+    case 'six_five_tables':
+      return {
+        title: '6:5 Tables Are Shorting Your Blackjacks',
+        detail: `${fmtPct(leak.share)} of your hands with table rules recorded (n=${leak.hands}) were at tables paying 6:5 for blackjack, which adds about 1.4% to the house edge.${leak.blackjacks > 0 ? ` Your ${leak.blackjacks} blackjack${leak.blackjacks === 1 ? '' : 's'} there paid ${fmtDollar(leak.cost)} less than at 3:2.` : ''}`,
+      };
     default:
       return { title: 'Leak Detected', detail: '' };
   }
@@ -96,6 +118,11 @@ export default function InsightsScreen({ route, navigation }) {
   const disciplinedSizing = betSizeDelta <= 0 && stats.sampleAfterLoss >= 3;
 
   const isBlackjack = gameType === 'Blackjack';
+  // Card-level analysis of hands logged with cards (utils/blackjackDetailEngine).
+  const detail = useMemo(
+    () => (isBlackjack ? computeBlackjackDetailInsights(sessionHistory) : null),
+    [isBlackjack, sessionHistory]
+  );
 
   const outcomes = stats.outcomeBreakdown;
   const returns = stats.returnStats;
@@ -117,7 +144,18 @@ export default function InsightsScreen({ route, navigation }) {
   const fmtMoney = (v) => `${v >= 0 ? '+' : '−'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
   const fmtDollar = (v) => `${currencySymbol}${v.toFixed(2)}`;
 
-  const topLeak = stats.topLeak;
+  // Card-level leaks join the frequency-based ones. Once enough hands are
+  // logged with cards to judge doubling hand by hand, that check replaces the
+  // rough "~10% of hands" doubling-frequency heuristic.
+  const leaks = useMemo(() => {
+    if (!detail) return stats.leaks;
+    const preciseDoubling = !!detail.doubling && detail.doubling.chances >= 10;
+    const base = preciseDoubling
+      ? stats.leaks.filter((l) => l.id !== 'double_down_underuse' && l.id !== 'double_down_overuse')
+      : stats.leaks;
+    return [...base, ...detail.leaks].sort((a, b) => b.score - a.score);
+  }, [stats, detail]);
+  const topLeak = leaks[0] || null;
 
   const [copied, setCopied] = useState(false);
 
@@ -172,6 +210,35 @@ export default function InsightsScreen({ route, navigation }) {
         lines.push(`Double-down frequency: ${ddr.rate.toFixed(1)}% of hands (reference: ~${ddr.benchmarkRate}%)`);
       }
       lines.push(`Natural blackjack rate: ${bj.actualRate.toFixed(1)}% (${bj.count}/${bj.sample}) vs. expected ~${bj.expectedRate}%`);
+      lines.push('');
+    }
+
+    if (isBlackjack && detail && (detail.detailedHands > 0 || detail.tableRules)) {
+      lines.push('CARD-LEVEL ANALYSIS');
+      lines.push(`Hands logged with cards: ${detail.detailedHands}`);
+      if (detail.accuracy) {
+        lines.push(`Basic strategy accuracy: ${fmtPct(detail.accuracy.rate)} (${detail.accuracy.correct} of ${detail.accuracy.judged} decisions)`);
+        detail.accuracy.topMistakes.slice(0, 5).forEach((m) => {
+          lines.push(`Mistake — ${m.situation}: you ${actionPastTense(m.action)} ×${m.count}, basic strategy says ${actionLabel(m.recommended)} (net ${fmtMoney(m.net)})`);
+        });
+      }
+      if (detail.doubling) {
+        lines.push(`Doubled when strategy says double: ${fmtPct(detail.doubling.takenRate)} (n=${detail.doubling.chances}); doubles strategy says to avoid: ${detail.doubling.badDoubles}`);
+      }
+      detail.situations.forEach((s) => {
+        lines.push(`${s.label}: vs dealer 2–6 ${s.vsWeak.sample ? fmtMoney(s.vsWeak.net) : '—'} (n=${s.vsWeak.sample}), vs dealer 7–A ${s.vsStrong.sample ? fmtMoney(s.vsStrong.net) : '—'} (n=${s.vsStrong.sample})`);
+      });
+      if (detail.insurance) {
+        lines.push(`Insurance: taken ${detail.insurance.taken} of ${detail.insurance.offered} times, net ${fmtMoney(detail.insurance.net)}`);
+      }
+      if (detail.dealerBust) {
+        const { weak, strong } = detail.dealerBust;
+        if (weak.sample) lines.push(`Dealer bust rate showing 2–6: ${fmtPct(weak.rate)} (n=${weak.sample}, usual ~${weak.expectedRate.toFixed(0)}%)`);
+        if (strong.sample) lines.push(`Dealer bust rate showing 7–A: ${fmtPct(strong.rate)} (n=${strong.sample}, usual ~${strong.expectedRate.toFixed(0)}%)`);
+      }
+      if (detail.tableRules) {
+        lines.push(`Table rules: ${fmtPct(detail.tableRules.sixFiveShare)} of hands at 6:5, ${fmtPct(detail.tableRules.h17Share)} with the dealer hitting soft 17`);
+      }
       lines.push('');
     }
 
@@ -242,6 +309,51 @@ export default function InsightsScreen({ route, navigation }) {
           ]}
           showsVerticalScrollIndicator={false}
         >
+          {/* Basic strategy accuracy. Free — real numbers on a locked page
+              too, like the house-edge card on the roulette and baccarat
+              pages. The mistake breakdown further down is Ante+. */}
+          {isBlackjack && detail && (
+            detail.accuracy ? (
+              <View style={[styles.card, styles.freeCard]}>
+                <View style={styles.proRow}>
+                  <Ionicons name="checkmark-done-outline" size={moderateScale(13)} color={COLORS.primary} />
+                  <Text style={styles.proRowLabel}>BASIC STRATEGY ACCURACY</Text>
+                </View>
+                <Text style={styles.cardHint}>
+                  How often your play matched basic strategy for your table's rules, across {detail.accuracy.judged} decision
+                  {detail.accuracy.judged === 1 ? '' : 's'} logged with cards
+                </Text>
+                <View style={styles.compareRow}>
+                  <CompareStat
+                    label="Accuracy"
+                    value={fmtPct(detail.accuracy.rate)}
+                    valueColor={
+                      detail.accuracy.rate >= 90 ? COLORS.success : detail.accuracy.rate >= 75 ? COLORS.warning : COLORS.danger
+                    }
+                  />
+                  <CompareStat label="Correct plays" value={String(detail.accuracy.correct)} />
+                  <CompareStat label="Mistakes" value={String(detail.accuracy.mistakeCount)} />
+                </View>
+                <Text style={styles.cardFootnote}>
+                  {isLocked
+                    ? 'Unlock Ante+ to see exactly which spots you misplay and what they cost.'
+                    : 'Your most common mistakes are broken down further down this page.'}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.card, styles.freeCard]}>
+                <View style={styles.proRow}>
+                  <Ionicons name="albums-outline" size={moderateScale(13)} color={COLORS.primary} />
+                  <Text style={styles.proRowLabel}>CHECK YOUR PLAY</Text>
+                </View>
+                <Text style={styles.cardHint}>
+                  In the Blackjack tracker, open Options and turn on Enter cards. Then tap your two cards, the dealer's upcard,
+                  and your play, and Ante checks every decision against basic strategy for your table's rules.
+                </Text>
+              </View>
+            )
+          )}
+
           {!hasEnoughData && !isLocked ? (
             <View style={styles.emptyCard}>
               <Ionicons name="analytics-outline" size={moderateScale(28)} color={COLORS.textMuted} />
@@ -263,9 +375,9 @@ export default function InsightsScreen({ route, navigation }) {
                   </View>
                   <Text style={styles.leakTitle}>{getLeakCopy(topLeak, { fmtDollar, fmtPct }).title}</Text>
                   <Text style={styles.leakDetail}>{getLeakCopy(topLeak, { fmtDollar, fmtPct }).detail}</Text>
-                  {stats.leaks.length > 1 && (
+                  {leaks.length > 1 && (
                     <Text style={styles.leakMoreText}>
-                      +{stats.leaks.length - 1} more pattern{stats.leaks.length - 1 !== 1 ? 's' : ''} flagged below
+                      +{leaks.length - 1} more pattern{leaks.length - 1 !== 1 ? 's' : ''} flagged below
                     </Text>
                   )}
                 </View>
@@ -483,6 +595,151 @@ export default function InsightsScreen({ route, navigation }) {
                 </>
               )}
 
+              {/* Card-level analysis of hands logged with cards (Ante+) */}
+              {isBlackjack && detail && detail.detailedHands > 0 && (
+                <>
+                  {detail.accuracy && detail.accuracy.topMistakes.length > 0 && (
+                    <View style={styles.card}>
+                      <Text style={styles.cardLabel}>Most common strategy mistakes</Text>
+                      <Text style={styles.cardHint}>Spots where your play didn't match basic strategy, most frequent first</Text>
+                      {isLocked
+                        ? [0, 1, 2].map((i) => (
+                            <View key={i} style={[styles.mistakeRow, i > 0 && styles.mistakeRowDivider]}>
+                              <SkeletonBar width="55%" height={12} />
+                              <SkeletonBar width="80%" height={10} style={{ marginTop: 6 }} />
+                            </View>
+                          ))
+                        : detail.accuracy.topMistakes.slice(0, 5).map((m, i) => (
+                            <View key={`${m.situation}|${m.action}`} style={[styles.mistakeRow, i > 0 && styles.mistakeRowDivider]}>
+                              <View style={styles.mistakeTop}>
+                                <Text style={styles.mistakeTitle}>{m.situation}</Text>
+                                <Text style={styles.mistakeCount}>×{m.count}</Text>
+                              </View>
+                              <Text style={styles.mistakeDetail}>
+                                You {actionPastTense(m.action)}; basic strategy says {actionLabel(m.recommended).toLowerCase()}. Net on
+                                these hands: {fmtMoney(m.net)}.
+                              </Text>
+                            </View>
+                          ))}
+                    </View>
+                  )}
+
+                  {detail.doubling && (
+                    <View style={styles.card}>
+                      <Text style={styles.cardLabel}>Doubling decisions</Text>
+                      <Text style={styles.cardHint}>Checked hand by hand against the cards you were actually dealt</Text>
+                      <View style={styles.compareRow}>
+                        <CompareStat
+                          label={`Doubled when you should (n=${detail.doubling.chances})`}
+                          value={fmtPct(detail.doubling.takenRate)}
+                          locked={isLocked}
+                        />
+                        <CompareStat label="Missed doubles" value={String(detail.doubling.missed)} locked={isLocked} />
+                        <CompareStat label="Doubles to avoid" value={String(detail.doubling.badDoubles)} locked={isLocked} />
+                      </View>
+                    </View>
+                  )}
+
+                  {detail.situations.length > 0 && (
+                    <View style={styles.card}>
+                      <Text style={styles.cardLabel}>Results by situation</Text>
+                      <Text style={styles.cardHint}>
+                        Net result by starting hand: dealer showing 2–6 / dealer showing 7–A
+                      </Text>
+                      {detail.situations.map((s) => (
+                        <StatLine
+                          key={s.id}
+                          label={`${s.label} (n=${s.vsWeak.sample + s.vsStrong.sample})`}
+                          value={`${s.vsWeak.sample ? fmtMoney(s.vsWeak.net) : '—'} / ${s.vsStrong.sample ? fmtMoney(s.vsStrong.net) : '—'}`}
+                          locked={isLocked}
+                        />
+                      ))}
+                    </View>
+                  )}
+
+                  {detail.insurance && (
+                    <View style={styles.card}>
+                      <Text style={styles.cardLabel}>Insurance</Text>
+                      <View style={styles.compareRow}>
+                        <CompareStat label="Dealer showed an Ace" value={String(detail.insurance.offered)} locked={isLocked} />
+                        <CompareStat label="You took insurance" value={String(detail.insurance.taken)} locked={isLocked} />
+                        <CompareStat
+                          label="Insurance net"
+                          value={fmtMoney(detail.insurance.net)}
+                          valueColor={netTone(detail.insurance.net)}
+                          locked={isLocked}
+                        />
+                      </View>
+                      <Text style={styles.cardFootnote}>
+                        Basic strategy never takes insurance: it's a side bet with about a 7% house edge in a six-deck game.
+                      </Text>
+                    </View>
+                  )}
+
+                  {detail.dealerBust && (
+                    <View style={styles.card}>
+                      <Text style={styles.cardLabel}>How often the dealer busted</Text>
+                      <Text style={styles.cardHint}>
+                        Among hands you tagged with how they ended, against the usual bust rate for those upcards
+                      </Text>
+                      <View style={styles.compareRow}>
+                        {detail.dealerBust.weak.sample > 0 && (
+                          <CompareStat
+                            label={`Dealer showing 2–6 (n=${detail.dealerBust.weak.sample})`}
+                            value={fmtPct(detail.dealerBust.weak.rate)}
+                            sub={`usual ~${detail.dealerBust.weak.expectedRate.toFixed(0)}%`}
+                            locked={isLocked}
+                          />
+                        )}
+                        {detail.dealerBust.strong.sample > 0 && (
+                          <CompareStat
+                            label={`Dealer showing 7–A (n=${detail.dealerBust.strong.sample})`}
+                            value={fmtPct(detail.dealerBust.strong.rate)}
+                            sub={`usual ~${detail.dealerBust.strong.expectedRate.toFixed(0)}%`}
+                            locked={isLocked}
+                          />
+                        )}
+                      </View>
+                      <Text style={styles.cardFootnote}>
+                        This is luck, not skill. It helps tell a cold run of cards apart from costly decisions.
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+
+              {isBlackjack && detail && detail.tableRules && (detail.tableRules.sixFiveHands > 0 || detail.tableRules.h17Hands > 0) && (
+                <View style={styles.card}>
+                  <Text style={styles.cardLabel}>Table rules you've played</Text>
+                  <View style={styles.compareRow}>
+                    <CompareStat
+                      label="Hands at 6:5 tables"
+                      value={fmtPct(detail.tableRules.sixFiveShare)}
+                      sub={`n=${detail.tableRules.sixFiveHands}`}
+                      locked={isLocked}
+                    />
+                    <CompareStat
+                      label="Dealer hits soft 17"
+                      value={fmtPct(detail.tableRules.h17Share)}
+                      sub={`n=${detail.tableRules.h17Hands}`}
+                      locked={isLocked}
+                    />
+                  </View>
+                  {!isLocked && detail.tableRules.sixFiveBlackjacks > 0 && (
+                    <View style={styles.insightNote}>
+                      <Ionicons name="alert-circle-outline" size={moderateScale(16)} color={COLORS.warning} />
+                      <Text style={styles.insightNoteText}>
+                        Your {detail.tableRules.sixFiveBlackjacks} blackjack{detail.tableRules.sixFiveBlackjacks === 1 ? '' : 's'} at 6:5
+                        tables paid {fmtDollar(detail.tableRules.sixFiveCost)} less than they would have at 3:2.
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.cardFootnote}>
+                    6:5 blackjack adds roughly 1.4% to the house edge; a dealer hitting soft 17 adds about 0.2%.
+                  </Text>
+                </View>
+              )}
+
               {/* Bet-size tier win rates */}
               {tiers && (
                 <View style={styles.card}>
@@ -645,7 +902,7 @@ export default function InsightsScreen({ route, navigation }) {
         </ScrollView>
         {isLocked && (
           <InsightsUnlockCta
-            subtitle="Conditional win rates, doubling performance, and leak detection — unlocked with Ante+."
+            subtitle="Your strategy mistakes, doubling decisions, and leak detection — unlocked with Ante+."
             onPress={() => navigation.navigate('AntePlus')}
           />
         )}
@@ -764,6 +1021,17 @@ const styles = StyleSheet.create({
     paddingVertical: moderateScale(14),
     marginTop: 8,
   },
+  // Free cards get the same lifted border as other featured surfaces.
+  freeCard: { borderColor: COLORS.primaryGlow },
+  proRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  proRowLabel: { fontSize: fluidFont(10), fontWeight: '700', color: COLORS.primary, letterSpacing: 0.8 },
+  mistakeRow: { paddingVertical: moderateScale(10) },
+  mistakeRowDivider: { borderTopWidth: 1, borderTopColor: COLORS.cardBorder },
+  mistakeTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mistakeTitle: { fontSize: fluidFont(13), fontWeight: '700', color: COLORS.textPrimary },
+  mistakeCount: { fontSize: fluidFont(13), fontWeight: '700', color: COLORS.warning, fontVariant: ['tabular-nums'] },
+  mistakeDetail: { fontSize: fluidFont(11), color: COLORS.textMuted, marginTop: 3, lineHeight: fluidFont(15) },
+
   copyReportBtnLocked: { backgroundColor: COLORS.textMuted },
   copyReportBtnText: { color: COLORS.textDark, fontWeight: '700', fontSize: fluidFont(14) },
   copyReportHint: {

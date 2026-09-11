@@ -26,6 +26,7 @@ import GeneralTrackerScreen from './screens/GeneralTrackerScreen';
 import InsightsScreen from './screens/InsightsScreen';
 import PokerInsightsScreen from './screens/PokerInsightsScreen';
 import SportsBettingInsightsScreen from './screens/SportsBettingInsightsScreen';
+import TableGameInsightsScreen from './screens/TableGameInsightsScreen';
 import LifetimeInsightsScreen from './screens/LifetimeInsightsScreen';
 import LegalScreen from './screens/LegalScreen';
 import ManageSubscriptionScreen from './screens/ManageSubscriptionScreen';
@@ -346,6 +347,7 @@ function AppContent({ navigationRef }) {
           <Stack.Screen name="Insights" component={InsightsScreen} />
           <Stack.Screen name="PokerInsights" component={PokerInsightsScreen} />
           <Stack.Screen name="SportsBettingInsights" component={SportsBettingInsightsScreen} />
+          <Stack.Screen name="TableGameInsights" component={TableGameInsightsScreen} />
           <Stack.Screen name="LifetimeInsights" component={LifetimeInsightsScreen} />
           <Stack.Screen name="Legal" component={LegalScreen} />
           <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />

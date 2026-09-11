@@ -700,7 +700,7 @@ export default function AnalyticsScreen({ navigation }) {
           >
             <View>
               <Text style={styles.insightLinkTitle}>Blackjack Insights</Text>
-              <Text style={styles.insightLinkSubtitle}>Streaks, bet sizing, and patterns</Text>
+              <Text style={styles.insightLinkSubtitle}>Strategy accuracy, doubling, and patterns</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
           </TouchableOpacity>
@@ -725,6 +725,30 @@ export default function AnalyticsScreen({ navigation }) {
             <View>
               <Text style={styles.insightLinkTitle}>Sports Betting Insights</Text>
               <Text style={styles.insightLinkSubtitle}>Odds edge, favorites vs. dogs, and leak detection</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.card, SHADOWS.card, styles.insightLinkCard]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('TableGameInsights', { gameType: 'Roulette' })}
+          >
+            <View>
+              <Text style={styles.insightLinkTitle}>Roulette Insights</Text>
+              <Text style={styles.insightLinkSubtitle}>House edge vs. luck, wheel choice, and bet types</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.card, SHADOWS.card, styles.insightLinkCard]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('TableGameInsights', { gameType: 'Baccarat' })}
+          >
+            <View>
+              <Text style={styles.insightLinkTitle}>Baccarat Insights</Text>
+              <Text style={styles.insightLinkSubtitle}>House edge vs. luck, Tie bets, and progressions</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
           </TouchableOpacity>
