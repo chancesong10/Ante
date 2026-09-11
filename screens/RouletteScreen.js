@@ -148,7 +148,7 @@ export default function RouletteScreen({ navigation }) {
           >
             {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}
             {currencySymbol}
-            {Math.abs(totalNet).toFixed(2)}
+            {Math.abs(totalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
 
           <View style={styles.statsRow}>
@@ -229,7 +229,7 @@ export default function RouletteScreen({ navigation }) {
               <Text style={styles.payoutPreviewLabel}>TO WIN</Text>
               <Text style={styles.payoutPreviewValue}>
                 +{currencySymbol}
-                {projectedPayout.toFixed(2)}
+                {projectedPayout.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </View>
           )}
@@ -290,7 +290,7 @@ export default function RouletteScreen({ navigation }) {
                   >
                     {s.netChange > 0 ? '+' : s.netChange < 0 ? '-' : ''}
                     {currencySymbol}
-                    {Math.abs(s.netChange).toFixed(2)}
+                    {Math.abs(s.netChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Text>
                 </View>
               </SwipeableRow>

@@ -112,7 +112,7 @@ function RecentSessionCard({
           >
             {privacyMode
               ? '••••••'
-              : `${net > 0 ? '+' : net < 0 ? '-' : ''}${currencySymbol}${Math.abs(net).toFixed(2)}`}
+              : `${net > 0 ? '+' : net < 0 ? '-' : ''}${currencySymbol}${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </Text>
           <Text style={styles.sessionDuration}>{session.durationFormatted}</Text>
         </View>
@@ -345,7 +345,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                 >
                   {privacyMode
                     ? '••••••'
-                    : `${activeNet > 0 ? '+' : activeNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(activeNet).toFixed(2)}`}
+                    : `${activeNet > 0 ? '+' : activeNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(activeNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </Text>
               </View>
               <View style={styles.activeHandsBadge}>
@@ -381,7 +381,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
           >
             {privacyMode
               ? '••••••'
-              : `${totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(totalNet).toFixed(2)}`}
+              : `${totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(totalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </Text>
 
           {/* Key Metrics Row */}

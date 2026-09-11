@@ -75,7 +75,7 @@ export default function ActiveSessionSlip({ session, currencySymbol = '$', priva
         <Text style={[styles.net, { color: tone }]} numberOfLines={1}>
           {privacyMode
             ? '••••'
-            : `${net > 0 ? '+' : net < 0 ? '-' : ''}${currencySymbol}${Math.abs(net).toFixed(2)}`}
+            : `${net > 0 ? '+' : net < 0 ? '-' : ''}${currencySymbol}${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         </Text>
       </TouchableOpacity>
 

@@ -93,7 +93,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
   const hasEnoughData = stats.totalSessions >= 5;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
+  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtDuration = (minutes) => {
     const total = Math.round(minutes);
     const h = Math.floor(total / 60);

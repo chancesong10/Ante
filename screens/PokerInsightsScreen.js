@@ -82,8 +82,8 @@ export default function PokerInsightsScreen({ navigation }) {
   const hasEnoughData = stats.totalHands >= 5;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
-  const fmtMoneyAbs = (v) => `${currencySymbol}${Math.abs(v).toFixed(2)}`;
+  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtMoneyAbs = (v) => `${currencySymbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtBB = (v) => (v === null || v === undefined ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)} bb`);
 
   const outcomes = stats.outcomeBreakdown;
@@ -169,8 +169,8 @@ export default function PokerInsightsScreen({ navigation }) {
     }
 
     lines.push('INVESTMENT AFTER OUTCOME');
-    lines.push(`After a winning hand: ${currencySymbol}${investAfter.avgInvestmentAfterWin.toFixed(2)}`);
-    lines.push(`After a losing hand: ${currencySymbol}${investAfter.avgInvestmentAfterLoss.toFixed(2)}`);
+    lines.push(`After a winning hand: ${currencySymbol}${investAfter.avgInvestmentAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    lines.push(`After a losing hand: ${currencySymbol}${investAfter.avgInvestmentAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     lines.push('');
 
     lines.push('STREAKS');
@@ -505,8 +505,8 @@ export default function PokerInsightsScreen({ navigation }) {
             {/* Investment After Outcome (Chasing) */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>INVESTMENT AFTER OUTCOME</Text>
-              <StatLine label="After a Winning Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterWin.toFixed(2)}`} locked={isLocked} />
-              <StatLine label="After a Losing Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterLoss.toFixed(2)}`} locked={isLocked} />
+              <StatLine label="After a Winning Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+              <StatLine label="After a Losing Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
               {!isLocked && chasesLosses && (
                 <View style={styles.insightNote}>
                   <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
@@ -594,8 +594,8 @@ export default function PokerInsightsScreen({ navigation }) {
                   ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average investment, hand to hand.`
                   : 'Not enough investment variation yet to score this.'}
               </Text>
-              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} locked={isLocked} />
-              <StatLine label="Investment Std. Deviation" value={`${currencySymbol}${vol.investmentStdDev.toFixed(2)}`} locked={isLocked} />
+              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+              <StatLine label="Investment Std. Deviation" value={`${currencySymbol}${vol.investmentStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
               <StatLine label="Sizing Consistency" value={vol.investmentConsistency !== null ? `${vol.investmentConsistency.toFixed(0)}/100` : '—'} locked={isLocked} />
             </View>
 

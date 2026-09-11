@@ -48,7 +48,7 @@ export function buildSessionCsv(sessions) {
     s.wins ?? 0,
     s.losses ?? 0,
     s.pushes ?? 0,
-    (s.netProfit ?? 0).toFixed(2),
+    (s.netProfit ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
   ]);
   const escape = (v) => {
     const str = String(v ?? '');
