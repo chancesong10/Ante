@@ -20,18 +20,41 @@ import SwipeableRow from '../components/SwipeableRow';
 import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
+import SegmentedPicker from '../components/SegmentedPicker';
+import { SessionMoneyStrip, SessionMixCard } from '../components/TableSessionSummary';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
-import { calcBaccaratNet, BACCARAT_TIE_ODDS as TIE_ODDS } from '../utils/tableGameOdds';
+import {
+  calcBaccaratNet,
+  baccaratHouseEdge,
+  isBaccaratTieOdds,
+  BACCARAT_TIE_ODDS,
+  BACCARAT_TIE_ODDS_OPTIONS,
+} from '../utils/tableGameOdds';
+import { calcSessionSummary } from '../utils/tableGameStatsEngine';
 
 const BET_ON = ['Player', 'Banker', 'Tie'];
 
+const TIE_ODDS_OPTIONS = BACCARAT_TIE_ODDS_OPTIONS.map((odds) => ({
+  value: odds,
+  label: `${odds}:1`,
+  sub: `${(baccaratHouseEdge('Tie', odds) * 100).toFixed(2)}% edge`,
+  accessibilityLabel: `Tie pays ${odds} to 1`,
+}));
+
 export default function BaccaratScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { currencySymbol = '$', quickChipsEnabled, quickChipPresets } = usePreferences();
+  const {
+    currencySymbol = '$',
+    quickChipsEnabled,
+    quickChipPresets,
+    baccaratTieOdds,
+    updatePreferences,
+  } = usePreferences();
   const chipPreset =
     Array.isArray(quickChipPresets?.baccarat) && quickChipPresets.baccarat.length > 0
       ? quickChipPresets.baccarat
       : DEFAULT_QUICK_CHIP_PRESETS.baccarat;
+  const tieOdds = isBaccaratTieOdds(baccaratTieOdds) ? baccaratTieOdds : BACCARAT_TIE_ODDS;
   const { user } = useAuth();
 
   const {
@@ -57,7 +80,7 @@ export default function BaccaratScreen({ navigation }) {
   const parsedBet = parseFloat(bet);
   const hasValidBet = bet !== '' && !isNaN(parsedBet) && parsedBet > 0;
   const canPush = betOn !== 'Tie';
-  const projectedWin = hasValidBet ? calcBaccaratNet(betOn, parsedBet, 'win') : 0;
+  const projectedWin = hasValidBet ? calcBaccaratNet(betOn, parsedBet, 'win', tieOdds) : 0;
 
   const handleChipPress = (chipValue) => {
     hapticLight();
@@ -75,7 +98,9 @@ export default function BaccaratScreen({ navigation }) {
       betOn,
       bet: parsedBet,
       outcome,
-      netChange: calcBaccaratNet(betOn, parsedBet, outcome),
+      netChange: calcBaccaratNet(betOn, parsedBet, outcome, tieOdds),
+      // The payout only matters to a Tie bet, so only Tie hands carry it.
+      ...(betOn === 'Tie' ? { tieOdds } : {}),
       createdAt: Date.now(),
     };
 
@@ -88,6 +113,7 @@ export default function BaccaratScreen({ navigation }) {
   const wins = hands.filter((h) => h.outcome === 'win').length;
   const losses = hands.filter((h) => h.outcome === 'loss').length;
   const pushes = hands.filter((h) => h.outcome === 'push').length;
+  const summary = calcSessionSummary(hands, 'Baccarat');
 
   const handleEndSessionPress = () => {
     hapticSuccess();
@@ -167,6 +193,8 @@ export default function BaccaratScreen({ navigation }) {
               <Text style={styles.statPillValue}>{hands.length}</Text>
             </View>
           </View>
+
+          <SessionMoneyStrip summary={summary} currencySymbol={currencySymbol} bestLabel="Best Hand" />
         </View>
 
         {/* BET ON SELECTOR */}
@@ -184,7 +212,7 @@ export default function BaccaratScreen({ navigation }) {
               >
                 <Text style={[styles.betOnText, active && styles.betOnTextActive]}>{b}</Text>
                 <Text style={[styles.betOnOdds, active && styles.betOnOddsActive]}>
-                  {b === 'Player' ? '1:1' : b === 'Banker' ? '0.95:1' : `${TIE_ODDS}:1`}
+                  {b === 'Player' ? '1:1' : b === 'Banker' ? '0.95:1' : `${tieOdds}:1`}
                 </Text>
               </TouchableOpacity>
             );
@@ -192,6 +220,18 @@ export default function BaccaratScreen({ navigation }) {
         </View>
         {betOn === 'Banker' && (
           <Text style={styles.commissionNote}>5% commission on Banker wins is applied automatically.</Text>
+        )}
+        {betOn === 'Tie' && (
+          <SegmentedPicker
+            label="Tie pays"
+            options={TIE_ODDS_OPTIONS}
+            value={tieOdds}
+            onChange={(odds) => {
+              hapticLight();
+              updatePreferences({ baccaratTieOdds: odds });
+            }}
+            style={{ marginTop: 8 }}
+          />
         )}
 
         {/* BET AMOUNT */}
@@ -269,6 +309,9 @@ export default function BaccaratScreen({ navigation }) {
           </View>
         </View>
 
+        {/* SESSION SIDE MIX */}
+        <SessionMixCard summary={summary} currencySymbol={currencySymbol} title="Session Side Mix" unit="hand" />
+
         {/* HAND HISTORY */}
         {hands.length > 0 && (
           <View style={styles.historySection}>
@@ -288,7 +331,10 @@ export default function BaccaratScreen({ navigation }) {
                 <View style={styles.historyRow}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.betTypeBadge}>
-                      <Text style={styles.betTypeBadgeText}>{h.betOn}</Text>
+                      <Text style={styles.betTypeBadgeText}>
+                        {h.betOn}
+                        {h.betOn === 'Tie' && isBaccaratTieOdds(h.tieOdds) ? ` · ${h.tieOdds}:1` : ''}
+                      </Text>
                     </View>
                     <Text style={styles.historySubtext}>
                       {currencySymbol}

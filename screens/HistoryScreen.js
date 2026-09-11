@@ -44,6 +44,13 @@ const getSessionTerms = (gameType) => {
   return { unit: 'Hands', recordLabel: 'Record (W-L-P)', recordKind: 'wlp' };
 };
 
+// " · 10-6 vs 9 · Hit" for a blackjack hand logged with cards; empty otherwise.
+const blackjackCardsLabel = (h) => {
+  if (!Array.isArray(h.playerCards) || !h.dealerUp) return '';
+  const play = h.action ? ` · ${h.action.charAt(0).toUpperCase()}${h.action.slice(1)}` : '';
+  return ` · ${h.playerCards.join('-')} vs ${h.dealerUp}${play}`;
+};
+
 const buildRecordText = (item) => {
   const wins = item.wins || 0;
   const losses = item.losses || 0;
@@ -304,7 +311,7 @@ const SessionRow = React.memo(function SessionRow({
                   if (h.type === 'split') {
                     return (
                       <View key={idx} style={styles.splitRowBox}>
-                        <Text style={styles.splitRowLabel}>Split pair</Text>
+                        <Text style={styles.splitRowLabel}>Split pair{blackjackCardsLabel(h)}</Text>
                         {h.hands.map((subHand, sIdx) => (
                           <View key={sIdx} style={styles.handRow}>
                             <Text style={styles.handDetail}>
@@ -352,7 +359,8 @@ const SessionRow = React.memo(function SessionRow({
                     return (
                       <View key={idx} style={styles.handRow}>
                         <Text style={styles.handDetail}>
-                          {h.betLabel || 'Bet'} · {h.odds}:1: {currencySymbol}
+                          {h.betLabel || 'Bet'} · {h.odds}:1
+                          {h.wheel === 'single' ? ' · 0 wheel' : h.wheel === 'double' ? ' · 00 wheel' : ''}: {currencySymbol}
                           {h.bet} — {(h.outcome || '').toUpperCase()}
                         </Text>
                         {handNet(h.netChange)}
@@ -364,7 +372,8 @@ const SessionRow = React.memo(function SessionRow({
                     return (
                       <View key={idx} style={styles.handRow}>
                         <Text style={styles.handDetail}>
-                          {h.betOn || 'Bet'}: {currencySymbol}
+                          {h.betOn || 'Bet'}
+                          {h.betOn === 'Tie' && (h.tieOdds === 8 || h.tieOdds === 9) ? ` (${h.tieOdds}:1)` : ''}: {currencySymbol}
                           {h.bet} — {(h.outcome || '').toUpperCase()}
                         </Text>
                         {handNet(h.netChange)}
@@ -377,7 +386,7 @@ const SessionRow = React.memo(function SessionRow({
                       <Text style={styles.handDetail}>
                         {h.matchup
                           ? `${h.matchup} (${h.betType}): ${currencySymbol}${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${(h.outcome || '').toUpperCase()}`
-                          : `${session.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''} — ${(h.outcome || '').toUpperCase()}`}
+                          : `${session.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''}${h.surrendered ? ' (surrender)' : ''}${h.insurance ? ' (insured)' : ''} — ${(h.outcome || '').toUpperCase()}${blackjackCardsLabel(h)}`}
                       </Text>
                       {handNet(h.netChange)}
                     </View>
