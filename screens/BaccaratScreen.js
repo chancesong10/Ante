@@ -146,7 +146,7 @@ export default function BaccaratScreen({ navigation }) {
           >
             {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}
             {currencySymbol}
-            {Math.abs(totalNet).toFixed(2)}
+            {Math.abs(totalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
 
           <View style={styles.statsRow}>
@@ -234,7 +234,7 @@ export default function BaccaratScreen({ navigation }) {
               <Text style={styles.payoutPreviewLabel}>TO WIN</Text>
               <Text style={styles.payoutPreviewValue}>
                 +{currencySymbol}
-                {projectedWin.toFixed(2)}
+                {projectedWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </View>
           )}
@@ -303,7 +303,7 @@ export default function BaccaratScreen({ navigation }) {
                   >
                     {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}
                     {currencySymbol}
-                    {Math.abs(h.netChange).toFixed(2)}
+                    {Math.abs(h.netChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Text>
                 </View>
               </SwipeableRow>

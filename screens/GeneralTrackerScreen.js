@@ -173,7 +173,7 @@ export default function GeneralTrackerScreen({ navigation }) {
               },
             ]}
           >
-            {hasValidNumbers ? `${liveNet > 0 ? '+' : liveNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(liveNet).toFixed(2)}` : '—'}
+            {hasValidNumbers ? `${liveNet > 0 ? '+' : liveNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(liveNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
           </Text>
           <Text style={styles.statsHint}>
             For slots, craps, keno, or anything you'd rather log simply

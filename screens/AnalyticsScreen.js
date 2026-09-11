@@ -83,7 +83,7 @@ export default function AnalyticsScreen({ navigation }) {
 
     const profitFactor =
       totalGrossLosses > 0
-        ? (totalGrossWins / totalGrossLosses).toFixed(2)
+        ? (totalGrossWins / totalGrossLosses).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : totalGrossWins > 0
         ? '∞'
         : '0.00';
@@ -544,7 +544,7 @@ export default function AnalyticsScreen({ navigation }) {
             >
               {privacyMode
                 ? '••••••'
-                : `${bestSession > 0 ? '+' : bestSession < 0 ? '-' : ''}${currencySymbol}${Math.abs(bestSession).toFixed(2)}`}
+                : `${bestSession > 0 ? '+' : bestSession < 0 ? '-' : ''}${currencySymbol}${Math.abs(bestSession).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
           </View>
 
@@ -558,7 +558,7 @@ export default function AnalyticsScreen({ navigation }) {
             >
               {privacyMode
                 ? '••••••'
-                : `${worstSession > 0 ? '+' : worstSession < 0 ? '-' : ''}${currencySymbol}${Math.abs(worstSession).toFixed(2)}`}
+                : `${worstSession > 0 ? '+' : worstSession < 0 ? '-' : ''}${currencySymbol}${Math.abs(worstSession).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
           </View>
 
@@ -576,7 +576,7 @@ export default function AnalyticsScreen({ navigation }) {
             >
               {privacyMode
                 ? '••••••'
-                : `${avgSessionNet > 0 ? '+' : avgSessionNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(avgSessionNet).toFixed(2)}`}
+                : `${avgSessionNet > 0 ? '+' : avgSessionNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(avgSessionNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
           </View>
 

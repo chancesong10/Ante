@@ -337,7 +337,7 @@ export default function BlackjackScreen({ navigation }) {
               },
             ]}
           >
-            {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(totalNet).toFixed(2)}
+            {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(totalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
 
           <View style={styles.statsRow}>
@@ -504,7 +504,7 @@ export default function BlackjackScreen({ navigation }) {
                               },
                             ]}
                           >
-                            {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(h.netChange).toFixed(2)}
+                            {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(h.netChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </Text>
                         </View>
                       ))}
@@ -523,7 +523,7 @@ export default function BlackjackScreen({ navigation }) {
                             },
                           ]}
                         >
-                          {groupNet > 0 ? '+' : groupNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(groupNet).toFixed(2)}
+                          {groupNet > 0 ? '+' : groupNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(groupNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </Text>
                       </View>
                     </View>
@@ -555,7 +555,7 @@ export default function BlackjackScreen({ navigation }) {
                         },
                       ]}
                     >
-                      {r.netChange > 0 ? '+' : r.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(r.netChange).toFixed(2)}
+                      {r.netChange > 0 ? '+' : r.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(r.netChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
                   </View>
                 </SwipeableRow>

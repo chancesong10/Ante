@@ -239,7 +239,7 @@ export default function SportsBettingScreen({ navigation }) {
               },
             ]}
           >
-            {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(totalNet).toFixed(2)}
+            {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(totalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
 
           <View style={styles.statsRow}>
@@ -427,7 +427,7 @@ export default function SportsBettingScreen({ navigation }) {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.payoutPreviewValue}>+{currencySymbol}{projectedPayout.toFixed(2)}</Text>
+              <Text style={styles.payoutPreviewValue}>+{currencySymbol}{projectedPayout.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </View>
           )}
 
@@ -491,7 +491,7 @@ export default function SportsBettingScreen({ navigation }) {
                            <>
                              <Text style={styles.pendingStatusText}>Pending</Text>
                              <Text style={styles.potentialPayoutText}>
-                               To win {currencySymbol}{calcPayout(b.bet, b.odds).toFixed(2)}
+                               To win {currencySymbol}{calcPayout(b.bet, b.odds).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                              </Text>
                            </>
                          ) : (
@@ -508,7 +508,7 @@ export default function SportsBettingScreen({ navigation }) {
                                },
                              ]}
                            >
-                             {b.netChange > 0 ? '+' : b.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(b.netChange).toFixed(2)}
+                             {b.netChange > 0 ? '+' : b.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(b.netChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </Text>
                          )}
                       </View>

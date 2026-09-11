@@ -21,7 +21,7 @@ export const formatMoney = (
   if (privacyMode) return '••••';
   const n = Number(value) || 0;
   const sign = signed ? (n > 0 ? '+' : n < 0 ? '−' : '') : '';
-  return `${sign}${currencySymbol}${Math.abs(n).toFixed(2)}`;
+  return `${sign}${currencySymbol}${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 // Hex (#RRGGBB) → rgba() so a solid accent can be used as a translucent tint.

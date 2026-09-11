@@ -63,7 +63,7 @@ export default function ResponsibleGamingAlertModal({
               STOP-LOSS THRESHOLD REACHED
             </Text>
             <Text style={styles.subtitle}>
-              Your live session outcome has dropped to {currencySymbol}{Math.abs(netOutcome).toFixed(2)}, crossing your {currencySymbol}{thresholdAmount} safety limit.
+              Your live session outcome has dropped to {currencySymbol}{Math.abs(netOutcome).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, crossing your {currencySymbol}{thresholdAmount} safety limit.
             </Text>
 
             {/* Live Metrics Grid */}
@@ -78,7 +78,7 @@ export default function ResponsibleGamingAlertModal({
                 >
                   {netOutcome < 0 ? '-' : '+'}
                   {currencySymbol}
-                  {Math.abs(netOutcome).toFixed(2)}
+                  {Math.abs(netOutcome).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </View>
 

@@ -87,7 +87,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
   const hasEnoughData = stats.totalHands >= 5;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
+  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const outcomes = stats.outcomeBreakdown;
   const returns = stats.returnStats;
@@ -182,8 +182,8 @@ export default function SportsBettingInsightsScreen({ navigation }) {
     lines.push('');
 
     lines.push('STAKE SIZE AFTER OUTCOME');
-    lines.push(`After a win: ${currencySymbol}${betSizeAfterOutcome.avgBetAfterWin.toFixed(2)}`);
-    lines.push(`After a loss: ${currencySymbol}${betSizeAfterOutcome.avgBetAfterLoss.toFixed(2)}`);
+    lines.push(`After a win: ${currencySymbol}${betSizeAfterOutcome.avgBetAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    lines.push(`After a loss: ${currencySymbol}${betSizeAfterOutcome.avgBetAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     lines.push('');
 
     if (tiers) {
@@ -450,8 +450,8 @@ export default function SportsBettingInsightsScreen({ navigation }) {
             {/* Stake Size After Outcome */}
             <View style={[styles.card, SHADOWS.card]}>
               <Text style={styles.cardLabel}>STAKE SIZE AFTER OUTCOME</Text>
-              <StatLine label="After a Win" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterWin.toFixed(2)}`} locked={isLocked} />
-              <StatLine label="After a Loss" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterLoss.toFixed(2)}`} locked={isLocked} />
+              <StatLine label="After a Win" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+              <StatLine label="After a Loss" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
               {!isLocked && chasesLosses && (
                 <View style={styles.insightNote}>
                   <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />

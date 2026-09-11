@@ -114,8 +114,8 @@ export default function InsightsScreen({ route, navigation }) {
     vol.riskLabel === 'Low' ? COLORS.success : vol.riskLabel === 'High' ? COLORS.danger : COLORS.warning;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : '−'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
-  const fmtDollar = (v) => `${currencySymbol}${v.toFixed(2)}`;
+  const fmtMoney = (v) => `${v >= 0 ? '+' : '−'}${currencySymbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtDollar = (v) => `${currencySymbol}${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const topLeak = stats.topLeak;
 
@@ -185,14 +185,14 @@ export default function InsightsScreen({ route, navigation }) {
 
     lines.push('RISK & VOLATILITY');
     lines.push(`Risk level: ${vol.riskLabel || 'Not enough data'}`);
-    lines.push(`Net result std. deviation: ${currencySymbol}${vol.netResultStdDev.toFixed(2)}`);
-    lines.push(`Bet size std. deviation: ${currencySymbol}${vol.betSizeStdDev.toFixed(2)}`);
+    lines.push(`Net result std. deviation: ${currencySymbol}${vol.netResultStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    lines.push(`Bet size std. deviation: ${currencySymbol}${vol.betSizeStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     lines.push(`Bet sizing consistency: ${vol.betSizeConsistency !== null ? `${vol.betSizeConsistency.toFixed(0)}/100` : '—'}`);
     lines.push('');
 
     lines.push('BET SIZE AFTER OUTCOME');
-    lines.push(`After a win: ${currencySymbol}${stats.avgBetAfterWin.toFixed(2)}`);
-    lines.push(`After a loss: ${currencySymbol}${stats.avgBetAfterLoss.toFixed(2)}`);
+    lines.push(`After a win: ${currencySymbol}${stats.avgBetAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    lines.push(`After a loss: ${currencySymbol}${stats.avgBetAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     lines.push('');
 
     if (dow) {
@@ -533,8 +533,8 @@ export default function InsightsScreen({ route, navigation }) {
                     ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average bet, hand to hand.`
                     : 'Not enough bet variation yet to score this.'}
                 </Text>
-                <StatLine label="Net result std. deviation" value={`${currencySymbol}${vol.netResultStdDev.toFixed(2)}`} locked={isLocked} />
-                <StatLine label="Bet size std. deviation" value={`${currencySymbol}${vol.betSizeStdDev.toFixed(2)}`} locked={isLocked} />
+                <StatLine label="Net result std. deviation" value={`${currencySymbol}${vol.netResultStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                <StatLine label="Bet size std. deviation" value={`${currencySymbol}${vol.betSizeStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
                 <StatLine
                   label="Bet sizing consistency"
                   value={vol.betSizeConsistency !== null ? `${vol.betSizeConsistency.toFixed(0)}/100` : '—'}
@@ -549,8 +549,8 @@ export default function InsightsScreen({ route, navigation }) {
               {/* Bet size after outcome */}
               <View style={styles.card}>
                 <Text style={styles.cardLabel}>Bet size after outcome</Text>
-                <StatLine label="After a win" value={`${currencySymbol}${stats.avgBetAfterWin.toFixed(2)}`} locked={isLocked} />
-                <StatLine label="After a loss" value={`${currencySymbol}${stats.avgBetAfterLoss.toFixed(2)}`} locked={isLocked} />
+                <StatLine label="After a win" value={`${currencySymbol}${stats.avgBetAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                <StatLine label="After a loss" value={`${currencySymbol}${stats.avgBetAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
                 {!isLocked && chasesLosses && (
                   <View style={styles.insightNote}>
                     <Ionicons name="alert-circle-outline" size={moderateScale(16)} color={COLORS.warning} />
