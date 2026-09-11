@@ -841,14 +841,17 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   // Recent session trajectory — diverging bars about a zero line.
-  trajChart: { paddingTop: SPACING.xs },
+  // Margin, not padding: padding would shift the absolutely positioned zero
+  // line's origin, so its offset would no longer match where the bars sit.
+  trajChart: { marginTop: SPACING.xs },
   // Spans the full width rather than being stitched from per-column segments,
-  // so it stays continuous through the gaps between bars.
+  // so it stays continuous through the gaps between bars. Centred exactly on
+  // the seam between the two halves, where every bar starts.
   trajZeroLine: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: TRAJ_HALF + moderateScale(4),
+    top: TRAJ_HALF - 0.5,
     height: 1,
     backgroundColor: COLORS.cardBorder,
   },
