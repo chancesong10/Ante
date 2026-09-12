@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, LAYOUT, TOUCH_TARGET } from '../constants/layout';
-import { netTone, formatMoney } from '../utils/format';
+import { netTone, formatMoney, formatAmount } from '../utils/format';
 import { Screen, ScreenHeader, Tappable, Rise, useReduceMotion } from '../components/ui';
 import { renderGameIcon, GameIconTile } from '../components/GameIcon';
 import { useVisibleSessionHistory } from '../context/SyncContext';
@@ -316,7 +316,7 @@ const SessionRow = React.memo(function SessionRow({
                           <View key={sIdx} style={styles.handRow}>
                             <Text style={styles.handDetail}>
                               Hand {sIdx + 1}: {currencySymbol}
-                              {subHand.bet}
+                              {formatAmount(subHand.bet)}
                               {subHand.doubled ? ' (2x)' : ''}
                               {subHand.blackjack ? ' (BJ)' : ''} — {(subHand.outcome || '').toUpperCase()}
                             </Text>
@@ -330,9 +330,9 @@ const SessionRow = React.memo(function SessionRow({
                   if (session.gameType === 'Poker' || h.gameType === 'Poker') {
                     const posStr = h.position ? ` (${h.position})` : '';
                     const betVal = h.heroInvestment !== undefined ? h.heroInvestment : h.bet;
-                    let label = `Hand ${idx + 1}${posStr}: Bet ${currencySymbol}${betVal}`;
+                    let label = `Hand ${idx + 1}${posStr}: Bet ${currencySymbol}${formatAmount(betVal)}`;
                     if (h.outcome === 'win') {
-                      label += ` | Pot ${currencySymbol}${h.pot || 0} — WON`;
+                      label += ` | Pot ${currencySymbol}${formatAmount(h.pot)} — WON`;
                     } else if (h.outcome === 'fold') {
                       const foldTag =
                         h.foldReason === 'bluffed'
@@ -342,9 +342,9 @@ const SessionRow = React.memo(function SessionRow({
                           : '';
                       label += ` (${h.streetFolded || 'Fold'}) — FOLD${foldTag}`;
                     } else if (h.outcome === 'split') {
-                      label += ` | Pot ${currencySymbol}${h.pot || 0} — SPLIT (${h.splitCount || 2}W)`;
+                      label += ` | Pot ${currencySymbol}${formatAmount(h.pot)} — SPLIT (${h.splitCount || 2}W)`;
                     } else {
-                      label += ` | Pot ${currencySymbol}${h.pot || 0} — LOST`;
+                      label += ` | Pot ${currencySymbol}${formatAmount(h.pot)} — LOST`;
                     }
 
                     return (
@@ -361,7 +361,7 @@ const SessionRow = React.memo(function SessionRow({
                         <Text style={styles.handDetail}>
                           {h.betLabel || 'Bet'} · {h.odds}:1
                           {h.wheel === 'single' ? ' · 0 wheel' : h.wheel === 'double' ? ' · 00 wheel' : ''}: {currencySymbol}
-                          {h.bet} — {(h.outcome || '').toUpperCase()}
+                          {formatAmount(h.bet)} — {(h.outcome || '').toUpperCase()}
                         </Text>
                         {handNet(h.netChange)}
                       </View>
@@ -374,7 +374,7 @@ const SessionRow = React.memo(function SessionRow({
                         <Text style={styles.handDetail}>
                           {h.betOn || 'Bet'}
                           {h.betOn === 'Tie' && (h.tieOdds === 8 || h.tieOdds === 9) ? ` (${h.tieOdds}:1)` : ''}: {currencySymbol}
-                          {h.bet} — {(h.outcome || '').toUpperCase()}
+                          {formatAmount(h.bet)} — {(h.outcome || '').toUpperCase()}
                         </Text>
                         {handNet(h.netChange)}
                       </View>
@@ -385,8 +385,8 @@ const SessionRow = React.memo(function SessionRow({
                     <View key={idx} style={styles.handRow}>
                       <Text style={styles.handDetail}>
                         {h.matchup
-                          ? `${h.matchup} (${h.betType}): ${currencySymbol}${h.bet} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${(h.outcome || '').toUpperCase()}`
-                          : `${session.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${h.bet}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''}${h.surrendered ? ' (surrender)' : ''}${h.insurance ? ' (insured)' : ''} — ${(h.outcome || '').toUpperCase()}${blackjackCardsLabel(h)}`}
+                          ? `${h.matchup} (${h.betType}): ${currencySymbol}${formatAmount(h.bet)} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${(h.outcome || '').toUpperCase()}`
+                          : `${session.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${formatAmount(h.bet)}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''}${h.surrendered ? ' (surrender)' : ''}${h.insurance ? ' (insured)' : ''} — ${(h.outcome || '').toUpperCase()}${blackjackCardsLabel(h)}`}
                       </Text>
                       {handNet(h.netChange)}
                     </View>

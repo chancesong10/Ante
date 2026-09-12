@@ -32,6 +32,7 @@ import {
   calcInsuranceNet,
 } from '../utils/blackjackStrategy';
 import { judgeRecord, calcStrategyAccuracy, hasCardDetail } from '../utils/blackjackDetailEngine';
+import { formatAmount } from '../utils/format';
 
 // Laid out like the table: dealer on top, you below, then your bet, your play
 // and the result. Card entry is opt-in from Options. With it off this is a
@@ -505,7 +506,7 @@ export default function BlackjackScreen({ navigation }) {
               <TouchableOpacity key={chip} style={styles.chipButton} onPress={() => handleSplitChipPress(which, chip)}>
                 <Text style={styles.chipText}>
                   {currencySymbol}
-                  {chip}
+                  {formatAmount(chip)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -709,7 +710,7 @@ export default function BlackjackScreen({ navigation }) {
                 <TouchableOpacity key={chip} style={styles.chipButton} onPress={() => handleChipPress(chip)}>
                   <Text style={styles.chipText}>
                     {currencySymbol}
-                    {chip}
+                    {formatAmount(chip)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -820,7 +821,7 @@ export default function BlackjackScreen({ navigation }) {
                         <View key={i} style={styles.historyRow}>
                           <Text style={styles.historyText}>
                             Hand {i + 1}: {currencySymbol}
-                            {h.bet}
+                            {formatAmount(h.bet)}
                             {h.doubled ? ' (2x)' : ''}
                             {h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
                           </Text>
@@ -849,7 +850,7 @@ export default function BlackjackScreen({ navigation }) {
                     <View style={{ flex: 1, marginRight: 8 }}>
                       <Text style={styles.historyText}>
                         {currencySymbol}
-                        {r.bet}
+                        {formatAmount(r.bet)}
                         {r.doubled ? ' (2x)' : ''}
                         {r.blackjack ? ' (BJ)' : ''}
                         {r.surrendered ? ' (surrender)' : ''}

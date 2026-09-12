@@ -18,6 +18,7 @@ import BankrollLineChart from '../components/BankrollLineChart';
 import { GameIconTile } from '../components/GameIcon';
 import CountUp from '../components/CountUp';
 import usePullToRefresh from '../components/usePullToRefresh';
+import { formatNumber } from '../utils/format';
 
 // Trajectory chart geometry. Each half is a fixed band; inside it a strip is
 // reserved for the value label so a full-height bar can never push its own
@@ -404,7 +405,7 @@ export default function AnalyticsScreen({ navigation }) {
                             <Text style={[styles.trajValue, { color: COLORS.success }]}>
                               {privacyMode
                                 ? '••'
-                                : `+${currencySymbol}${Math.abs(Math.round(net))}`}
+                                : `+${currencySymbol}${formatNumber(Math.abs(net), 0)}`}
                             </Text>
                           )}
                           {isPositive && (
@@ -432,7 +433,7 @@ export default function AnalyticsScreen({ navigation }) {
                             <Text style={[styles.trajValue, { color: COLORS.danger }]}>
                               {privacyMode
                                 ? '••'
-                                : `-${currencySymbol}${Math.abs(Math.round(net))}`}
+                                : `-${currencySymbol}${formatNumber(Math.abs(net), 0)}`}
                             </Text>
                           )}
                         </View>

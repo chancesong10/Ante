@@ -33,6 +33,7 @@ import {
   rouletteHouseEdge,
 } from '../utils/tableGameOdds';
 import { calcSessionSummary } from '../utils/tableGameStatsEngine';
+import { formatAmount } from '../utils/format';
 
 const BET_TYPES = ROULETTE_BET_TYPES;
 const betTypeById = getRouletteBetType;
@@ -257,7 +258,7 @@ export default function RouletteScreen({ navigation }) {
                     <TouchableOpacity key={chip} style={styles.stakeChip} onPress={() => handleChipPress(chip)}>
                       <Text style={styles.stakeChipText}>
                         {currencySymbol}
-                        {chip}
+                        {formatAmount(chip)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -325,7 +326,7 @@ export default function RouletteScreen({ navigation }) {
                     </View>
                     <Text style={styles.historySubtext}>
                       {currencySymbol}
-                      {s.bet}
+                      {formatAmount(s.bet)}
                     </Text>
                   </View>
                   <Text

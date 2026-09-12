@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, getGameColor } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
-import { useActiveSession } from '../context/SessionContext';
+import { useActiveSession, sessionHasContent } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
@@ -393,6 +393,7 @@ export default function StartSessionModal({
     endSessionWithFx({
       net,
       gameType: session.gameType,
+      saved: sessionHasContent(session),
       onCommit: () => endActiveSession(session.gameType),
     });
   };

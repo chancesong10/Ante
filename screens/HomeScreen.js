@@ -14,7 +14,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { useActiveSession, formatDuration } from '../context/SessionContext';
+import { useActiveSession, formatDuration, sessionHasContent } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -200,6 +200,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
     endSessionWithFx({
       net: liveNetOf(session),
       gameType: session.gameType,
+      saved: sessionHasContent(session),
       onCommit: () => endActiveSession(session.gameType),
     });
   };

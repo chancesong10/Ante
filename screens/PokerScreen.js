@@ -24,6 +24,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
+import { formatAmount } from '../utils/format';
 
 const STREETS = [
   { key: 'preflop', label: 'Pre-Flop', short: 'Pre' },
@@ -823,7 +824,7 @@ export default function PokerScreen({ navigation }) {
                 activeOpacity={0.75}
               >
                 <Text style={styles.blindCallBtnBlindText}>
-                  SB +{currencySymbol}{sbVal}
+                  SB +{currencySymbol}{formatAmount(sbVal)}
                 </Text>
               </TouchableOpacity>
             )}
@@ -834,7 +835,7 @@ export default function PokerScreen({ navigation }) {
                 activeOpacity={0.75}
               >
                 <Text style={styles.blindCallBtnBlindText}>
-                  BB +{currencySymbol}{bbVal}
+                  BB +{currencySymbol}{formatAmount(bbVal)}
                 </Text>
               </TouchableOpacity>
             )}
@@ -852,7 +853,7 @@ export default function PokerScreen({ navigation }) {
                   canCall ? styles.blindCallBtnCallText : styles.blindCallBtnCallTextDisabled
                 }
               >
-                Call {currencySymbol}{currentStreetMaxBet}
+                Call {currencySymbol}{formatAmount(currentStreetMaxBet)}
               </Text>
             </TouchableOpacity>
           </View>
@@ -868,7 +869,7 @@ export default function PokerScreen({ navigation }) {
                 <View style={styles.chipInnerCircle}>
                   <Text style={styles.chipText}>
                     +{currencySymbol}
-                    {chip}
+                    {formatAmount(chip)}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -1407,9 +1408,9 @@ export default function PokerScreen({ navigation }) {
           <View style={styles.blindsHeaderPill}>
             <Text style={styles.blindsHeaderText}>
               {blindMode === 'both'
-                ? `STAKES: ${currencySymbol}${smallBlind} / ${currencySymbol}${bigBlind}`
+                ? `STAKES: ${currencySymbol}${formatAmount(smallBlind)} / ${currencySymbol}${formatAmount(bigBlind)}`
                 : blindMode === 'big'
-                ? `STAKES: BB ${currencySymbol}${bigBlind}`
+                ? `STAKES: BB ${currencySymbol}${formatAmount(bigBlind)}`
                 : 'CASUAL / NO BLINDS'}
             </Text>
           </View>
@@ -1554,7 +1555,7 @@ export default function PokerScreen({ navigation }) {
                           )}
                         </View>
                         <Text style={styles.historySubtitle}>
-                          Bet: {currencySymbol}{h.heroInvestment || 0} • Pot: {currencySymbol}{h.pot || 0}
+                          Bet: {currencySymbol}{formatAmount(h.heroInvestment)} • Pot: {currencySymbol}{formatAmount(h.pot)}
                         </Text>
                       </View>
 
@@ -1588,10 +1589,10 @@ export default function PokerScreen({ navigation }) {
                         <View style={styles.expandedDivider} />
                         <Text style={styles.expandedBreakdownTitle}>Street Investments:</Text>
                         <View style={styles.streetGrid}>
-                          <Text style={styles.streetGridItem}>Pre-Flop: {currencySymbol}{h.streets.preflop || 0}</Text>
-                          <Text style={styles.streetGridItem}>Flop: {currencySymbol}{h.streets.flop || 0}</Text>
-                          <Text style={styles.streetGridItem}>Turn: {currencySymbol}{h.streets.turn || 0}</Text>
-                          <Text style={styles.streetGridItem}>River: {currencySymbol}{h.streets.river || 0}</Text>
+                          <Text style={styles.streetGridItem}>Pre-Flop: {currencySymbol}{formatAmount(h.streets.preflop)}</Text>
+                          <Text style={styles.streetGridItem}>Flop: {currencySymbol}{formatAmount(h.streets.flop)}</Text>
+                          <Text style={styles.streetGridItem}>Turn: {currencySymbol}{formatAmount(h.streets.turn)}</Text>
+                          <Text style={styles.streetGridItem}>River: {currencySymbol}{formatAmount(h.streets.river)}</Text>
                         </View>
                       </View>
                     )}

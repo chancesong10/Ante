@@ -4,6 +4,7 @@ import Svg, { Path, Line, Circle, ClipPath, Rect, Defs, Text as SvgText, G } fro
 import { COLORS } from '../constants/theme';
 import { fluidFont } from '../constants/layout';
 import { useReduceMotion } from './ui';
+import { formatNumber } from '../utils/format';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
@@ -151,7 +152,7 @@ function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false
     series,
   } = chart;
 
-  const fmt = (v) => (privacyMode ? '••••' : `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(0)}`);
+  const fmt = (v) => (privacyMode ? '••••' : `${v >= 0 ? '+' : '-'}${currencySymbol}${formatNumber(Math.abs(v), 0)}`);
   const fmtFull = (v) => (privacyMode ? '••••••' : `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
   const firstDate = sessions[0]?.startTime ? fmtDate(sessions[0].startTime) : 'Start';

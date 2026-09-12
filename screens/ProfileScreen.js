@@ -33,6 +33,7 @@ import { usePurchases } from '../context/PurchasesContext';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { getOrCreateDeviceId } from '../services/storageService';
 import { exportSessionsCsv } from '../utils/exportSessions';
+import { formatAmount } from '../utils/format';
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
 // the common four stay at the top of a long list. Dollar-family currencies
@@ -886,7 +887,7 @@ export default function ProfileScreen({ navigation }) {
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>Session Loss Alert</Text>
               <Text style={styles.menuSubtitle}>
-                {stopLossAlert ? `Active warning at ${currencySymbol}${stopLossAmount}` : 'No threshold configured'}
+                {stopLossAlert ? `Active warning at ${currencySymbol}${formatAmount(stopLossAmount)}` : 'No threshold configured'}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />

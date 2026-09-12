@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { computeTableGameInsights } from '../utils/tableGameStatsEngine';
 import { rouletteHouseEdge, baccaratHouseEdge } from '../utils/tableGameOdds';
+import { formatAmount, formatNumber } from '../utils/format';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
 import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
@@ -116,11 +117,10 @@ export default function TableGameInsightsScreen({ route, navigation }) {
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
   const fmtEdge = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(2)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(2)}`;
-  const fmtDollar = (v) => `${currencySymbol}${Math.abs(v).toFixed(2)}`;
-  const fmtWhole = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toFixed(0)}`;
-  const fmtAmount = (v) =>
-    `${currencySymbol}${Math.abs(v - Math.round(v)) < 0.005 ? Math.round(v) : v.toFixed(2)}`;
+  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${formatNumber(Math.abs(v))}`;
+  const fmtDollar = (v) => `${currencySymbol}${formatNumber(Math.abs(v))}`;
+  const fmtWhole = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${formatNumber(Math.abs(v), 0)}`;
+  const fmtAmount = (v) => `${currencySymbol}${formatAmount(v)}`;
   const toneOf = (v) => (v > 0 ? COLORS.success : v < 0 ? COLORS.danger : COLORS.textPrimary);
 
   const outcomes = stats.outcomeBreakdown;

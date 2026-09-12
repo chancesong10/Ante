@@ -46,14 +46,16 @@ export function SessionEndFxProvider({ children, onNavigate }) {
     }
     busyRef.current = true;
     commitRef.current = next.onCommit;
-    setFx({ id: Math.random().toString(), net: next.net, gameType: next.gameType });
+    setFx({ id: Math.random().toString(), net: next.net, gameType: next.gameType, saved: next.saved });
   }, []);
 
   // Called by a tracker screen instead of ending the session directly.
   // `onCommit` is what actually ends it, deferred until the wash hides it.
+  // `saved` is false for a session with nothing in it: endActiveSession drops
+  // those rather than saving them, so the wash still plays but says so.
   const endSessionWithFx = useCallback(
-    ({ net = 0, gameType = null, onCommit = null }) => {
-      queueRef.current.push({ net, gameType, onCommit });
+    ({ net = 0, gameType = null, onCommit = null, saved = true }) => {
+      queueRef.current.push({ net, gameType, onCommit, saved });
       if (!busyRef.current) playNext();
     },
     [playNext]

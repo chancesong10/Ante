@@ -211,7 +211,9 @@ export default function SessionEndOverlay({
           {formatMoney(net, currencySymbol, privacyMode)}
         </Text>
         <View style={styles.rule} />
-        <Text style={styles.caption}>SESSION SAVED TO HISTORY</Text>
+        <Text style={styles.caption}>
+          {fx.saved === false ? 'NOTHING LOGGED · NOT SAVED' : 'SESSION SAVED TO HISTORY'}
+        </Text>
       </Animated.View>
     </Animated.View>
   );
