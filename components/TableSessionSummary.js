@@ -2,14 +2,15 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { formatAmount, formatNumber } from '../utils/format';
 
 // Live session figures shared by the roulette and baccarat trackers. Both
 // take a summary from calcSessionSummary (utils/tableGameStatsEngine).
 
-// Whole amounts stay whole ("$25"); anything with cents keeps them.
-const amount = (v) => (Math.abs(v - Math.round(v)) < 0.005 ? String(Math.round(v)) : v.toFixed(2));
-const signed = (v, symbol) => `${v > 0 ? '+' : v < 0 ? '-' : ''}${symbol}${Math.abs(v).toFixed(2)}`;
-const signedWhole = (v, symbol) => `${v > 0 ? '+' : v < 0 ? '-' : ''}${symbol}${Math.abs(v).toFixed(0)}`;
+// Whole amounts stay whole ("$1,000"); anything with cents keeps them.
+const amount = formatAmount;
+const signed = (v, symbol) => `${v > 0 ? '+' : v < 0 ? '-' : ''}${symbol}${formatNumber(Math.abs(v))}`;
+const signedWhole = (v, symbol) => `${v > 0 ? '+' : v < 0 ? '-' : ''}${symbol}${formatNumber(Math.abs(v), 0)}`;
 const toneOf = (v) => (v > 0 ? COLORS.success : v < 0 ? COLORS.danger : COLORS.textPrimary);
 
 // Sits under the net outcome: money across the felt, the typical bet, the best

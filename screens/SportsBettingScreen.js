@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
+import { formatAmount } from '../utils/format';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
 const BET_TYPES = ['Moneyline', 'Spread', 'Total', 'Parlay', 'Prop'];
@@ -482,7 +483,7 @@ export default function SportsBettingScreen({ navigation }) {
                           {b.matchup}
                         </Text>
                         <Text style={styles.historySubtext}>
-                          {currencySymbol}{b.bet} @ {b.odds > 0 ? '+' : ''}{b.odds}
+                          {currencySymbol}{formatAmount(b.bet)} @ {b.odds > 0 ? '+' : ''}{b.odds}
                           {b.sport ? ` • ${b.sport}` : ''}
                         </Text>
                       </View>

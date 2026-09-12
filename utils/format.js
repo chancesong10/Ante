@@ -24,6 +24,18 @@ export const formatMoney = (
   return `${sign}${currencySymbol}${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+// A number with thousands separators at a fixed precision, for amounts where
+// the caller renders the currency symbol and sign itself.
+export const formatNumber = (value, decimals = 2) =>
+  (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
+// An amount as a player entered it — a bet, a chip, a blind: whole amounts
+// stay whole ("1,000") and anything with cents keeps two places ("12.50").
+export const formatAmount = (value) => {
+  const n = Number(value) || 0;
+  return formatNumber(n, Math.abs(n - Math.round(n)) < 0.005 ? 0 : 2);
+};
+
 // Hex (#RRGGBB) → rgba() so a solid accent can be used as a translucent tint.
 // Passes non-hex values through untouched.
 export const hexToRgba = (hex, alpha) => {

@@ -31,6 +31,7 @@ import {
   BACCARAT_TIE_ODDS_OPTIONS,
 } from '../utils/tableGameOdds';
 import { calcSessionSummary } from '../utils/tableGameStatsEngine';
+import { formatAmount } from '../utils/format';
 
 const BET_ON = ['Player', 'Banker', 'Tie'];
 
@@ -260,7 +261,7 @@ export default function BaccaratScreen({ navigation }) {
                     <TouchableOpacity key={chip} style={styles.stakeChip} onPress={() => handleChipPress(chip)}>
                       <Text style={styles.stakeChipText}>
                         {currencySymbol}
-                        {chip}
+                        {formatAmount(chip)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -338,7 +339,7 @@ export default function BaccaratScreen({ navigation }) {
                     </View>
                     <Text style={styles.historySubtext}>
                       {currencySymbol}
-                      {h.bet}
+                      {formatAmount(h.bet)}
                     </Text>
                   </View>
                   <Text

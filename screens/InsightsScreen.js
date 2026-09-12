@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, LAYOUT } from '../constants/layout';
-import { netTone } from '../utils/format';
+import { netTone, formatNumber } from '../utils/format';
 import { NavBar, Tappable } from '../components/ui';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -244,9 +244,9 @@ export default function InsightsScreen({ route, navigation }) {
 
     if (tiers) {
       lines.push('WIN RATE BY BET SIZE (pushes excluded from rate)');
-      lines.push(`Small (avg ${currencySymbol}${tiers.small.avgBet.toFixed(0)}, n=${tiers.small.sample}): ${fmtPct(tiers.small.winRate)}`);
-      lines.push(`Medium (avg ${currencySymbol}${tiers.medium.avgBet.toFixed(0)}, n=${tiers.medium.sample}): ${fmtPct(tiers.medium.winRate)}`);
-      lines.push(`Large (avg ${currencySymbol}${tiers.large.avgBet.toFixed(0)}, n=${tiers.large.sample}): ${fmtPct(tiers.large.winRate)}`);
+      lines.push(`Small (avg ${currencySymbol}${formatNumber(tiers.small.avgBet, 0)}, n=${tiers.small.sample}): ${fmtPct(tiers.small.winRate)}`);
+      lines.push(`Medium (avg ${currencySymbol}${formatNumber(tiers.medium.avgBet, 0)}, n=${tiers.medium.sample}): ${fmtPct(tiers.medium.winRate)}`);
+      lines.push(`Large (avg ${currencySymbol}${formatNumber(tiers.large.avgBet, 0)}, n=${tiers.large.sample}): ${fmtPct(tiers.large.winRate)}`);
       lines.push('');
     }
 
@@ -746,17 +746,17 @@ export default function InsightsScreen({ route, navigation }) {
                   <Text style={styles.cardLabel}>Win rate by bet size</Text>
                   <Text style={styles.cardHint}>Based on your own small / medium / large bet ranges</Text>
                   <StatLine
-                    label={`Small (avg ${currencySymbol}${tiers.small.avgBet.toFixed(0)}, n=${tiers.small.sample})`}
+                    label={`Small (avg ${currencySymbol}${formatNumber(tiers.small.avgBet, 0)}, n=${tiers.small.sample})`}
                     value={fmtPct(tiers.small.winRate)}
                     locked={isLocked}
                   />
                   <StatLine
-                    label={`Medium (avg ${currencySymbol}${tiers.medium.avgBet.toFixed(0)}, n=${tiers.medium.sample})`}
+                    label={`Medium (avg ${currencySymbol}${formatNumber(tiers.medium.avgBet, 0)}, n=${tiers.medium.sample})`}
                     value={fmtPct(tiers.medium.winRate)}
                     locked={isLocked}
                   />
                   <StatLine
-                    label={`Large (avg ${currencySymbol}${tiers.large.avgBet.toFixed(0)}, n=${tiers.large.sample})`}
+                    label={`Large (avg ${currencySymbol}${formatNumber(tiers.large.avgBet, 0)}, n=${tiers.large.sample})`}
                     value={fmtPct(tiers.large.winRate)}
                     locked={isLocked}
                   />
