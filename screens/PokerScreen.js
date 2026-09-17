@@ -25,6 +25,7 @@ import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 import { formatAmount } from '../utils/format';
+import TrackerGuide from '../components/TrackerGuide';
 
 const STREETS = [
   { key: 'preflop', label: 'Pre-Flop', short: 'Pre' },
@@ -631,6 +632,7 @@ export default function PokerScreen({ navigation }) {
           >
             <Ionicons name="close" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
+          <TrackerGuide gameType="Poker" navigation={navigation} />
           <View style={styles.navTitleContainer}>
             <MaterialCommunityIcons name="cards-playing-outline" size={20} color={COLORS.primary} />
             <Text style={styles.navTitle}>Poker Setup</Text>
@@ -1378,6 +1380,7 @@ export default function PokerScreen({ navigation }) {
         <TouchableOpacity style={styles.backBtn} onPress={handleLeaveSession}>
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
+        <TrackerGuide gameType="Poker" navigation={navigation} />
 
         <View style={styles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />

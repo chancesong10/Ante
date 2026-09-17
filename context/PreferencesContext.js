@@ -59,6 +59,12 @@ const DEFAULT_PREFERENCES = {
   // Whether the Blackjack tracker shows card entry (dealer upcard and your two
   // cards). Off by default, so the tracker opens as a quick bet-and-result log.
   blackjackCardEntry: false,
+  // Which trackers have had their ⓘ guide opened at least once, keyed by
+  // gameType. Drives the pulse on the guide button: it breathes until the
+  // guide has been seen for that game, then stays quiet for good. A map
+  // rather than one flag so opening Blackjack's guide doesn't silently
+  // mark Poker's as read.
+  trackerGuidesSeen: {},
 };
 
 export function PreferencesProvider({ children }) {
@@ -141,6 +147,18 @@ export function PreferencesProvider({ children }) {
     }));
   }, []);
 
+  // Marks one tracker's guide as seen, leaving the others alone.
+  const markTrackerGuideSeen = useCallback((gameType) => {
+    if (!gameType) return;
+    setPreferences((prev) => {
+      if (prev.trackerGuidesSeen?.[gameType]) return prev; // already seen, no write
+      return {
+        ...prev,
+        trackerGuidesSeen: { ...(prev.trackerGuidesSeen || {}), [gameType]: true },
+      };
+    });
+  }, []);
+
   const resetPreferences = useCallback(() => {
     setPreferences(DEFAULT_PREFERENCES);
   }, []);
@@ -156,9 +174,10 @@ export function PreferencesProvider({ children }) {
       updatePreferences,
       setQuickChipsEnabled,
       setQuickChipPreset,
+      markTrackerGuideSeen,
       resetPreferences,
     }),
-    [preferences, isLoaded, updatePreferences, setQuickChipsEnabled, setQuickChipPreset, resetPreferences]
+    [preferences, isLoaded, updatePreferences, setQuickChipsEnabled, setQuickChipPreset, markTrackerGuideSeen, resetPreferences]
   );
 
   return (

@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
+import TrackerGuide from '../components/TrackerGuide';
 
 export default function GeneralTrackerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -132,6 +133,7 @@ export default function GeneralTrackerScreen({ navigation }) {
         <TouchableOpacity style={styles.backBtn} onPress={handleDiscardPress}>
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
+        <TrackerGuide gameType="General" navigation={navigation} />
 
         <View style={styles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />

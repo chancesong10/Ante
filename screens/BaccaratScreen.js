@@ -32,6 +32,7 @@ import {
 } from '../utils/tableGameOdds';
 import { calcSessionSummary } from '../utils/tableGameStatsEngine';
 import { formatAmount } from '../utils/format';
+import TrackerGuide from '../components/TrackerGuide';
 
 const BET_ON = ['Player', 'Banker', 'Tie'];
 
@@ -142,6 +143,7 @@ export default function BaccaratScreen({ navigation }) {
         >
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
+        <TrackerGuide gameType="Baccarat" navigation={navigation} />
         <View style={styles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />
           <Text style={[styles.navTitle, { marginLeft: 8 }]}>Baccarat Tracker</Text>

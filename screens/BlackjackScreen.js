@@ -33,6 +33,7 @@ import {
 } from '../utils/blackjackStrategy';
 import { judgeRecord, calcStrategyAccuracy, hasCardDetail } from '../utils/blackjackDetailEngine';
 import { formatAmount } from '../utils/format';
+import TrackerGuide from '../components/TrackerGuide';
 
 // Laid out like the table: dealer on top, you below, then your bet, your play
 // and the result. Card entry is opt-in from Options. With it off this is a
@@ -612,6 +613,7 @@ export default function BlackjackScreen({ navigation }) {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}>
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
+        <TrackerGuide gameType="Blackjack" navigation={navigation} />
 
         <View style={styles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />

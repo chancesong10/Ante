@@ -24,6 +24,7 @@ import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 import { formatAmount } from '../utils/format';
+import TrackerGuide from '../components/TrackerGuide';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
 const BET_TYPES = ['Moneyline', 'Spread', 'Total', 'Parlay', 'Prop'];
@@ -201,6 +202,7 @@ export default function SportsBettingScreen({ navigation }) {
         >
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
+        <TrackerGuide gameType="Sports Betting" navigation={navigation} />
         <View style={styles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />
           <Text style={[styles.navTitle, { marginLeft: 8 }]}>Bet Slip Tracker</Text>
