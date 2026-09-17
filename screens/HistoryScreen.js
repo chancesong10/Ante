@@ -309,89 +309,83 @@ const SessionRow = React.memo(function SessionRow({
                   Logged {terms.unit.toLowerCase()} ({handRecords.length})
                 </Text>
                 {handRecords.map((h, idx) => {
-                  if (h.type === 'split') {
-                    return (
-                      <View key={idx} style={styles.splitRowBox}>
-                        <Text style={styles.splitRowLabel}>Split pair{blackjackCardsLabel(h)}</Text>
-                        {h.hands.map((subHand, sIdx) => (
-                          <View key={sIdx} style={styles.handRow}>
-                            <Text style={styles.handDetail}>
-                              Hand {sIdx + 1}: {currencySymbol}
-                              {formatAmount(subHand.bet)}
-                              {subHand.doubled ? ' (2x)' : ''}
-                              {subHand.blackjack ? ' (BJ)' : ''} — {(subHand.outcome || '').toUpperCase()}
-                            </Text>
-                            {handNet(subHand.netChange)}
-                          </View>
-                        ))}
-                      </View>
-                    );
-                  }
+                  const renderHandData = (hand, index, isSub = false) => {
+                    let title = isSub ? `Hand ${index + 1}` : session.gameType === 'Sports Betting' ? `Bet ${index + 1}` : `Hand ${index + 1}`;
+                    let betVal = hand.heroInvestment !== undefined ? hand.heroInvestment : hand.bet;
+                    let betStr = `${currencySymbol}${formatAmount(betVal)}`;
+                    
+                    if (hand.doubled) betStr += ' (2x)';
+                    if (hand.blackjack) betStr += ' (BJ)';
+                    if (hand.surrendered) betStr += ' (Surrender)';
+                    if (hand.insurance) betStr += ' (Insured)';
+                    if (hand.odds) betStr += ` @ ${hand.odds > 0 ? '+' : ''}${hand.odds}`;
+                    
+                    let playStr = null;
+                    if (session.gameType === 'Poker' || hand.gameType === 'Poker') {
+                      if (hand.position) title += ` (${hand.position})`;
+                      if (hand.pot !== undefined) playStr = `Pot: ${currencySymbol}${formatAmount(hand.pot)}`;
+                    } else if (session.gameType === 'Roulette') {
+                      playStr = hand.betLabel || 'Bet';
+                      if (hand.wheel === 'single') playStr += ' (0)';
+                      if (hand.wheel === 'double') playStr += ' (00)';
+                    } else if (session.gameType === 'Baccarat') {
+                      playStr = hand.betOn || 'Bet';
+                      if (hand.betOn === 'Tie' && (hand.tieOdds === 8 || hand.tieOdds === 9)) playStr += ` (${hand.tieOdds}:1)`;
+                    } else if (hand.matchup) {
+                      title = hand.matchup;
+                      playStr = hand.betType;
+                    }
+                    
+                    const cards = blackjackCardsLabel(hand);
+                    if (cards) {
+                      playStr = (playStr ? playStr + ' · ' : '') + cards.replace(' · ', '').trim();
+                    }
 
-                  if (session.gameType === 'Poker' || h.gameType === 'Poker') {
-                    const posStr = h.position ? ` (${h.position})` : '';
-                    const betVal = h.heroInvestment !== undefined ? h.heroInvestment : h.bet;
-                    let label = `Hand ${idx + 1}${posStr}: Bet ${currencySymbol}${formatAmount(betVal)}`;
-                    if (h.outcome === 'win') {
-                      label += ` | Pot ${currencySymbol}${formatAmount(h.pot)} — WON`;
-                    } else if (h.outcome === 'fold') {
-                      const foldTag =
-                        h.foldReason === 'bluffed'
-                          ? ' [BLUFFED]'
-                          : h.foldReason === 'good_fold'
-                          ? ' [GOOD FOLD]'
-                          : '';
-                      label += ` (${h.streetFolded || 'Fold'}) — FOLD${foldTag}`;
-                    } else if (h.outcome === 'split') {
-                      label += ` | Pot ${currencySymbol}${formatAmount(h.pot)} — SPLIT (${h.splitCount || 2}W)`;
-                    } else {
-                      label += ` | Pot ${currencySymbol}${formatAmount(h.pot)} — LOST`;
+                    let outcomeStr = (hand.outcome || '').toUpperCase();
+                    if (hand.outcome === 'fold') {
+                      const foldTag = hand.foldReason === 'bluffed' ? ' [BLUFFED]' : hand.foldReason === 'good_fold' ? ' [GOOD FOLD]' : '';
+                      outcomeStr = `FOLD${foldTag}`;
+                      if (hand.streetFolded) outcomeStr += ` (${hand.streetFolded})`;
+                    } else if (hand.outcome === 'split' && hand.splitCount) {
+                      outcomeStr = `SPLIT (${hand.splitCount}W)`;
                     }
 
                     return (
-                      <View key={idx} style={styles.handRow}>
-                        <Text style={styles.handDetail}>{label}</Text>
-                        {handNet(h.netChange)}
+                      <View key={isSub ? `sub-${index}` : index} style={styles.structuredHandBox}>
+                        <View style={styles.structuredHandHeader}>
+                          <Text style={styles.structuredHandTitle}>{title}</Text>
+                          {handNet(hand.netChange)}
+                        </View>
+                        <View style={styles.structuredHandGrid}>
+                          <View style={styles.structuredHandCol}>
+                            <Text style={styles.structuredHandLabel}>BET</Text>
+                            <Text style={styles.structuredHandValue}>{betStr}</Text>
+                          </View>
+                          {playStr && (
+                            <View style={styles.structuredHandCol}>
+                              <Text style={styles.structuredHandLabel}>PLAY</Text>
+                              <Text style={styles.structuredHandValue}>{playStr}</Text>
+                            </View>
+                          )}
+                          <View style={styles.structuredHandCol}>
+                            <Text style={styles.structuredHandLabel}>OUTCOME</Text>
+                            <Text style={styles.structuredHandValue}>{outcomeStr}</Text>
+                          </View>
+                        </View>
                       </View>
                     );
-                  }
+                  };
 
-                  if (session.gameType === 'Roulette') {
+                  if (h.type === 'split') {
                     return (
-                      <View key={idx} style={styles.handRow}>
-                        <Text style={styles.handDetail}>
-                          {h.betLabel || 'Bet'} · {h.odds}:1
-                          {h.wheel === 'single' ? ' · 0 wheel' : h.wheel === 'double' ? ' · 00 wheel' : ''}: {currencySymbol}
-                          {formatAmount(h.bet)} — {(h.outcome || '').toUpperCase()}
-                        </Text>
-                        {handNet(h.netChange)}
+                      <View key={idx} style={styles.splitGroup}>
+                        <Text style={styles.splitGroupLabel}>Split pair{blackjackCardsLabel(h)}</Text>
+                        {h.hands.map((subHand, sIdx) => renderHandData(subHand, sIdx, true))}
                       </View>
                     );
                   }
 
-                  if (session.gameType === 'Baccarat') {
-                    return (
-                      <View key={idx} style={styles.handRow}>
-                        <Text style={styles.handDetail}>
-                          {h.betOn || 'Bet'}
-                          {h.betOn === 'Tie' && (h.tieOdds === 8 || h.tieOdds === 9) ? ` (${h.tieOdds}:1)` : ''}: {currencySymbol}
-                          {formatAmount(h.bet)} — {(h.outcome || '').toUpperCase()}
-                        </Text>
-                        {handNet(h.netChange)}
-                      </View>
-                    );
-                  }
-
-                  return (
-                    <View key={idx} style={styles.handRow}>
-                      <Text style={styles.handDetail}>
-                        {h.matchup
-                          ? `${h.matchup} (${h.betType}): ${currencySymbol}${formatAmount(h.bet)} @ ${h.odds > 0 ? '+' : ''}${h.odds} — ${(h.outcome || '').toUpperCase()}`
-                          : `${session.gameType === 'Sports Betting' ? 'Bet' : 'Hand'} ${idx + 1}: ${currencySymbol}${formatAmount(h.bet)}${h.doubled ? ' (2x)' : ''}${h.blackjack ? ' (BJ)' : ''}${h.surrendered ? ' (surrender)' : ''}${h.insurance ? ' (insured)' : ''} — ${(h.outcome || '').toUpperCase()}${blackjackCardsLabel(h)}`}
-                      </Text>
-                      {handNet(h.netChange)}
-                    </View>
-                  );
+                  return renderHandData(h, idx);
                 })}
               </>
             )}
@@ -1075,5 +1069,57 @@ const styles = StyleSheet.create({
   },
   gameOptionTextSelected: {
     color: COLORS.primary,
+  },
+  splitGroup: {
+    marginTop: 4,
+  },
+  splitGroupLabel: {
+    fontSize: fluidFont(11),
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  structuredHandBox: {
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.xs,
+    padding: SPACING.xs,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+  },
+  structuredHandHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.cardBorder,
+  },
+  structuredHandTitle: {
+    fontSize: fluidFont(12),
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  structuredHandGrid: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: SPACING.md,
+  },
+  structuredHandCol: {
+    flex: 1,
+  },
+  structuredHandLabel: {
+    fontSize: fluidFont(9),
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    marginBottom: 2,
+    letterSpacing: 0.5,
+  },
+  structuredHandValue: {
+    fontSize: fluidFont(11),
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
 });
