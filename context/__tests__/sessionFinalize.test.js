@@ -118,3 +118,49 @@ describe('sanitizeSessionRecord', () => {
     expect(out.id).toBe('abc');
   });
 });
+
+// A session's date label used to be computed once at finalize time and stored
+// on the record, which meant a session ended yesterday kept the literal string
+// "Today at 8:42 PM" forever — every old session in History claimed to be from
+// today. The label must be derived from startTime at render, never persisted.
+describe('session date labels are derived, not frozen', () => {
+  const { formatSessionDateTime } = require('../SessionContext');
+
+  test('a finalized record carries no precomputed date string', () => {
+    const record = finalizeSession(baseSession({ buyIn: 100, cashOut: 150 }));
+    expect(record.formattedDate).toBeUndefined();
+    // The real instant is still there for the renderer to format.
+    expect(Number.isFinite(record.startTime)).toBe(true);
+    expect(typeof record.rawDate).toBe('string');
+  });
+
+  test('a hands-mode record carries no precomputed date string either', () => {
+    const record = finalizeSession(
+      baseSession({ hands: [{ bet: 25, outcome: 'win', netChange: 25 }] })
+    );
+    expect(record.formattedDate).toBeUndefined();
+    expect(Number.isFinite(record.startTime)).toBe(true);
+  });
+
+  test('a timestamp from yesterday is never labelled Today', () => {
+    const now = new Date();
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 20, 42);
+    const label = formatSessionDateTime(yesterday.getTime());
+    expect(label).toMatch(/^Yesterday at /);
+    expect(label).not.toMatch(/Today/);
+  });
+
+  test('an older timestamp gets an explicit calendar date', () => {
+    const now = new Date();
+    const lastWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 8, 20, 42);
+    const label = formatSessionDateTime(lastWeek.getTime());
+    // MM/DD/YYYY at h:mm AM — an absolute date, not a relative word.
+    expect(label).toMatch(/^\d{2}\/\d{2}\/\d{4} at /);
+    expect(label).not.toMatch(/Today|Yesterday/);
+  });
+
+  test("today's timestamp still reads Today", () => {
+    const label = formatSessionDateTime(Date.now());
+    expect(label).toMatch(/^Today at /);
+  });
+});

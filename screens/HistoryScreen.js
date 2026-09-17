@@ -18,6 +18,7 @@ import { netTone, formatMoney, formatAmount } from '../utils/format';
 import { Screen, ScreenHeader, Tappable, Rise, useReduceMotion } from '../components/ui';
 import { renderGameIcon, GameIconTile } from '../components/GameIcon';
 import { useVisibleSessionHistory } from '../context/SyncContext';
+import { formatSessionDateTime } from '../context/SessionContext';
 import { usePreferences } from '../context/PreferencesContext';
 import SwipeableRow from '../components/SwipeableRow';
 import usePullToRefresh from '../components/usePullToRefresh';
@@ -201,7 +202,7 @@ const SessionRow = React.memo(function SessionRow({
             </Text>
             <Text style={styles.sessionDateTime}>
               {session.label ? `${session.gameType} · ` : ''}
-              {session.formattedDate}
+              {formatSessionDateTime(session.startTime)}
             </Text>
           </View>
 

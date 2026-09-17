@@ -1364,12 +1364,18 @@ export default function ProfileScreen({ navigation }) {
                   </View>
                 )}
 
-                <View style={[styles.inputContainer, { marginTop: SPACING.xs }]}>
+                {/* The address goes here rather than in the placeholder: a
+                    single-line TextInput truncates anything longer than the
+                    field, and most real emails are longer than the field. */}
+                <Text style={styles.deleteConfirmPrompt}>
+                  Type <Text style={styles.deleteConfirmEmail}>{user?.email}</Text> to confirm:
+                </Text>
+                <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.textInput}
                     value={deleteConfirmEmail}
                     onChangeText={setDeleteConfirmEmail}
-                    placeholder={`Type ${user?.email || 'your email'} to confirm`}
+                    placeholder="Email address"
                     placeholderTextColor={COLORS.textMuted}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -2182,6 +2188,18 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     lineHeight: fluidFont(17),
     marginBottom: SPACING.sm,
+  },
+  deleteConfirmPrompt: {
+    fontSize: fluidFont(12),
+    color: COLORS.textSecondary,
+    lineHeight: fluidFont(17),
+    marginBottom: SPACING.xs,
+  },
+  // Wraps onto its own line(s) when the address is long, instead of being
+  // clipped the way placeholder text would be.
+  deleteConfirmEmail: {
+    color: COLORS.textPrimary,
+    fontWeight: '700',
   },
   deleteModalBtn: {
     backgroundColor: COLORS.dangerMuted,

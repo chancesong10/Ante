@@ -14,7 +14,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { useActiveSession, formatDuration, sessionHasContent } from '../context/SessionContext';
+import { useActiveSession, formatDuration, sessionHasContent, formatSessionDateTime } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -97,7 +97,7 @@ function RecentSessionCard({
 
         <View style={styles.sessionInfo}>
           <Text style={styles.sessionTitle}>{session.gameType} Session</Text>
-          <Text style={styles.sessionDate}>{session.formattedDate}</Text>
+          <Text style={styles.sessionDate}>{formatSessionDateTime(session.startTime)}</Text>
         </View>
 
         <View style={styles.sessionResult}>
