@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="ps.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2" data-width="1024" data-height="500">
+      <div class="ps">
+        <div class="ps-glow" style="background:
+          radial-gradient(38% 90% at 18% 40%, rgba(96,165,250,0.16), transparent 70%),
+          radial-gradient(50% 100% at 92% 60%, rgba(74,222,128,0.10), transparent 70%);"></div>
+        <div class="fg">
+          <div class="fg-left">
+            <div class="fg-brand">
+              <div class="fg-mark"><img src="assets/ante-logo.png" alt="Ante" /></div>
+              <div class="fg-word">ANTE</div>
+            </div>
+            <div class="fg-title">Track every hand.<br /><span class="g">Know your real edge.</span></div>
+            <div class="fg-sub">Live bankroll tracking, per-game analytics, and leak detection that actually calls you out.</div>
+            <div class="fg-pills">
+              <div class="fg-pill">Live tracking</div>
+              <div class="fg-pill">6 games</div>
+              <div class="fg-pill">Leak detection</div>
+            </div>
+          </div>
+          <div class="fg-right">
+            <div class="fg-card fg-leak-card">
+              <div class="leak-eyebrow" style="margin-bottom:10px;">⚠ Leak detected</div>
+              <div style="font-size:26px; font-weight:800; letter-spacing:-0.4px;">You Bet Bigger After Losing</div>
+              <div style="font-size:16px; color:var(--text-2); margin-top:10px; line-height:1.4;">$312 after a loss vs $190 after a win — 64% more.</div>
+            </div>
+            <div class="fg-card fg-net-card">
+              <div class="card-label" style="text-align:center;">TOTAL NET PROFIT</div>
+              <div style="font-size:52px; font-weight:800; color:var(--success); text-align:center; font-variant-numeric:tabular-nums; letter-spacing:-1.5px; margin:6px 0; text-shadow:0 0 26px rgba(74,222,128,0.35);">+$8,420.00</div>
+              <div class="metrics" style="margin-top:16px;">
+                <div class="metric"><div class="m-lbl">Sessions</div><div class="m-val">47</div></div>
+                <div class="m-div"></div>
+                <div class="metric"><div class="m-lbl">Win Rate</div><div class="m-val" style="color:var(--success);">58.6%</div></div>
+                <div class="m-div"></div>
+                <div class="metric"><div class="m-lbl">Hands</div><div class="m-val">1,204</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>window.__timelines['main'] = gsap.timeline({ paused: true });</script>
+  </body>
+</html>

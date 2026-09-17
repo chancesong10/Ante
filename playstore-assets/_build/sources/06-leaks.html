@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="ps.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2" data-width="1080" data-height="1920">
+      <div class="ps">
+        <div class="ps-glow" style="background: radial-gradient(52% 34% at 50% 30%, rgba(251,191,36,0.10), transparent 70%);"></div>
+        <div class="shot">
+          <div class="shot-head">
+            <div class="shot-kicker" style="color: var(--warning);">Leak detection</div>
+            <div class="shot-title">It calls out how<br /><span class="dim">you really play.</span></div>
+          </div>
+          <div class="shot-phone-wrap">
+            <div class="phone"><div class="notch"></div><div class="screen">
+              <div class="app">
+                <div class="insight-head"><div class="insight-icon">⚠</div><div class="insight-kicker">LEAK DETECTED</div></div>
+                <div class="leak-card">
+                  <div class="leak-eyebrow">⚠ Biggest leak detected</div>
+                  <div class="leak-title">You Bet Bigger After Losing</div>
+                  <div class="leak-detail">You invest <b class="loss">$312</b> after a loss vs <b class="win">$190</b> after a win — <b>64% more</b>.</div>
+                  <span class="leak-chip">Classic loss-chasing</span>
+                </div>
+                <div class="leak-more">2 more leaks flagged</div>
+                <div class="leak-mini"><div class="leak-mini-t">Getting Bluffed Puts You On Tilt</div><div class="leak-mini-s">Tilt pattern</div></div>
+                <div class="leak-mini"><div class="leak-mini-t">Fold Judgment Fades Late In Sessions</div><div class="leak-mini-s">Session fatigue</div></div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>window.__timelines['main'] = gsap.timeline({ paused: true });</script>
+  </body>
+</html>

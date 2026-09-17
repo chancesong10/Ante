@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="ps.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2" data-width="1080" data-height="1920">
+      <div class="ps">
+        <div class="ps-glow" style="background: radial-gradient(52% 34% at 50% 30%, rgba(96,165,250,0.12), transparent 70%);"></div>
+        <div class="shot">
+          <div class="shot-head">
+            <div class="shot-kicker" style="color: var(--blackjack);">Blackjack</div>
+            <div class="shot-title">Every hand graded<br /><span class="dim">vs. basic strategy.</span></div>
+          </div>
+          <div class="shot-phone-wrap">
+            <div class="phone"><div class="notch"></div><div class="screen">
+              <div class="app">
+                <div class="navtitle"><span class="chev">‹</span>Blackjack insights</div>
+                <div class="card">
+                  <div class="card-label">STRATEGY ACCURACY</div>
+                  <div class="card-hint">Every decision checked against basic strategy for your table's rules</div>
+                  <div class="compare-row">
+                    <div class="ccell"><div class="c-lbl">Accuracy</div><div class="c-val" style="color: var(--success); font-size: 44px;">94%</div></div>
+                    <div class="ccell"><div class="c-lbl">Correct plays</div><div class="c-val">312</div></div>
+                    <div class="ccell"><div class="c-lbl">Hands judged</div><div class="c-val">331</div></div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-label">PERFORMANCE OVERVIEW</div>
+                  <div class="card-hint">Your actual results across 331 hands</div>
+                  <div class="obar">
+                    <div class="oseg" style="flex: 52.4; background: var(--success);"></div>
+                    <div class="oseg" style="flex: 8.1; background: var(--cyan);"></div>
+                    <div class="oseg" style="flex: 39.5; background: var(--danger);"></div>
+                  </div>
+                  <div class="olegend">
+                    <div class="oitem"><div class="odot" style="background: var(--success);"></div><div class="otext">Win 52.4%</div></div>
+                    <div class="oitem"><div class="odot" style="background: var(--cyan);"></div><div class="otext">Push 8.1%</div></div>
+                    <div class="oitem"><div class="odot" style="background: var(--danger);"></div><div class="otext">Loss 39.5%</div></div>
+                  </div>
+                  <div class="ov-div"></div>
+                  <div class="row">
+                    <div class="label" style="text-transform:none; letter-spacing:0;">Return on wagered</div>
+                    <div class="gval" style="color: var(--success); font-size: 22px;">+6.2%</div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-label">MOST COMMON MISSES</div>
+                  <div class="card-hint">Spots where your play didn't match basic strategy</div>
+                  <div class="mrow"><div><div class="msit">16 vs 10</div><div class="mfix">You hit · basic strategy says stand</div></div><div class="mcount">×7</div></div>
+                  <div class="mrow"><div><div class="msit">Soft 18 vs 9</div><div class="mfix">You stood · basic strategy says hit</div></div><div class="mcount">×4</div></div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>window.__timelines['main'] = gsap.timeline({ paused: true });</script>
+  </body>
+</html>

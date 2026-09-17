@@ -1,0 +1,21 @@
+=== SHORT DESCRIPTION (max 80 characters) ===
+Track every session live, then see the honest analytics on how you really play.
+
+=== FULL DESCRIPTION (max 4000 characters) ===
+Ante is a premium session tracker for people who actually want to know how they play — not just whether they're up.
+
+Track live, hand by hand. Start a session for Poker, Blackjack, Baccarat, Roulette, Sports Betting, or a general bankroll, and log every hand as you go. Your live net updates in real time, so you always know exactly where you stand at the table.
+
+Then Ante shows you the truth. Every session rolls into analytics that go far beyond a running total:
+
+• Live P&L and full session history in one clean dashboard
+• Per-game performance — see which game is actually paying and which one is quietly bleeding you
+• Blackjack strategy grading — every decision checked against basic strategy for your table's rules, with your accuracy and most common mistakes
+• Leak detection — Ante flags real patterns in your play, like betting bigger after a loss, tilting after getting bluffed, or your judgment fading late in sessions
+• Win rate, streaks, time played, and return on what you actually wagered
+
+No fluff, no hype — just an honest read on your game, in a fast, private, dark-mode app.
+
+Know how you actually play.
+
+Ante is a tracking and analytics tool for informational and entertainment purposes only. It does not facilitate gambling and does not provide gambling or financial advice.

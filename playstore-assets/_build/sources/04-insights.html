@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="ps.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2" data-width="1080" data-height="1920">
+      <div class="ps">
+        <div class="ps-glow" style="background: radial-gradient(52% 34% at 50% 30%, rgba(56,189,248,0.12), transparent 70%);"></div>
+        <div class="shot">
+          <div class="shot-head">
+            <div class="shot-kicker" style="color: var(--cyan);">Analytics</div>
+            <div class="shot-title">See which game<br /><span class="dim">actually pays.</span></div>
+          </div>
+          <div class="shot-phone-wrap">
+            <div class="phone"><div class="notch"></div><div class="screen">
+              <div class="app">
+                <div class="navtitle"><span class="chev">‹</span>Lifetime insights</div>
+                <div class="card">
+                  <div class="card-label">OVERVIEW</div>
+                  <div class="card-hint">Across every game you've ever logged</div>
+                  <div class="compare-row">
+                    <div class="ccell"><div class="c-lbl">Lifetime Net</div><div class="c-val" style="color: var(--success);">+$8,420</div></div>
+                    <div class="ccell"><div class="c-lbl">Win Rate</div><div class="c-val">58.6%</div></div>
+                    <div class="ccell"><div class="c-lbl">Sessions</div><div class="c-val">47</div></div>
+                  </div>
+                  <div class="ov-div"></div>
+                  <div class="compare-row">
+                    <div class="ccell"><div class="c-lbl">Time Played</div><div class="c-val">92h 10m</div></div>
+                    <div class="ccell"><div class="c-lbl">Avg / Session</div><div class="c-val">1h 57m</div></div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-label">PERFORMANCE BY GAME</div>
+                  <div class="card-hint">Average net per session — which game is actually working for you</div>
+                  <div class="grow"><div class="gleft"><div class="gdot" style="background: var(--blackjack);"></div><div><div class="gname">Blackjack</div><div class="gsub">18 sessions</div></div></div><div class="gval" style="color: var(--success);">+$142/session</div></div>
+                  <div class="grow"><div class="gleft"><div class="gdot" style="background: var(--roulette);"></div><div><div class="gname">Roulette</div><div class="gsub">9 sessions</div></div></div><div class="gval" style="color: var(--success);">+$64/session</div></div>
+                  <div class="grow"><div class="gleft"><div class="gdot" style="background: var(--baccarat);"></div><div><div class="gname">Baccarat</div><div class="gsub">8 sessions</div></div></div><div class="gval" style="color: var(--success);">+$31/session</div></div>
+                  <div class="grow"><div class="gleft"><div class="gdot" style="background: var(--poker);"></div><div><div class="gname">Poker</div><div class="gsub">12 sessions</div></div></div><div class="gval" style="color: var(--danger);">-$18/session</div></div>
+                  <div class="foot">Best: Blackjack · Worst: Poker</div>
+                </div>
+                <div class="card">
+                  <div class="row">
+                    <div>
+                      <div class="card-label">CURRENT SESSION STREAK</div>
+                      <div class="streak-val" style="color: var(--success);">3 Winning</div>
+                    </div>
+                    <div style="text-align:right;">
+                      <div class="gsub" style="margin-top:0;">Longest up · down</div>
+                      <div class="gval" style="margin-top:4px;">6 · 4</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>window.__timelines['main'] = gsap.timeline({ paused: true });</script>
+  </body>
+</html>

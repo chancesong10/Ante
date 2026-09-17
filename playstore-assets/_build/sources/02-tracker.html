@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="ps.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2" data-width="1080" data-height="1920">
+      <div class="ps">
+        <div class="ps-glow" style="background: radial-gradient(52% 34% at 50% 30%, rgba(96,165,250,0.12), transparent 70%);"></div>
+        <div class="shot">
+          <div class="shot-head">
+            <div class="shot-kicker" style="color: var(--blackjack);">Live tracking</div>
+            <div class="shot-title">Log every hand<br /><span class="dim">as you play.</span></div>
+          </div>
+          <div class="shot-phone-wrap">
+            <div class="phone"><div class="notch"></div><div class="screen">
+              <div class="app">
+                <div class="bj-top">
+                  <div class="live-badge"><span class="live-dot"></span><span class="live-txt">LIVE · BLACKJACK</span></div>
+                  <div style="text-align:right;"><div class="bj-net-lbl">NET</div><div class="bj-net">+$1,240.00</div></div>
+                </div>
+                <div class="card bj-table">
+                  <div class="bj-side"><span class="bj-role">DEALER</span><span class="pcard">10</span></div>
+                  <div class="bj-side"><span class="bj-role">YOU</span><span class="pcard red">A</span><span class="pcard">6</span><span class="bj-hand">Soft 17</span></div>
+                </div>
+                <div class="card">
+                  <div class="mini-label">YOUR BET</div>
+                  <div class="bj-bet-row">
+                    <div class="bj-bet">$100</div>
+                    <div class="bj-chips">
+                      <div class="chip">+$25</div>
+                      <div class="chip hot">+$100</div>
+                      <div class="chip">+$500</div>
+                    </div>
+                  </div>
+                  <div class="mini-label" style="margin-top: 22px;">RESULT</div>
+                  <div class="bj-results">
+                    <div class="res-btn win-sel">Win</div>
+                    <div class="res-btn">Loss</div>
+                    <div class="res-btn">Push</div>
+                  </div>
+                </div>
+                <div class="bj-end">End Session</div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>window.__timelines['main'] = gsap.timeline({ paused: true });</script>
+  </body>
+</html>
