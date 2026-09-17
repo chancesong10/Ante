@@ -30,6 +30,19 @@ const DEFAULT_ENVIRONMENTS = ['production', 'preview', 'development'];
 // reads at runtime via process.env. Anything else in .env is tooling-local.
 const PREFIX = 'EXPO_PUBLIC_';
 
+// Never synced from .env, because EAS keys a variable by NAME across every
+// environment — `env:set --environment development` overwrites the value
+// production sees too. So anything whose value must differ between local dev
+// and shipped builds has to be managed by hand with `eas env:set`, or a
+// routine sync would silently swap it out from under a release build.
+//
+// The RevenueCat key is exactly that: .env holds the Test Store key
+// (test_...) so `expo start` has a working paywall locally, while EAS holds
+// the real Play key (goog_...) so shipped builds take real money. Syncing it
+// would replace the second with the first and produce a build that fakes
+// purchases on a live Play track — a failure that looks like success.
+const NEVER_SYNC = new Set(['EXPO_PUBLIC_REVENUECAT_API_KEY']);
+
 function parseEnvFile(filePath) {
   if (!fs.existsSync(filePath)) {
     console.error(`No .env found at ${filePath}. Nothing to sync.`);
@@ -47,7 +60,7 @@ function parseEnvFile(filePath) {
     if (value.length >= 2 && /^(".*"|'.*')$/s.test(value)) {
       value = value.slice(1, -1);
     }
-    if (name.startsWith(PREFIX) && value) vars.set(name, value);
+    if (name.startsWith(PREFIX) && value && !NEVER_SYNC.has(name)) vars.set(name, value);
   }
   return vars;
 }
@@ -87,6 +100,7 @@ function main() {
   console.log(
     `Syncing ${vars.size} variable(s) to EAS [${environments.join(', ')}]: ${[...vars.keys()].join(', ')}`
   );
+  console.log(`Not synced (managed by hand): ${[...NEVER_SYNC].join(', ')}\n`);
 
   const unquotable = [...vars].filter(([, value]) => !isShellQuotable(value));
   if (unquotable.length) {
