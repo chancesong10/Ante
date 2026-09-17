@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "scheme": "ante",
     "orientation": "portrait",
-    "icon": "./assets/App Icon.png",
+    "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
