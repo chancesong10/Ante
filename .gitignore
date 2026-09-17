@@ -48,3 +48,6 @@ yarn-error.*
 .claude/settings.local.json
 .claude/agents/impeccable-*.md
 skills-lock.json
+
+# generated promo/video output (HyperFrames renders + bundled media assets)
+brag-output/
