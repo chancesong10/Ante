@@ -230,6 +230,48 @@ export function AuthProvider({ children }) {
     [session]
   );
 
+  // Permanently deletes the account and everything synced to it, via the
+  // delete_account() RPC (see supabase/migrations) — the anon key can't touch
+  // auth.users directly. Identity is proved the same way a password change
+  // proves it, for the same reason: an unlocked phone alone shouldn't be
+  // enough to destroy someone's account.
+  //
+  // Google-only accounts have no password to re-check. Supabase's emailed
+  // reauthenticate() nonce is only consumable by updateUser(), so it can't
+  // gate an RPC; those accounts confirm by typing their email address
+  // instead, which is the usual bar for a destructive-but-not-takeover action.
+  //
+  // Signs out last so the app lands in its normal signed-out state. The
+  // caller is responsible for the local side (see releaseAccountSessions).
+  const deleteAccount = useCallback(
+    async (currentPassword) => {
+      const email = session?.user?.email;
+      if (!session?.user) throw new Error('You need to be signed in to delete your account.');
+
+      if (hasPasswordLogin) {
+        const { error: reauthError } = await supabase.auth.signInWithPassword({
+          email,
+          password: currentPassword || '',
+        });
+        if (reauthError) throw new Error('That password is not correct.');
+      }
+
+      const { error } = await supabase.rpc('delete_account');
+      if (error) throw error;
+
+      // A failure here leaves the account already gone on the server but the
+      // stale session still on the device, so don't let it surface as if the
+      // deletion itself failed — the next request would 401 anyway.
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error('AuthContext: sign-out after account deletion failed', err);
+      }
+    },
+    [session, hasPasswordLogin]
+  );
+
+
   const value = useMemo(
     () => ({
       session,
@@ -246,6 +288,7 @@ export function AuthProvider({ children }) {
       sendPasswordChangeCode,
       updatePasswordWithCode,
       updateUsername,
+      deleteAccount,
     }),
     [
       session,
@@ -261,6 +304,7 @@ export function AuthProvider({ children }) {
       sendPasswordChangeCode,
       updatePasswordWithCode,
       updateUsername,
+      deleteAccount,
     ]
   );
 

@@ -534,6 +534,27 @@ export function SessionProvider({ children }) {
     );
   }, []);
 
+  // The inverse of markSessionsSynced: strips the account stamp off sessions
+  // that belonged to a now-deleted account, handing them back to the device
+  // as plain local records.
+  //
+  // Without this, deleting an account would orphan its sessions — they'd
+  // still be in local storage, but useVisibleSessionHistory hides any session
+  // whose syncedUserId isn't the signed-in user, and that id can never come
+  // back. Deleting the account deletes what's on the server; it shouldn't
+  // silently swallow the copy on the phone.
+  const releaseAccountSessions = useCallback((userId) => {
+    if (!userId) return;
+    setSessionHistory((prev) => {
+      if (!prev.some((s) => s.syncedUserId === userId)) return prev;
+      return prev.map((s) => {
+        if (s.syncedUserId !== userId) return s;
+        const { syncedUserId, ...rest } = s;
+        return rest;
+      });
+    });
+  }, []);
+
   // Each recomputed only when its own underlying data actually changes, so
   // a screen subscribed to just one of the two contexts doesn't re-render
   // when the other one updates.
@@ -594,8 +615,9 @@ export function SessionProvider({ children }) {
       clearAllSessions,
       mergeSessionsFromCloud,
       markSessionsSynced,
+      releaseAccountSessions,
     }),
-    [sessionHistory, isLoaded, toggleSessionStar, deleteSession, clearAllSessions, mergeSessionsFromCloud, markSessionsSynced]
+    [sessionHistory, isLoaded, toggleSessionStar, deleteSession, clearAllSessions, mergeSessionsFromCloud, markSessionsSynced, releaseAccountSessions]
   );
 
   return (

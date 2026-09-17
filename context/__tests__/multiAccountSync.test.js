@@ -283,3 +283,48 @@ test('a successful pull merges a cloud session created on another device', async
   expect(latestApi.sessionHistory).toHaveLength(1);
   expect(latestApi.sessionHistory[0].syncedUserId).toBe('A');
 });
+
+// Deleting an account is the one case where a syncedUserId can name an account
+// that no longer exists. useVisibleSessionHistory hides any session whose
+// syncedUserId isn't the signed-in user, so without releaseAccountSessions
+// those records would sit in local storage permanently invisible.
+test('releasing a deleted account\'s sessions un-tags them and leaves them local', async () => {
+  const renderer = await renderApp();
+  createBuyInSession(100, 150);
+  createBuyInSession(50, 20);
+  await signIn(renderer, 'A');
+  expect(latestApi.sessionHistory.every((s) => s.syncedUserId === 'A')).toBe(true);
+
+  // What ProfileScreen does after deleteAccount() resolves: sign-out first
+  // (the RPC already removed the server rows), then hand the local copies back.
+  await signIn(renderer, null);
+  pushSessions.mockClear();
+  act(() => {
+    latestApi.releaseAccountSessions('A');
+  });
+  await flush();
+
+  expect(latestApi.sessionHistory).toHaveLength(2);
+  expect(latestApi.sessionHistory.every((s) => s.syncedUserId === undefined)).toBe(true);
+  // Signed out, so nothing should have been pushed back to the dead account.
+  expect(pushSessions).not.toHaveBeenCalled();
+});
+
+test('releasing one account\'s sessions leaves another account\'s sessions tagged', async () => {
+  const renderer = await renderApp();
+  createBuyInSession(100, 150);
+  await signIn(renderer, 'A');
+  await signIn(renderer, null);
+  createBuyInSession(75, 25);
+  await signIn(renderer, 'B');
+  await signIn(renderer, null);
+
+  act(() => {
+    latestApi.releaseAccountSessions('A');
+  });
+  await flush();
+
+  const owners = latestApi.sessionHistory.map((s) => s.syncedUserId);
+  expect(owners).toContain('B');
+  expect(owners).not.toContain('A');
+});

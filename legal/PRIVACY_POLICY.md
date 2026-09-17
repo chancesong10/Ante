@@ -1,6 +1,6 @@
 # Ante Privacy Policy
 
-**Last Updated: September 1, 2026**
+**Last Updated: September 16, 2026**
 
 ## Overview
 
@@ -40,9 +40,11 @@ Ante does not integrate any third-party analytics SDK, advertising network, or c
 Because most of your data lives on your device, you're largely in control of it:
 
 - **Uninstalling** the app removes all locally stored Ante data from your device. It does not cancel an Ante Pro subscription.
-- **Signing out** stops further syncing but does not delete data already stored on our server. Contact us at tncante1008@gmail.com to request deletion of your account and any synced or subscription data.
+- **Signing out** stops further syncing but does not delete data already stored on our server.
+- **Deleting your account** — **Profile → Account → Delete Account** permanently erases your account, your profile, and every session synced to it from our servers. The sessions stored on your device are not affected; use **Erase All Data** for those. Full detail, including how to request deletion if you can't sign in, is at https://chancesong10.github.io/Ante/delete-account.html.
+- **Erasing your session data** — **Profile → Data & Privacy → Erase All Data** deletes every recorded session from this device, and from your account if you're signed in, while leaving the account itself intact.
 - **Managing your subscription** — you can view, cancel, or request a refund for an Ante Pro subscription only through your Apple App Store or Google Play account settings; Ante cannot do this for you.
-- Ante does not currently offer an in-app data export tool. This policy will be updated if that changes.
+- **Exporting your data** — **Profile → Data & Privacy → Export Session History** writes your full session history to a CSV file you can save or share.
 
 ## Children's privacy
 

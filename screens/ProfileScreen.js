@@ -94,7 +94,7 @@ const CHIP_PRESET_GAMES = [
 
 export default function ProfileScreen({ navigation }) {
   // clearAllSessions comes through useVisibleSessionHistory's passthrough.
-  const { sessionHistory, clearAllSessions } = useVisibleSessionHistory();
+  const { sessionHistory, clearAllSessions, releaseAccountSessions } = useVisibleSessionHistory();
   const {
     user,
     profile,
@@ -104,6 +104,7 @@ export default function ProfileScreen({ navigation }) {
     updatePasswordWithCurrent,
     sendPasswordChangeCode,
     updatePasswordWithCode,
+    deleteAccount,
   } = useAuth();
   const {
     isPro,
@@ -142,8 +143,10 @@ export default function ProfileScreen({ navigation }) {
   const [copiedSeed, setCopiedSeed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Account settings — 'username' | 'password' | null
+  // Account settings — 'username' | 'password' | 'delete' | null
   const [accountModal, setAccountModal] = useState(null);
+  // Typed-back email address that arms the delete button.
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
   const [tempUsername, setTempUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -173,6 +176,57 @@ export default function ProfileScreen({ navigation }) {
     setCodeSent(false);
     setAccountError(null);
     setAccountModal('password');
+  };
+
+  const openDeleteAccountModal = () => {
+    setCurrentPassword('');
+    setDeleteConfirmEmail('');
+    setAccountError(null);
+    setAccountModal('delete');
+  };
+
+  // Case/whitespace-insensitive: this is a confirmation of intent, not a
+  // password, and failing someone over a capital letter in their own email
+  // address would just teach them to paste it.
+  const deleteEmailMatches =
+    !!user?.email && deleteConfirmEmail.trim().toLowerCase() === user.email.trim().toLowerCase();
+
+  const handleDeleteAccount = async () => {
+    if (!deleteEmailMatches) {
+      setAccountError('Type your email address exactly to confirm.');
+      return;
+    }
+    if (hasPasswordLogin && !currentPassword) {
+      setAccountError('Enter your current password.');
+      return;
+    }
+    // Captured before the delete: `user` is null by the time it resolves,
+    // and the local cleanup below needs the id that's about to stop existing.
+    const deletedUserId = user?.id;
+
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      await deleteAccount(currentPassword);
+      // Only after the server confirms. Runs post-sign-out, so the sync
+      // engine is already idle and won't try to push these back up.
+      releaseAccountSessions(deletedUserId);
+      setAccountModal(null);
+      setDataModal({
+        variant: 'primary',
+        icon: 'checkmark-circle-outline',
+        title: 'Account deleted',
+        message:
+          'Your account and everything synced to it are gone. The sessions recorded on this device are still here — erase them from Data & Privacy if you want them gone too.',
+        confirmText: 'Got It',
+        showCancel: false,
+        onConfirm: () => setDataModal(null),
+      });
+    } catch (err) {
+      setAccountError(err?.message || "That account couldn't be deleted. Try again.");
+    } finally {
+      setAccountBusy(false);
+    }
   };
 
   const handleSendCode = async () => {
@@ -564,6 +618,29 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.menuTextGroup}>
                   <Text style={styles.menuTitle}>Password</Text>
                   <Text style={styles.menuSubtitle}>Set a new password for this account</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+
+              <View style={styles.menuDivider} />
+
+              <TouchableOpacity
+                style={styles.menuRow}
+                activeOpacity={0.7}
+                onPress={openDeleteAccountModal}
+              >
+                <View style={[styles.menuIconCircle, styles.menuIconCircleDanger]}>
+                  <Ionicons
+                    name="person-remove-outline"
+                    size={moderateScale(18)}
+                    color={COLORS.danger}
+                  />
+                </View>
+                <View style={styles.menuTextGroup}>
+                  <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Delete Account</Text>
+                  <Text style={styles.menuSubtitle}>
+                    Permanently close this account and erase what's synced to it
+                  </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
               </TouchableOpacity>
@@ -1230,6 +1307,93 @@ export default function ProfileScreen({ navigation }) {
                     )}
                   </TouchableOpacity>
                 )}
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* DELETE ACCOUNT MODAL */}
+      <Modal
+        visible={accountModal === 'delete'}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAccountModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <TouchableWithoutFeedback onPress={closeAccountModal}>
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
+                style={[styles.modalSheet, SHADOWS.card]}
+              >
+                <View style={styles.modalHeaderRow}>
+                  <Text style={styles.modalTitle}>Delete Account</Text>
+                  <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
+                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.limitSub}>
+                  This permanently deletes your account and every session synced to it. It cannot
+                  be undone.
+                </Text>
+                <Text style={styles.deleteNote}>
+                  Sessions recorded on this device stay on this device — erase them from Data &
+                  Privacy if you want those gone too. An {PLUS_NAME} subscription is billed by the
+                  store, so cancel it from your {Platform.OS === 'ios' ? 'App Store' : 'Google Play'}{' '}
+                  account settings.
+                </Text>
+
+                {hasPasswordLogin && (
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.textInput}
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                      placeholder="Current password"
+                      placeholderTextColor={COLORS.textMuted}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                )}
+
+                <View style={[styles.inputContainer, { marginTop: SPACING.xs }]}>
+                  <TextInput
+                    style={styles.textInput}
+                    value={deleteConfirmEmail}
+                    onChangeText={setDeleteConfirmEmail}
+                    placeholder={`Type ${user?.email || 'your email'} to confirm`}
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                {!!accountError && <Text style={styles.accountError}>{accountError}</Text>}
+
+                <TouchableOpacity
+                  style={[
+                    styles.deleteModalBtn,
+                    (!deleteEmailMatches || accountBusy) && styles.deleteModalBtnDisabled,
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={handleDeleteAccount}
+                  disabled={!deleteEmailMatches || accountBusy}
+                >
+                  {accountBusy ? (
+                    <ActivityIndicator size="small" color={COLORS.textPrimary} />
+                  ) : (
+                    <Text style={styles.deleteModalBtnText}>Delete My Account</Text>
+                  )}
+                </TouchableOpacity>
               </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
@@ -2012,6 +2176,30 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(12),
     color: COLORS.danger,
     marginTop: SPACING.xs,
+  },
+  deleteNote: {
+    fontSize: fluidFont(12),
+    color: COLORS.textMuted,
+    lineHeight: fluidFont(17),
+    marginBottom: SPACING.sm,
+  },
+  deleteModalBtn: {
+    backgroundColor: COLORS.dangerMuted,
+    borderWidth: 1,
+    borderColor: COLORS.dangerBorder,
+    borderRadius: RADIUS.sm,
+    paddingVertical: moderateScale(13),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.sm,
+  },
+  deleteModalBtnText: {
+    color: COLORS.danger,
+    fontSize: fluidFont(14),
+    fontWeight: '700',
+  },
+  deleteModalBtnDisabled: {
+    opacity: 0.45,
   },
   noticeRow: {
     flexDirection: 'row',
