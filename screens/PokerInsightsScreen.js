@@ -15,6 +15,7 @@ import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 import { NavBar } from '../components/ui';
+import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers, same split
@@ -113,6 +114,13 @@ export default function PokerInsightsScreen({ navigation }) {
     vol.riskLabel === 'Low' ? COLORS.success : vol.riskLabel === 'High' ? COLORS.danger : COLORS.warning;
 
   const [copied, setCopied] = useState(false);
+
+  const timed = sessionHistory.filter((s) => s.startTime != null && s.endTime != null && s.endTime > s.startTime);
+  const totalMs = timed.reduce((sum, s) => sum + (s.endTime - s.startTime), 0);
+  const totalHours = totalMs / 3600000;
+  const timedNet = timed.reduce((sum, s) => sum + (s.netProfit || 0), 0);
+  const hourlyRate = totalHours >= 0.25 ? timedNet / totalHours : null;
+  const bbPerHour = bb && totalHours >= 0.25 ? bb.netBB / totalHours : null;
 
   const buildReportText = () => {
     const lines = [];
@@ -251,7 +259,6 @@ export default function PokerInsightsScreen({ navigation }) {
           </View>
         ) : (
           <>
-            {/* Leak Spotlight — the headline "why this is worth paying for" card */}
             {isLocked ? (
               <LockedLeakTeaser />
             ) : topLeak ? (
@@ -276,370 +283,382 @@ export default function PokerInsightsScreen({ navigation }) {
               </View>
             )}
 
-            {/* Performance Overview */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>PERFORMANCE OVERVIEW</Text>
-              <Text style={styles.cardHint}>Your actual results across {outcomes.sample} hands</Text>
-
-              {isLocked ? (
-                <>
-                  <View style={styles.outcomeBarRow}>
-                    <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
-                  </View>
-                  <View style={styles.outcomeLegendRow}>
-                    <SkeletonBar width={70} height={12} />
-                    <SkeletonBar width={70} height={12} />
-                    <SkeletonBar width={70} height={12} />
-                    <SkeletonBar width={70} height={12} />
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.outcomeBarRow}>
-                    {outcomes.winRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />}
-                    {outcomes.splitRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.splitRate, backgroundColor: COLORS.accentCyan }]} />}
-                    {outcomes.foldRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.foldRate, backgroundColor: COLORS.textMuted }]} />}
-                    {outcomes.lossRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />}
-                  </View>
-
-                  <View style={styles.outcomeLegendRow}>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                      <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)}</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.accentCyan }]} />
-                      <Text style={styles.outcomeLegendText}>Split {fmtPct(outcomes.splitRate)}</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                      <Text style={styles.outcomeLegendText}>Fold {fmtPct(outcomes.foldRate)}</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                      <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)}</Text>
-                    </View>
-                  </View>
-                </>
-              )}
-
-              <View style={styles.overviewDivider} />
-
-              <View style={styles.compareRow}>
-                <CompareStat
-                  label="Net Result"
-                  value={fmtMoney(returns.netProfit)}
-                  valueColor={returns.netProfit > 0 ? COLORS.success : returns.netProfit < 0 ? COLORS.danger : COLORS.textPrimary}
-                  locked={isLocked}
-                />
-                <CompareStat
-                  label="Return on Invested"
-                  value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
-                  valueColor={(returns.roi || 0) > 0 ? COLORS.success : (returns.roi || 0) < 0 ? COLORS.danger : COLORS.textPrimary}
-                  locked={isLocked}
-                />
-                <CompareStat label="Avg / Hand" value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} locked={isLocked} />
-              </View>
-
-              {bb && (
-                <>
-                  <View style={styles.overviewDivider} />
-                  <View style={styles.proRow}>
-                    <Ionicons name="ribbon-outline" size={13} color={COLORS.primary} />
-                    <Text style={styles.proRowLabel}>PRO METRIC — RESULTS BY THE BIG BLIND</Text>
-                  </View>
-                  <View style={styles.compareRow}>
-                    <CompareStat
-                      label="Net (BB)"
-                      value={fmtBB(bb.netBB)}
-                      valueColor={bb.netBB > 0 ? COLORS.success : bb.netBB < 0 ? COLORS.danger : COLORS.textPrimary}
-                      locked={isLocked}
-                    />
-                    <CompareStat
-                      label="bb / 100 hands"
-                      value={`${bb.bbPer100 >= 0 ? '+' : ''}${bb.bbPer100.toFixed(1)}`}
-                      valueColor={bb.bbPer100 > 0 ? COLORS.success : bb.bbPer100 < 0 ? COLORS.danger : COLORS.textPrimary}
-                      locked={isLocked}
-                    />
-                    <CompareStat label="Avg Bet (BB)" value={`${bb.avgInvestmentBB.toFixed(1)} bb`} locked={isLocked} />
-                  </View>
-                  <Text style={styles.cardFootnote}>
-                    bb/100 is how serious players compare results across different stakes — a dollar total alone can't do that.
-                  </Text>
-                </>
-              )}
-            </View>
-
-            {/* Bluff-Catcher Score */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>BLUFF-CATCHER SCORE</Text>
-              <Text style={styles.cardHint}>What your folds turned out to be, once you found out</Text>
-
-              {fold.sample > 0 ? (
-                <>
-                  {isLocked ? (
-                    <>
-                      <View style={styles.outcomeBarRow}>
-                        <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
-                      </View>
-                      <View style={styles.outcomeLegendRow}>
-                        <SkeletonBar width={64} height={12} />
-                        <SkeletonBar width={64} height={12} />
-                        <SkeletonBar width={64} height={12} />
-                      </View>
-                    </>
-                  ) : (
-                    <>
-                      <View style={styles.outcomeBarRow}>
-                        {fold.bluffedRate > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.bluffed, backgroundColor: COLORS.primary }]} />}
-                        {fold.goodFold > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.goodFold, backgroundColor: COLORS.success }]} />}
-                        {fold.noShow > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.noShow, backgroundColor: COLORS.textMuted }]} />}
-                      </View>
-                      <View style={styles.outcomeLegendRow}>
-                        <View style={styles.outcomeLegendItem}>
-                          <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
-                          <Text style={styles.outcomeLegendText}>Bluffed {fold.bluffed}</Text>
-                        </View>
-                        <View style={styles.outcomeLegendItem}>
-                          <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                          <Text style={styles.outcomeLegendText}>Good Fold {fold.goodFold}</Text>
-                        </View>
-                        <View style={styles.outcomeLegendItem}>
-                          <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                          <Text style={styles.outcomeLegendText}>No-Show {fold.noShow}</Text>
-                        </View>
-                      </View>
-                    </>
-                  )}
-
-                  <View style={styles.overviewDivider} />
-
-                  <View style={styles.compareRow}>
-                    <CompareStat
-                      label={`Bluffed-Fold Rate (n=${fold.judgedSample})`}
-                      value={fmtPct(fold.bluffedRate)}
-                      valueColor={fold.bluffedRate !== null && fold.bluffedRate > 35 ? COLORS.danger : COLORS.success}
-                      locked={isLocked}
-                    />
-                    <CompareStat
-                      label="Money Left On The Table"
-                      value={fmtMoneyAbs(fold.moneyLeftOnTable)}
-                      valueColor={COLORS.warning}
-                      sub={fold.moneyLeftOnTableBB !== null ? `${fold.moneyLeftOnTableBB.toFixed(1)} bb` : undefined}
-                      locked={isLocked}
-                    />
-                  </View>
-                  <Text style={styles.cardFootnote}>
-                    "Money left on the table" is the pot you'd have collected on every fold that turned out to be a bluff. Judged folds only — no-shows aren't counted either way.
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.cardHint}>No folds logged yet — this fills in once you start tagging folds.</Text>
-              )}
-            </View>
-
-            {/* Fold Quality by Street */}
-            {byStreet.length > 0 && (
+            <ExpandableSection title="The Basics" defaultExpanded={true}>
               <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>FOLD QUALITY BY STREET</Text>
-                <Text style={styles.cardHint}>Where your bluff-catching actually breaks down</Text>
-                {byStreet.map((s) => (
-                  <StatLine
-                    key={s.street}
-                    label={`${s.street} (n=${s.sample})`}
-                    value={s.bluffedRate !== null ? `${fmtPct(s.bluffedRate)} bluffed` : '—'}
-                    valueColor={s.bluffedRate !== null && s.bluffedRate > 40 ? COLORS.danger : undefined}
+                <Text style={styles.cardLabel}>PERFORMANCE OVERVIEW</Text>
+                <Text style={styles.cardHint}>Your actual results across {outcomes.sample} hands</Text>
+                
+                {isLocked ? (
+                  <>
+                    <View style={styles.outcomeBarRow}>
+                      <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
+                    </View>
+                    <View style={styles.outcomeLegendRow}>
+                      <SkeletonBar width={70} height={12} />
+                      <SkeletonBar width={70} height={12} />
+                      <SkeletonBar width={70} height={12} />
+                      <SkeletonBar width={70} height={12} />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.outcomeBarRow}>
+                      {outcomes.winRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />}
+                      {outcomes.splitRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.splitRate, backgroundColor: COLORS.accentCyan }]} />}
+                      {outcomes.foldRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.foldRate, backgroundColor: COLORS.textMuted }]} />}
+                      {outcomes.lossRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />}
+                    </View>
+                    <View style={styles.outcomeLegendRow}>
+                      <View style={styles.outcomeLegendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
+                        <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)}</Text>
+                      </View>
+                      <View style={styles.outcomeLegendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: COLORS.accentCyan }]} />
+                        <Text style={styles.outcomeLegendText}>Split {fmtPct(outcomes.splitRate)}</Text>
+                      </View>
+                      <View style={styles.outcomeLegendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
+                        <Text style={styles.outcomeLegendText}>Fold {fmtPct(outcomes.foldRate)}</Text>
+                      </View>
+                      <View style={styles.outcomeLegendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
+                        <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)}</Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+
+                <View style={styles.overviewDivider} />
+                <View style={styles.compareRow}>
+                  <CompareStat
+                    label="Net Result"
+                    value={fmtMoney(returns.netProfit)}
+                    valueColor={returns.netProfit > 0 ? COLORS.success : returns.netProfit < 0 ? COLORS.danger : COLORS.textPrimary}
                     locked={isLocked}
                   />
-                ))}
-                <Text style={styles.cardFootnote}>
-                  Later streets carry bigger pots, so a high bluffed rate there costs more than the same rate pre-flop.
-                </Text>
+                  <CompareStat
+                    label="Return on Invested"
+                    value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
+                    valueColor={(returns.roi || 0) > 0 ? COLORS.success : (returns.roi || 0) < 0 ? COLORS.danger : COLORS.textPrimary}
+                    locked={isLocked}
+                  />
+                  <CompareStat label="Avg / Hand" value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} locked={isLocked} />
+                </View>
               </View>
-            )}
+              
+              <TrendArrow 
+                label="Hourly Rate" 
+                valueText={hourlyRate !== null ? fmtMoney(hourlyRate) + '/hr' : '—'} 
+                trend={hourlyRate !== null ? hourlyRate : 0} 
+              />
+              <ProgressBar 
+                label="Win Rate" 
+                valueText={fmtPct(outcomes.winRate)} 
+                percent={outcomes.winRate} 
+              />
+            </ExpandableSection>
 
-            {/* Post-Bluff Tilt Index */}
-            {(postBluff.afterBluffed.sample > 0 || postBluff.afterGood.sample > 0) && (
+            <ExpandableSection title="Your Habits">
+              {/* Streaks */}
               <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>POST-BLUFF TILT INDEX</Text>
-                <Text style={styles.cardHint}>Does getting bluffed change your very next fold read?</Text>
-                <StatLine label={`Bluffed Again, Right After a Bluff (n=${postBluff.afterBluffed.sample})`} value={fmtPct(postBluff.afterBluffed.rate)} locked={isLocked} />
-                <StatLine label={`Bluffed Again, Right After a Good Fold (n=${postBluff.afterGood.sample})`} value={fmtPct(postBluff.afterGood.rate)} locked={isLocked} />
-                {!isLocked && postBluff.tiltIndex !== null && (
-                  <View style={styles.insightNote}>
-                    <Ionicons
-                      name={postBluff.tiltIndex > 15 ? 'alert-circle-outline' : 'information-circle-outline'}
-                      size={16}
-                      color={postBluff.tiltIndex > 15 ? COLORS.warning : COLORS.textSecondary}
-                    />
-                    <Text style={styles.insightNoteText}>
-                      {postBluff.tiltIndex > 15
-                        ? `Your bluffed-fold rate jumps ${postBluff.tiltIndex.toFixed(1)} points right after getting bluffed — a real tilt signature worth watching.`
-                        : "Getting bluffed doesn't meaningfully change your next fold read — your judgment holds up under pressure."}
-                    </Text>
-                  </View>
+                <Text style={styles.cardLabel}>CURRENT STREAK</Text>
+                {isLocked ? (
+                  <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
+                ) : (
+                  <Text style={[styles.streakValue, { color: streakColor }]}>
+                    {streaks.currentStreakType
+                      ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'up' ? 'Up' : 'Down'}`
+                      : 'None'}
+                  </Text>
                 )}
               </View>
-            )}
 
-            {/* Session Fatigue on Fold Judgment */}
-            {fatigue && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>SESSION FATIGUE ON FOLD JUDGMENT</Text>
-                <Text style={styles.cardHint}>Bluffed-fold rate, first half of your sessions vs. the second half</Text>
-                <View style={styles.compareRow}>
-                  <CompareStat label={`First Half (n=${fatigue.firstHalf.sample})`} value={fmtPct(fatigue.firstHalf.rate)} locked={isLocked} />
-                  <CompareStat label={`Second Half (n=${fatigue.secondHalf.sample})`} value={fmtPct(fatigue.secondHalf.rate)} locked={isLocked} />
+              <View style={styles.rowCards}>
+                <View style={[styles.halfCard, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>LONGEST UP STREAK</Text>
+                  {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestUpStreak}</Text>}
                 </View>
-                {!isLocked && fatigue.fatigueDelta > 15 && (
+                <View style={[styles.halfCard, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>LONGEST DOWN STREAK</Text>
+                  {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestDownStreak}</Text>}
+                </View>
+              </View>
+
+              <View style={[styles.card, SHADOWS.card]}>
+                <Text style={styles.cardLabel}>LOCATION PERFORMANCE</Text>
+                <Text style={styles.cardHint}>Coming soon: track where you play best.</Text>
+              </View>
+
+              <View style={[styles.card, SHADOWS.card]}>
+                <Text style={styles.cardLabel}>STAKES PERFORMANCE</Text>
+                <Text style={styles.cardHint}>Coming soon: see your win rate across different stakes.</Text>
+              </View>
+
+              {/* Investment After Outcome (Chasing) */}
+              <View style={[styles.card, SHADOWS.card]}>
+                <Text style={styles.cardLabel}>INVESTMENT AFTER OUTCOME</Text>
+                <StatLine label="After a Winning Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                <StatLine label="After a Losing Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                {!isLocked && chasesLosses && (
                   <View style={styles.insightNote}>
                     <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
                     <Text style={styles.insightNoteText}>
-                      Your fold reads get {fatigue.fatigueDelta.toFixed(1)} points worse in the back half of a session — a fatigue signal worth a break for.
+                      You invest {((betSizeDelta / (investAfter.avgInvestmentAfterWin || 1)) * 100).toFixed(0)}% more right after losing a hand than after winning one — a loss-chasing pattern worth watching.
                     </Text>
                   </View>
                 )}
+                {!isLocked && disciplinedSizing && (
+                  <View style={styles.insightNote}>
+                    <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
+                    <Text style={styles.insightNoteText}>You don't bet bigger after losing to try to win it back — that's disciplined sizing.</Text>
+                  </View>
+                )}
               </View>
-            )}
 
-            {/* Investment After Outcome (Chasing) */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>INVESTMENT AFTER OUTCOME</Text>
-              <StatLine label="After a Winning Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
-              <StatLine label="After a Losing Hand" value={`${currencySymbol}${investAfter.avgInvestmentAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
-              {!isLocked && chasesLosses && (
-                <View style={styles.insightNote}>
-                  <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
-                  <Text style={styles.insightNoteText}>
-                    You invest {((betSizeDelta / (investAfter.avgInvestmentAfterWin || 1)) * 100).toFixed(0)}% more right after losing a hand than after winning one — a loss-chasing pattern worth watching.
+              {/* Post-Bluff Tilt Index */}
+              {(postBluff.afterBluffed.sample > 0 || postBluff.afterGood.sample > 0) && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>POST-BLUFF TILT INDEX</Text>
+                  <Text style={styles.cardHint}>Does getting bluffed change your very next fold read?</Text>
+                  <StatLine label={`Bluffed Again, Right After a Bluff (${postBluff.afterBluffed.sample} hands)`} value={fmtPct(postBluff.afterBluffed.rate)} locked={isLocked} />
+                  <StatLine label={`Bluffed Again, Right After a Good Fold (${postBluff.afterGood.sample} hands)`} value={fmtPct(postBluff.afterGood.rate)} locked={isLocked} />
+                  {!isLocked && postBluff.tiltIndex !== null && (
+                    <View style={styles.insightNote}>
+                      <Ionicons
+                        name={postBluff.tiltIndex > 15 ? 'alert-circle-outline' : 'information-circle-outline'}
+                        size={16}
+                        color={postBluff.tiltIndex > 15 ? COLORS.warning : COLORS.textSecondary}
+                      />
+                      <Text style={styles.insightNoteText}>
+                        {postBluff.tiltIndex > 15
+                          ? `Your bluffed-fold rate jumps ${postBluff.tiltIndex.toFixed(1)} points right after getting bluffed — a real tilt signature worth watching.`
+                          : "Getting bluffed doesn't meaningfully change your next fold read — your judgment holds up under pressure."}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Session Fatigue on Fold Judgment */}
+              {fatigue && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>SESSION FATIGUE ON FOLD JUDGMENT</Text>
+                  <Text style={styles.cardHint}>Bluffed-fold rate, first half of your sessions vs. the second half</Text>
+                  <View style={styles.compareRow}>
+                    <CompareStat label={`First Half (${fatigue.firstHalf.sample} hands)`} value={fmtPct(fatigue.firstHalf.rate)} locked={isLocked} />
+                    <CompareStat label={`Second Half (${fatigue.secondHalf.sample} hands)`} value={fmtPct(fatigue.secondHalf.rate)} locked={isLocked} />
+                  </View>
+                  {!isLocked && fatigue.fatigueDelta > 15 && (
+                    <View style={styles.insightNote}>
+                      <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
+                      <Text style={styles.insightNoteText}>
+                        Your fold reads get {fatigue.fatigueDelta.toFixed(1)} points worse in the back half of a session — a fatigue signal worth a break for.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Day of Week */}
+              {dow && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
+                  <StatLine
+                    label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
+                    value={fmtMoney(dow.best.avgNet)}
+                    valueColor={COLORS.success}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
+                    value={fmtMoney(dow.worst.avgNet)}
+                    valueColor={COLORS.danger}
+                    locked={isLocked}
+                  />
+                </View>
+              )}
+
+              {/* Session Length Performance */}
+              {lenPerf && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
+                  <StatLine
+                    label={`Short: ≤10 hands (${lenPerf.short.sample} hands)`}
+                    value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Medium: 11–25 hands (${lenPerf.medium.sample} hands)`}
+                    value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Large: 25+ hands (${lenPerf.long.sample} hands)`}
+                    value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                  <Text style={styles.cardFootnote}>If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.</Text>
+                </View>
+              )}
+            </ExpandableSection>
+
+            <ExpandableSection title="Advanced Stats">
+              {/* Volatility */}
+              <View style={[styles.card, SHADOWS.card]}>
+                <View style={styles.riskHeaderRow}>
+                  <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
+                  {isLocked ? (
+                    <SkeletonBar width={56} height={18} />
+                  ) : (
+                    vol.riskLabel && (
+                      <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
+                        <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
+                      </View>
+                    )
+                  )}
+                </View>
+                <Text style={styles.cardHint}>
+                  {isLocked
+                    ? 'See how consistent your bet sizing and results really are.'
+                    : vol.riskLabel
+                    ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average investment, hand to hand.`
+                    : 'Not enough investment variation yet to score this.'}
+                </Text>
+                <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                <StatLine label="Investment Std. Deviation" value={`${currencySymbol}${vol.investmentStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                <StatLine label="Sizing Consistency" value={vol.investmentConsistency !== null ? `${vol.investmentConsistency.toFixed(0)}/100` : '—'} locked={isLocked} />
+              </View>
+
+              {/* BB/Hour */}
+              <View style={[styles.card, SHADOWS.card]}>
+                <Text style={styles.cardLabel}>BB / HOUR</Text>
+                <Text style={styles.cardHint}>Big blinds won per hour of play</Text>
+                <View style={styles.compareRow}>
+                  <CompareStat label="BB/Hour" value={bbPerHour !== null ? `${bbPerHour >= 0 ? '+' : ''}${bbPerHour.toFixed(1)}` : '—'} valueColor={bbPerHour !== null && bbPerHour > 0 ? COLORS.success : bbPerHour !== null && bbPerHour < 0 ? COLORS.danger : COLORS.textPrimary} locked={isLocked} />
+                  <CompareStat
+                    label="bb / 100 hands"
+                    value={bb ? `${bb.bbPer100 >= 0 ? '+' : ''}${bb.bbPer100.toFixed(1)}` : '—'}
+                    valueColor={bb && bb.bbPer100 > 0 ? COLORS.success : bb && bb.bbPer100 < 0 ? COLORS.danger : COLORS.textPrimary}
+                    locked={isLocked}
+                  />
+                  <CompareStat label="Avg Bet (BB)" value={bb ? `${bb.avgInvestmentBB.toFixed(1)} bb` : '—'} locked={isLocked} />
+                </View>
+              </View>
+
+              {/* Bluff-Catcher Score */}
+              <View style={[styles.card, SHADOWS.card]}>
+                <Text style={styles.cardLabel}>BLUFF-CATCHER SCORE</Text>
+                <Text style={styles.cardHint}>What your folds turned out to be, once you found out</Text>
+
+                {fold.sample > 0 ? (
+                  <>
+                    {isLocked ? (
+                      <>
+                        <View style={styles.outcomeBarRow}>
+                          <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
+                        </View>
+                        <View style={styles.outcomeLegendRow}>
+                          <SkeletonBar width={64} height={12} />
+                          <SkeletonBar width={64} height={12} />
+                          <SkeletonBar width={64} height={12} />
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.outcomeBarRow}>
+                          {fold.bluffedRate > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.bluffed, backgroundColor: COLORS.primary }]} />}
+                          {fold.goodFold > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.goodFold, backgroundColor: COLORS.success }]} />}
+                          {fold.noShow > 0 && <View style={[styles.outcomeBarSeg, { flex: fold.noShow, backgroundColor: COLORS.textMuted }]} />}
+                        </View>
+                        <View style={styles.outcomeLegendRow}>
+                          <View style={styles.outcomeLegendItem}>
+                            <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
+                            <Text style={styles.outcomeLegendText}>Bluffed {fold.bluffed}</Text>
+                          </View>
+                          <View style={styles.outcomeLegendItem}>
+                            <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
+                            <Text style={styles.outcomeLegendText}>Good Fold {fold.goodFold}</Text>
+                          </View>
+                          <View style={styles.outcomeLegendItem}>
+                            <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
+                            <Text style={styles.outcomeLegendText}>No-Show {fold.noShow}</Text>
+                          </View>
+                        </View>
+                      </>
+                    )}
+
+                    <View style={styles.overviewDivider} />
+
+                    <View style={styles.compareRow}>
+                      <CompareStat
+                        label={`Bluffed-Fold Rate (${fold.judgedSample} hands)`}
+                        value={fmtPct(fold.bluffedRate)}
+                        valueColor={fold.bluffedRate !== null && fold.bluffedRate > 35 ? COLORS.danger : COLORS.success}
+                        locked={isLocked}
+                      />
+                      <CompareStat
+                        label="Money Left On The Table"
+                        value={fmtMoneyAbs(fold.moneyLeftOnTable)}
+                        valueColor={COLORS.warning}
+                        sub={fold.moneyLeftOnTableBB !== null ? `${fold.moneyLeftOnTableBB.toFixed(1)} bb` : undefined}
+                        locked={isLocked}
+                      />
+                    </View>
+                    <Text style={styles.cardFootnote}>
+                      "Money left on the table" is the pot you'd have collected on every fold that turned out to be a bluff. Judged folds only — no-shows aren't counted either way.
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.cardHint}>No folds logged yet — this fills in once you start tagging folds.</Text>
+                )}
+              </View>
+
+              {/* Fold Quality by Street */}
+              {byStreet.length > 0 && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>FOLD QUALITY BY STREET</Text>
+                  <Text style={styles.cardHint}>Where your bluff-catching actually breaks down</Text>
+                  {byStreet.map((s) => (
+                    <StatLine
+                      key={s.street}
+                      label={`{s.street} ({s.sample} hands)`}
+                      value={s.bluffedRate !== null ? `${fmtPct(s.bluffedRate)} bluffed` : '—'}
+                      valueColor={s.bluffedRate !== null && s.bluffedRate > 40 ? COLORS.danger : undefined}
+                      locked={isLocked}
+                    />
+                  ))}
+                  <Text style={styles.cardFootnote}>
+                    Later streets carry bigger pots, so a high bluffed rate there costs more than the same rate pre-flop.
                   </Text>
                 </View>
               )}
-              {!isLocked && disciplinedSizing && (
-                <View style={styles.insightNote}>
-                  <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
-                  <Text style={styles.insightNoteText}>You don't bet bigger after losing to try to win it back — that's disciplined sizing.</Text>
+
+              {/* Showdown Win Rate */}
+              {showdown.sample > 0 && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>SHOWDOWN WIN RATE</Text>
+                  <Text style={styles.cardHint}>Of the hands you didn't fold, how often you won or chopped</Text>
+                  <View style={styles.compareRow}>
+                    <CompareStat label={`Won or Split (${showdown.sample} hands)`} value={fmtPct(showdown.winOrSplitRate)} locked={isLocked} />
+                    <CompareStat label="Won Outright" value={String(showdown.wins)} locked={isLocked} />
+                    <CompareStat label="Split" value={String(showdown.splits)} locked={isLocked} />
+                  </View>
                 </View>
               )}
-            </View>
 
-            {/* Streaks */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>CURRENT STREAK</Text>
-              {isLocked ? (
-                <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
-              ) : (
-                <Text style={[styles.streakValue, { color: streakColor }]}>
-                  {streaks.currentStreakType
-                    ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'up' ? 'Up' : 'Down'}`
-                    : 'None'}
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.rowCards}>
-              <View style={[styles.halfCard, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LONGEST UP STREAK</Text>
-                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestUpStreak}</Text>}
-              </View>
-              <View style={[styles.halfCard, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LONGEST DOWN STREAK</Text>
-                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestDownStreak}</Text>}
-              </View>
-            </View>
-
-            {/* Showdown Win Rate */}
-            {showdown.sample > 0 && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>SHOWDOWN WIN RATE</Text>
-                <Text style={styles.cardHint}>Of the hands you didn't fold, how often you won or chopped</Text>
-                <View style={styles.compareRow}>
-                  <CompareStat label={`Won or Split (n=${showdown.sample})`} value={fmtPct(showdown.winOrSplitRate)} locked={isLocked} />
-                  <CompareStat label="Won Outright" value={String(showdown.wins)} locked={isLocked} />
-                  <CompareStat label="Split" value={String(showdown.splits)} locked={isLocked} />
+              {/* Commitment Ratio */}
+              {commitment && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>POT COMMITMENT</Text>
+                  <Text style={styles.cardHint}>Your share of the average final pot</Text>
+                  <StatLine label={`Your Investment vs. Pot (${commitment.sample} hands)`} value={`${commitment.avgCommitmentPct.toFixed(1)}%`} locked={isLocked} />
+                  <Text style={styles.cardFootnote}>
+                    Higher means you're usually the one driving the betting; lower means you're more often calling into pots others built.
+                  </Text>
                 </View>
-              </View>
-            )}
-
-            {/* Commitment Ratio */}
-            {commitment && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>POT COMMITMENT</Text>
-                <Text style={styles.cardHint}>Your share of the average final pot</Text>
-                <StatLine label={`Your Investment vs. Pot (n=${commitment.sample})`} value={`${commitment.avgCommitmentPct.toFixed(1)}%`} locked={isLocked} />
-                <Text style={styles.cardFootnote}>
-                  Higher means you're usually the one driving the betting; lower means you're more often calling into pots others built.
-                </Text>
-              </View>
-            )}
-
-            {/* Risk & Volatility */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <View style={styles.riskHeaderRow}>
-                <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-                {isLocked ? (
-                  <SkeletonBar width={56} height={18} />
-                ) : (
-                  vol.riskLabel && (
-                    <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
-                    </View>
-                  )
-                )}
-              </View>
-              <Text style={styles.cardHint}>
-                {isLocked
-                  ? 'See how consistent your bet sizing and results really are.'
-                  : vol.riskLabel
-                  ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average investment, hand to hand.`
-                  : 'Not enough investment variation yet to score this.'}
-              </Text>
-              <StatLine label="Net Result Std. Deviation" value={`${currencySymbol}${vol.netResultStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
-              <StatLine label="Investment Std. Deviation" value={`${currencySymbol}${vol.investmentStdDev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
-              <StatLine label="Sizing Consistency" value={vol.investmentConsistency !== null ? `${vol.investmentConsistency.toFixed(0)}/100` : '—'} locked={isLocked} />
-            </View>
-
-            {/* Day of Week */}
-            {dow && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                <StatLine
-                  label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
-                  value={fmtMoney(dow.best.avgNet)}
-                  valueColor={COLORS.success}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
-                  value={fmtMoney(dow.worst.avgNet)}
-                  valueColor={COLORS.danger}
-                  locked={isLocked}
-                />
-              </View>
-            )}
-
-            {/* Session Length Performance */}
-            {lenPerf && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
-                <StatLine
-                  label={`Short: ≤10 hands (n=${lenPerf.short.sample})`}
-                  value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Medium: 11–25 hands (n=${lenPerf.medium.sample})`}
-                  value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
-                  value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <Text style={styles.cardFootnote}>If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.</Text>
-              </View>
-            )}
+              )}
+            </ExpandableSection>
 
             {/* Copy Report */}
             <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]} activeOpacity={0.85} onPress={handleCopyReport}>
@@ -651,7 +670,7 @@ export default function PokerInsightsScreen({ navigation }) {
             </Text>
           </>
         )}
-      </ScrollView>
+</ScrollView>
       {isLocked && (
         <InsightsUnlockCta
           subtitle="Your bluff-catcher score, tilt index, and leak detection — unlocked with Ante+."

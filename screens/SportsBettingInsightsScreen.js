@@ -16,6 +16,8 @@ import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 import { NavBar } from '../components/ui';
+import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
+
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers — same split
@@ -278,55 +280,31 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               </View>
             )}
 
-            {/* Performance Overview */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>PERFORMANCE OVERVIEW</Text>
-              <Text style={styles.cardHint}>Your actual results across {outcomes.sample} bets</Text>
-
+            {/* The Basics */}
+            <ExpandableSection title="The Basics" defaultExpanded={true}>
               {isLocked ? (
                 <>
-                  <View style={styles.outcomeBarRow}>
-                    <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.backgroundSecondary }]} />
-                  </View>
-                  <View style={styles.outcomeLegendRow}>
-                    <SkeletonBar width={70} height={12} />
-                    <SkeletonBar width={70} height={12} />
-                    <SkeletonBar width={70} height={12} />
-                  </View>
+                  <SkeletonBar width="100%" height={24} style={{ marginBottom: 12 }} />
+                  <SkeletonBar width="100%" height={24} style={{ marginBottom: 12 }} />
+                  <SkeletonBar width="100%" height={24} style={{ marginBottom: 16 }} />
                 </>
               ) : (
                 <>
-                  <View style={styles.outcomeBarRow}>
-                    {outcomes.winRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />}
-                    {outcomes.pushRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.pushRate, backgroundColor: COLORS.textMuted }]} />}
-                    {outcomes.lossRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />}
-                  </View>
-                  <View style={styles.outcomeLegendRow}>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                      <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)}</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                      <Text style={styles.outcomeLegendText}>Push {fmtPct(outcomes.pushRate)}</Text>
-                    </View>
-                    <View style={styles.outcomeLegendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                      <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)}</Text>
-                    </View>
-                  </View>
+                  <ProgressBar label="Win Rate" valueText={fmtPct(outcomes.winRate)} percent={outcomes.winRate} color={COLORS.success} />
+                  <ProgressBar label="Push Rate" valueText={fmtPct(outcomes.pushRate)} percent={outcomes.pushRate} color={COLORS.textMuted} />
+                  <ProgressBar label="Loss Rate" valueText={fmtPct(outcomes.lossRate)} percent={outcomes.lossRate} color={COLORS.danger} />
                 </>
               )}
-
+              
               <View style={styles.overviewDivider} />
-
+              
+              <TrendArrow 
+                trend={returns.netProfit} 
+                label="Net Profit" 
+                valueText={fmtMoney(returns.netProfit)} 
+                goodIsUp={true} 
+              />
               <View style={styles.compareRow}>
-                <CompareStat
-                  label="Net Result"
-                  value={fmtMoney(returns.netProfit)}
-                  valueColor={returns.netProfit > 0 ? COLORS.success : returns.netProfit < 0 ? COLORS.danger : COLORS.textPrimary}
-                  locked={isLocked}
-                />
                 <CompareStat
                   label="Return on Staked"
                   value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
@@ -335,239 +313,243 @@ export default function SportsBettingInsightsScreen({ navigation }) {
                 />
                 <CompareStat label="Avg / Bet" value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} locked={isLocked} />
               </View>
-            </View>
+            </ExpandableSection>
 
-            {/* Odds Edge — the headline "pro metric" */}
-            {oddsEdge && (
+            {/* Your Habits */}
+            <ExpandableSection title="Your Habits">
+              {/* Streaks */}
               <View style={[styles.card, SHADOWS.card]}>
-                <View style={styles.proRow}>
-                  <Ionicons name="ribbon-outline" size={13} color={COLORS.primary} />
-                  <Text style={styles.proRowLabel}>PRO METRIC — ARE YOU BEATING YOUR OWN PRICE?</Text>
+                <Text style={styles.cardLabel}>CURRENT STREAK</Text>
+                {isLocked ? (
+                  <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
+                ) : (
+                  <Text style={[styles.streakValue, { color: streakColor }]}>
+                    {streaks.currentStreakType
+                      ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'win' ? 'Win' : 'Loss'}${streaks.currentStreakLength !== 1 ? 's' : ''}`
+                      : 'None'}
+                  </Text>
+                )}
+              </View>
+  
+              <View style={styles.rowCards}>
+                <View style={[styles.halfCard, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>LONGEST WIN</Text>
+                  {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
                 </View>
-                <Text style={styles.cardHint}>Your win rate vs. the win probability your own odds implied</Text>
-                <View style={styles.compareRow}>
-                  <CompareStat label={`Actual Win Rate (n=${oddsEdge.sample})`} value={fmtPct(oddsEdge.actualWinRate)} locked={isLocked} />
-                  <CompareStat label="Avg Implied Probability" value={fmtPct(oddsEdge.avgImpliedProbability)} locked={isLocked} />
-                  <CompareStat
-                    label="Edge"
-                    value={`${oddsEdge.edge >= 0 ? '+' : ''}${oddsEdge.edge.toFixed(1)} pts`}
-                    valueColor={edgeColor}
-                    locked={isLocked}
-                  />
+                <View style={[styles.halfCard, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>LONGEST LOSS</Text>
+                  {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
                 </View>
-                <Text style={styles.cardFootnote}>
-                  A positive edge means you're winning more often than the price you bought implied — a real signal, not just variance. A negative edge means you're losing even relative to your own odds.
-                </Text>
               </View>
-            )}
 
-            {/* Favorite vs Underdog */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>FAVORITE VS. UNDERDOG</Text>
-              <Text style={styles.cardHint}>Negative-odds favorites vs. positive-odds underdogs</Text>
-              <View style={styles.compareRow}>
-                <CompareStat
-                  label={`Favorites (n=${favDog.favorites.sample})`}
-                  value={fmtPct(favDog.favorites.winRate)}
-                  sub={`ROI: ${favDog.favorites.roi !== null ? `${favDog.favorites.roi.toFixed(1)}%` : '—'}`}
-                  locked={isLocked}
-                />
-                <CompareStat
-                  label={`Underdogs (n=${favDog.underdogs.sample})`}
-                  value={fmtPct(favDog.underdogs.winRate)}
-                  sub={`ROI: ${favDog.underdogs.roi !== null ? `${favDog.underdogs.roi.toFixed(1)}%` : '—'}`}
-                  locked={isLocked}
-                />
-              </View>
-            </View>
+              {/* Sport Breakdown */}
+              {sportStats && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>BEST & WORST SPORT</Text>
+                  {sportStats.best && (
+                    <StatLine
+                      label={`Best: ${sportStats.best.sport}`}
+                      value={`${sportStats.best.roi >= 0 ? '+' : ''}${sportStats.best.roi.toFixed(1)}%`}
+                      valueColor={COLORS.success}
+                      locked={isLocked}
+                    />
+                  )}
+                  {sportStats.worst && (
+                    <StatLine
+                      label={`Worst: ${sportStats.worst.sport}`}
+                      value={`${sportStats.worst.roi >= 0 ? '+' : ''}${sportStats.worst.roi.toFixed(1)}%`}
+                      valueColor={COLORS.danger}
+                      locked={isLocked}
+                    />
+                  )}
+                </View>
+              )}
 
-            {/* Bet Type Breakdown */}
-            {betTypes.length > 0 && (
+              {/* Bet Type Breakdown */}
+              {betTypes.length > 0 && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>PERFORMANCE BY BET TYPE</Text>
+                  {betTypes.map((t) => (
+                    <StatLine
+                      key={t.type}
+                      label={`${t.type}`}
+                      value={t.roi !== null ? `${t.roi >= 0 ? '+' : ''}${t.roi.toFixed(1)}% ROI` : '—'}
+                      valueColor={t.roi !== null ? (t.roi > 0 ? COLORS.success : t.roi < 0 ? COLORS.danger : undefined) : undefined}
+                      locked={isLocked}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Stake Size After Outcome */}
               <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY BET TYPE</Text>
-                {betTypes.map((t) => (
-                  <StatLine
-                    key={t.type}
-                    label={`${t.type} (n=${t.sample})`}
-                    value={t.roi !== null ? `${t.roi >= 0 ? '+' : ''}${t.roi.toFixed(1)}% ROI` : '—'}
-                    valueColor={t.roi !== null ? (t.roi > 0 ? COLORS.success : t.roi < 0 ? COLORS.danger : undefined) : undefined}
-                    locked={isLocked}
-                  />
-                ))}
+                <Text style={styles.cardLabel}>STAKE SIZE AFTER OUTCOME</Text>
+                <StatLine label="After a Win" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                <StatLine label="After a Loss" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                {!isLocked && chasesLosses && (
+                  <View style={styles.insightNote}>
+                    <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
+                    <Text style={styles.insightNoteText}>
+                      You stake {((betSizeDelta / (betSizeAfterOutcome.avgBetAfterWin || 1)) * 100).toFixed(0)}% more right after losing a bet than after winning one — a loss-chasing pattern worth watching.
+                    </Text>
+                  </View>
+                )}
+                {!isLocked && disciplinedSizing && (
+                  <View style={styles.insightNote}>
+                    <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
+                    <Text style={styles.insightNoteText}>You don't bet bigger after a loss to try to win it back — that's disciplined staking.</Text>
+                  </View>
+                )}
               </View>
-            )}
 
-            {/* Sport Breakdown */}
-            {sportStats && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>BEST & WORST SPORT</Text>
-                <Text style={styles.cardHint}>By return on staked, minimum 3 bets per sport</Text>
-                {sportStats.best && (
+              {/* Live vs Pregame */}
+              {liveVsPregame && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>LIVE VS. PREGAME</Text>
+                  <View style={styles.compareRow}>
+                    <CompareStat
+                      label={`Live`}
+                      value={liveVsPregame.live.roi !== null ? `${liveVsPregame.live.roi >= 0 ? '+' : ''}${liveVsPregame.live.roi.toFixed(1)}%` : '—'}
+                      locked={isLocked}
+                    />
+                    <CompareStat
+                      label={`Pregame`}
+                      value={liveVsPregame.pregame.roi !== null ? `${liveVsPregame.pregame.roi >= 0 ? '+' : ''}${liveVsPregame.pregame.roi.toFixed(1)}%` : '—'}
+                      locked={isLocked}
+                    />
+                  </View>
+                </View>
+              )}
+
+              {/* Day of Week */}
+              {dow && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
                   <StatLine
-                    label={`Best: ${sportStats.best.sport} (n=${sportStats.best.sample})`}
-                    value={`${sportStats.best.roi >= 0 ? '+' : ''}${sportStats.best.roi.toFixed(1)}%`}
+                    label={`Best: ${dow.best.day}`}
+                    value={fmtMoney(dow.best.avgNet)}
                     valueColor={COLORS.success}
                     locked={isLocked}
                   />
-                )}
-                {sportStats.worst && (
                   <StatLine
-                    label={`Worst: ${sportStats.worst.sport} (n=${sportStats.worst.sample})`}
-                    value={`${sportStats.worst.roi >= 0 ? '+' : ''}${sportStats.worst.roi.toFixed(1)}%`}
+                    label={`Worst: ${dow.worst.day}`}
+                    value={fmtMoney(dow.worst.avgNet)}
                     valueColor={COLORS.danger}
                     locked={isLocked}
                   />
-                )}
-              </View>
-            )}
+                </View>
+              )}
 
-            {/* Live vs Pregame */}
-            {liveVsPregame && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LIVE VS. PREGAME</Text>
-                <View style={styles.compareRow}>
-                  <CompareStat
-                    label={`Live (n=${liveVsPregame.live.sample})`}
-                    value={liveVsPregame.live.roi !== null ? `${liveVsPregame.live.roi >= 0 ? '+' : ''}${liveVsPregame.live.roi.toFixed(1)}%` : '—'}
+              {/* Session Length Performance */}
+              {lenPerf && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
+                  <StatLine
+                    label={`Short (≤10)`}
+                    value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/bet` : '—'}
                     locked={isLocked}
                   />
-                  <CompareStat
-                    label={`Pregame (n=${liveVsPregame.pregame.sample})`}
-                    value={liveVsPregame.pregame.roi !== null ? `${liveVsPregame.pregame.roi >= 0 ? '+' : ''}${liveVsPregame.pregame.roi.toFixed(1)}%` : '—'}
+                  <StatLine
+                    label={`Medium (11–25)`}
+                    value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/bet` : '—'}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Large (25+)`}
+                    value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/bet` : '—'}
                     locked={isLocked}
                   />
                 </View>
+              )}
+            </ExpandableSection>
+
+            {/* Advanced Stats */}
+            <ExpandableSection title="Advanced Stats">
+              {/* Risk & Volatility */}
+              <View style={[styles.card, SHADOWS.card]}>
+                <View style={styles.riskHeaderRow}>
+                  <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
+                  {isLocked ? (
+                    <SkeletonBar width={56} height={18} />
+                  ) : (
+                    vol.riskLabel && (
+                      <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
+                        <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
+                      </View>
+                    )
+                  )}
+                </View>
+                <Text style={styles.cardHint}>
+                  {isLocked
+                    ? 'See how consistent your staking and results really are.'
+                    : vol.riskLabel
+                    ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average stake, bet to bet.`
+                    : 'Not enough stake variation yet to score this.'}
+                </Text>
               </View>
-            )}
 
-            {/* Conditional Win Rate */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>CONDITIONAL WIN RATE</Text>
-              <Text style={styles.cardHint}>Your win rate depending on what just happened</Text>
-              <StatLine label={`After a Win (n=${cwr.afterWin.sample})`} value={fmtPct(cwr.afterWin.rate)} locked={isLocked} />
-              <StatLine label={`After a Loss (n=${cwr.afterLoss.sample})`} value={fmtPct(cwr.afterLoss.rate)} locked={isLocked} />
-            </View>
-
-            {/* Stake Size After Outcome */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>STAKE SIZE AFTER OUTCOME</Text>
-              <StatLine label="After a Win" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
-              <StatLine label="After a Loss" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
-              {!isLocked && chasesLosses && (
-                <View style={styles.insightNote}>
-                  <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
-                  <Text style={styles.insightNoteText}>
-                    You stake {((betSizeDelta / (betSizeAfterOutcome.avgBetAfterWin || 1)) * 100).toFixed(0)}% more right after losing a bet than after winning one — a loss-chasing pattern worth watching.
+              {/* Odds Edge — the headline "pro metric" */}
+              {oddsEdge && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <View style={styles.proRow}>
+                    <Ionicons name="ribbon-outline" size={13} color={COLORS.primary} />
+                    <Text style={styles.proRowLabel}>PRO METRIC — ARE YOU BEATING YOUR OWN PRICE?</Text>
+                  </View>
+                  <Text style={styles.cardHint}>Your win rate vs. the win probability your own odds implied</Text>
+                  <View style={styles.compareRow}>
+                    <CompareStat label={`Actual Win Rate`} value={fmtPct(oddsEdge.actualWinRate)} locked={isLocked} />
+                    <CompareStat label="Avg Implied Prob" value={fmtPct(oddsEdge.avgImpliedProbability)} locked={isLocked} />
+                    <CompareStat
+                      label="Edge"
+                      value={`${oddsEdge.edge >= 0 ? '+' : ''}${oddsEdge.edge.toFixed(1)} pts`}
+                      valueColor={edgeColor}
+                      locked={isLocked}
+                    />
+                  </View>
+                  <Text style={styles.cardFootnote}>
+                    A positive edge means you're winning more often than the price you bought implied — a real signal, not just variance. A negative edge means you're losing even relative to your own odds.
                   </Text>
                 </View>
               )}
-              {!isLocked && disciplinedSizing && (
-                <View style={styles.insightNote}>
-                  <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
-                  <Text style={styles.insightNoteText}>You don't bet bigger after a loss to try to win it back — that's disciplined staking.</Text>
+              
+              {/* Favorite vs Underdog */}
+              <View style={[styles.card, SHADOWS.card]}>
+                <Text style={styles.cardLabel}>FAVORITE VS. UNDERDOG</Text>
+                <Text style={styles.cardHint}>Negative-odds favorites vs. positive-odds underdogs</Text>
+                <View style={styles.compareRow}>
+                  <CompareStat
+                    label={`Favorites`}
+                    value={fmtPct(favDog.favorites.winRate)}
+                    sub={`ROI: ${favDog.favorites.roi !== null ? `${favDog.favorites.roi.toFixed(1)}%` : '—'}`}
+                    locked={isLocked}
+                  />
+                  <CompareStat
+                    label={`Underdogs`}
+                    value={fmtPct(favDog.underdogs.winRate)}
+                    sub={`ROI: ${favDog.underdogs.roi !== null ? `${favDog.underdogs.roi.toFixed(1)}%` : '—'}`}
+                    locked={isLocked}
+                  />
+                </View>
+              </View>
+
+              {/* Conditional Win Rate */}
+              <View style={[styles.card, SHADOWS.card]}>
+                <Text style={styles.cardLabel}>CONDITIONAL WIN RATE</Text>
+                <StatLine label={`After a Win`} value={fmtPct(cwr.afterWin.rate)} locked={isLocked} />
+                <StatLine label={`After a Loss`} value={fmtPct(cwr.afterLoss.rate)} locked={isLocked} />
+              </View>
+
+              {/* Win Rate by Stake Tier */}
+              {tiers && (
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>WIN RATE BY STAKE SIZE</Text>
+                  <Text style={styles.cardHint}>Based on your own small / medium / large stake ranges</Text>
+                  <StatLine label={`Small`} value={fmtPct(tiers.small.winRate)} locked={isLocked} />
+                  <StatLine label={`Medium`} value={fmtPct(tiers.medium.winRate)} locked={isLocked} />
+                  <StatLine label={`Large`} value={fmtPct(tiers.large.winRate)} locked={isLocked} />
                 </View>
               )}
-            </View>
-
-            {/* Streaks */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>CURRENT STREAK</Text>
-              {isLocked ? (
-                <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
-              ) : (
-                <Text style={[styles.streakValue, { color: streakColor }]}>
-                  {streaks.currentStreakType
-                    ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'win' ? 'Win' : 'Loss'}${streaks.currentStreakLength !== 1 ? 's' : ''}`
-                    : 'None'}
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.rowCards}>
-              <View style={[styles.halfCard, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LONGEST WIN STREAK</Text>
-                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
-              </View>
-              <View style={[styles.halfCard, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LONGEST LOSS STREAK</Text>
-                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
-              </View>
-            </View>
-
-            {/* Win Rate by Stake Tier */}
-            {tiers && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>WIN RATE BY STAKE SIZE</Text>
-                <Text style={styles.cardHint}>Based on your own small / medium / large stake ranges</Text>
-                <StatLine label={`Small (avg ${currencySymbol}${formatNumber(tiers.small.avgBet, 0)}, n=${tiers.small.sample})`} value={fmtPct(tiers.small.winRate)} locked={isLocked} />
-                <StatLine label={`Medium (avg ${currencySymbol}${formatNumber(tiers.medium.avgBet, 0)}, n=${tiers.medium.sample})`} value={fmtPct(tiers.medium.winRate)} locked={isLocked} />
-                <StatLine label={`Large (avg ${currencySymbol}${formatNumber(tiers.large.avgBet, 0)}, n=${tiers.large.sample})`} value={fmtPct(tiers.large.winRate)} locked={isLocked} />
-              </View>
-            )}
-
-            {/* Risk & Volatility */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <View style={styles.riskHeaderRow}>
-                <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-                {isLocked ? (
-                  <SkeletonBar width={56} height={18} />
-                ) : (
-                  vol.riskLabel && (
-                    <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
-                    </View>
-                  )
-                )}
-              </View>
-              <Text style={styles.cardHint}>
-                {isLocked
-                  ? 'See how consistent your staking and results really are.'
-                  : vol.riskLabel
-                  ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average stake, bet to bet.`
-                  : 'Not enough stake variation yet to score this.'}
-              </Text>
-            </View>
-
-            {/* Day of Week */}
-            {dow && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                <StatLine
-                  label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
-                  value={fmtMoney(dow.best.avgNet)}
-                  valueColor={COLORS.success}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
-                  value={fmtMoney(dow.worst.avgNet)}
-                  valueColor={COLORS.danger}
-                  locked={isLocked}
-                />
-              </View>
-            )}
-
-            {/* Session Length Performance */}
-            {lenPerf && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
-                <StatLine
-                  label={`Short: ≤10 bets (n=${lenPerf.short.sample})`}
-                  value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/bet` : '—'}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Medium: 11–25 bets (n=${lenPerf.medium.sample})`}
-                  value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/bet` : '—'}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Large: 25+ bets (n=${lenPerf.long.sample})`}
-                  value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/bet` : '—'}
-                  locked={isLocked}
-                />
-              </View>
-            )}
+            </ExpandableSection>
 
             {/* Copy Report */}
             <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]} activeOpacity={0.85} onPress={handleCopyReport}>
