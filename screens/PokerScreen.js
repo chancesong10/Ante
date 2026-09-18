@@ -26,6 +26,15 @@ import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 import { formatAmount, formatMoney, formatNumber } from '../utils/format';
+import {
+  heroInvestment,
+  derivePot,
+  currentStreetMaxBet as maxBetOnStreet,
+  streetMismatch,
+  everyoneFolded as allOpponentsFolded,
+  foldWinNet as netFromFoldWin,
+  buildHandRecord,
+} from '../utils/pokerHand';
 import TrackerGuide from '../components/TrackerGuide';
 
 const STREETS = [
@@ -35,10 +44,6 @@ const STREETS = [
   { key: 'river', label: 'River (5th)', short: 'River' },
   { key: 'showdown', label: 'Showdown', short: 'Result' },
 ];
-
-// Half a cent — below this two money figures are the same amount as far as
-// the player is concerned, since every amount is rendered to two decimals.
-const MONEY_EPSILON = 0.005;
 
 const BLIND_MODES = [
   { key: 'none', label: 'No Blinds' },
@@ -176,37 +181,16 @@ export default function PokerScreen({ navigation }) {
     return name && name.trim() ? name.trim() : `Player ${id}`;
   };
 
-  // Calculated totals
+  // Calculated totals. The arithmetic lives in utils/pokerHand so it can be
+  // tested — see utils/__tests__/pokerHand.test.js for dead money, chops, and
+  // the float-drift case.
   const currentStreetKey = STREETS[currentStreetIdx]?.key || 'preflop';
   const currentHeroBet = streetBets[currentStreetKey] || 0;
-  const heroTotalInvestment =
-    (streetBets.preflop || 0) +
-    (streetBets.flop || 0) +
-    (streetBets.turn || 0) +
-    (streetBets.river || 0);
-
-  const opponentsTotalInvestment = opponents.reduce(
-    (sum, o) =>
-      sum +
-      (o.streetBets.preflop || 0) +
-      (o.streetBets.flop || 0) +
-      (o.streetBets.turn || 0) +
-      (o.streetBets.river || 0),
-    0
-  );
-
-  const effectiveTotalPot = heroTotalInvestment + opponentsTotalInvestment;
-
-  const currentStreetMaxBet = Math.max(
-    currentHeroBet,
-    0,
-    ...opponents.filter((o) => !o.folded).map((o) => o.streetBets[currentStreetKey] || 0)
-  );
-
-  // Hero is the last player standing once every seated opponent has folded.
-  const activeOpponentCount = opponents.filter((o) => !o.folded).length;
-  const everyoneFolded = opponents.length > 0 && activeOpponentCount === 0;
-  const foldWinNet = effectiveTotalPot - heroTotalInvestment;
+  const heroTotalInvestment = heroInvestment(streetBets);
+  const effectiveTotalPot = derivePot(streetBets, opponents);
+  const currentStreetMaxBet = maxBetOnStreet(currentStreetKey, currentHeroBet, opponents);
+  const everyoneFolded = allOpponentsFolded(opponents);
+  const foldWinNet = netFromFoldWin(effectiveTotalPot, heroTotalInvestment);
 
   // --- Handlers: Session Setup ---
   const handleBlindModeSelect = (mode) => {
@@ -374,21 +358,8 @@ export default function PokerScreen({ navigation }) {
   };
 
   // --- Handlers: Street Betting Validation & Advancement ---
-  // Bets are accumulated floats: a chip path of 0.10 + 0.20 lands on
-  // 0.30000000000000004, which is not === a typed 0.30 even though both
-  // render as "$0.30". Comparing to the half-cent keeps that drift from
-  // blocking a street behind a mismatch list whose rows look identical.
-  const getStreetMismatch = () => {
-    const liveBets = [{ label: 'You', amount: currentHeroBet }];
-    opponents.forEach((o) => {
-      if (!o.folded) {
-        liveBets.push({ label: getPlayerLabel(o.id), amount: o.streetBets[currentStreetKey] || 0 });
-      }
-    });
-    if (liveBets.length <= 1) return null;
-    const first = liveBets[0].amount;
-    return liveBets.some((b) => Math.abs(b.amount - first) > MONEY_EPSILON) ? liveBets : null;
-  };
+  const getStreetMismatch = () =>
+    streetMismatch(currentStreetKey, currentHeroBet, opponents, getPlayerLabel);
 
   const handleAdvanceStreet = (targetIdx) => {
     if (targetIdx > currentStreetIdx) {
@@ -431,18 +402,15 @@ export default function PokerScreen({ navigation }) {
   const handleConfirmFold = (foldReason) => {
     setFoldModalVisible(false);
 
-    const handRecord = {
+    const handRecord = buildHandRecord({
       id: Crypto.randomUUID(),
-      gameType: 'Poker',
+      timestamp: Date.now(),
       outcome: 'fold',
+      streetBets,
+      opponents,
       foldReason, // 'bluffed' | 'good_fold' | 'no_show'
       streetFolded: STREETS[currentStreetIdx]?.label || 'Pre-Flop',
-      heroInvestment: heroTotalInvestment,
-      pot: effectiveTotalPot,
-      netChange: -heroTotalInvestment,
-      streets: { ...streetBets },
-      timestamp: Date.now(),
-    };
+    });
 
     logHandToActiveSession(handRecord);
     setViewMode('dashboard');
@@ -452,19 +420,15 @@ export default function PokerScreen({ navigation }) {
   const handleWinByFold = () => {
     closeAlertModal();
 
-    const handRecord = {
+    const handRecord = buildHandRecord({
       id: Crypto.randomUUID(),
-      gameType: 'Poker',
-      outcome: 'win',
-      wonBy: 'fold', // uncontested — table folded to the hero
-      splitCount: 1,
-      streetFolded: STREETS[currentStreetIdx]?.label || 'Pre-Flop',
-      heroInvestment: heroTotalInvestment,
-      pot: effectiveTotalPot,
-      netChange: foldWinNet,
-      streets: { ...streetBets },
       timestamp: Date.now(),
-    };
+      outcome: 'win',
+      streetBets,
+      opponents,
+      wonBy: 'fold', // uncontested — table folded to the hero
+      streetFolded: STREETS[currentStreetIdx]?.label || 'Pre-Flop',
+    });
 
     logHandToActiveSession(handRecord);
     setViewMode('dashboard');
@@ -498,27 +462,14 @@ export default function PokerScreen({ navigation }) {
 
   // --- Handlers: Save Showdown Hand ---
   const handleSaveShowdownHand = () => {
-    let netChange = 0;
-    if (showdownResult === 'win') {
-      netChange = effectiveTotalPot - heroTotalInvestment;
-    } else if (showdownResult === 'split') {
-      const splitPot = effectiveTotalPot / splitWay;
-      netChange = splitPot - heroTotalInvestment;
-    } else {
-      netChange = -heroTotalInvestment;
-    }
-
-    const handRecord = {
+    const handRecord = buildHandRecord({
       id: Crypto.randomUUID(),
-      gameType: 'Poker',
-      outcome: showdownResult,
-      splitCount: showdownResult === 'split' ? splitWay : 1,
-      heroInvestment: heroTotalInvestment,
-      pot: effectiveTotalPot,
-      netChange,
-      streets: { ...streetBets },
       timestamp: Date.now(),
-    };
+      outcome: showdownResult,
+      streetBets,
+      opponents,
+      splitCount: splitWay,
+    });
 
     logHandToActiveSession(handRecord);
     setViewMode('dashboard');

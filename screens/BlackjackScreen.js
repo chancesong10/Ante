@@ -34,6 +34,7 @@ import {
 } from '../utils/blackjackStrategy';
 import { judgeRecord, calcStrategyAccuracy, hasCardDetail } from '../utils/blackjackDetailEngine';
 import { formatAmount, formatMoney, formatNumber } from '../utils/format';
+import { buildSplitRecord } from '../utils/blackjackHand';
 import TrackerGuide from '../components/TrackerGuide';
 
 // Laid out like the table: dealer on top, you below, then your bet, your play
@@ -366,25 +367,18 @@ export default function BlackjackScreen({ navigation }) {
       : {};
 
     if (isSplit) {
-      const toHand = (h) => {
-        const b = parseFloat(h.betAmount);
-        return {
-          bet: b,
-          doubled: h.doubled,
-          blackjack: false,
-          outcome: h.outcome,
-          netChange: calcBlackjackNet({ bet: b, doubled: h.doubled, outcome: h.outcome, payout: rules.payout }),
-        };
-      };
-      logHandToActiveSession({
-        id: Crypto.randomUUID(),
-        type: 'split',
-        hands: [toHand(splitHand1), toHand(splitHand2)],
-        // Every hand keeps the rules it was played under, cards or not.
-        rules,
-        createdAt: now,
-        ...cardDetail,
-      });
+      // Assembly and per-hand net live in utils/blackjackHand — see its tests
+      // for the doubled-half weighting and the rule that a split hand making
+      // 21 is not a natural.
+      logHandToActiveSession(
+        buildSplitRecord({
+          id: Crypto.randomUUID(),
+          createdAt: now,
+          hands: [splitHand1, splitHand2],
+          rules,
+          extra: cardDetail,
+        })
+      );
       resetForm();
       return;
     }
