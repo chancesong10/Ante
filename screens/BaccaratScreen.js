@@ -32,7 +32,7 @@ import {
   BACCARAT_TIE_ODDS_OPTIONS,
 } from '../utils/tableGameOdds';
 import { calcSessionSummary } from '../utils/tableGameStatsEngine';
-import { formatAmount } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber } from '../utils/format';
 import TrackerGuide from '../components/TrackerGuide';
 
 const BET_ON = ['Player', 'Banker', 'Tie'];
@@ -48,6 +48,7 @@ export default function BaccaratScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const {
     currencySymbol = '$',
+    privacyMode = false,
     quickChipsEnabled,
     quickChipPresets,
     baccaratTieOdds,
@@ -174,9 +175,7 @@ export default function BaccaratScreen({ navigation }) {
               { color: totalNet > 0 ? COLORS.success : totalNet < 0 ? COLORS.danger : COLORS.textPrimary },
             ]}
           >
-            {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}
-            {currencySymbol}
-            {Math.abs(totalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatMoney(totalNet, currencySymbol, privacyMode)}
           </Text>
 
           <View style={styles.statsRow}>
@@ -278,7 +277,7 @@ export default function BaccaratScreen({ navigation }) {
               <Text style={styles.payoutPreviewLabel}>TO WIN</Text>
               <Text style={styles.payoutPreviewValue}>
                 +{currencySymbol}
-                {projectedWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatNumber(projectedWin)}
               </Text>
             </View>
           )}
@@ -351,9 +350,7 @@ export default function BaccaratScreen({ navigation }) {
                       { color: h.netChange > 0 ? COLORS.success : h.netChange < 0 ? COLORS.danger : COLORS.textPrimary },
                     ]}
                   >
-                    {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}
-                    {currencySymbol}
-                    {Math.abs(h.netChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatMoney(h.netChange, currencySymbol, privacyMode)}
                   </Text>
                 </View>
               </SwipeableRow>

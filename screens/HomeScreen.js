@@ -110,9 +110,7 @@ function RecentSessionCard({
               },
             ]}
           >
-            {privacyMode
-              ? '••••••'
-              : `${net > 0 ? '+' : net < 0 ? '-' : ''}${currencySymbol}${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            {formatMoney(net, currencySymbol, privacyMode)}
           </Text>
           <Text style={styles.sessionDuration}>{session.durationFormatted}</Text>
         </View>
@@ -344,9 +342,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                     },
                   ]}
                 >
-                  {privacyMode
-                    ? '••••••'
-                    : `${activeNet > 0 ? '+' : activeNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(activeNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  {formatMoney(activeNet, currencySymbol, privacyMode)}
                 </Text>
               </View>
               <View style={styles.activeHandsBadge}>
@@ -380,9 +376,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
               },
             ]}
           >
-            {privacyMode
-              ? '••••••'
-              : `${totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(totalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            {formatMoney(totalNet, currencySymbol, privacyMode)}
           </Text>
 
           {/* Key Metrics Row */}

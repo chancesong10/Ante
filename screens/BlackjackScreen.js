@@ -33,7 +33,7 @@ import {
   calcInsuranceNet,
 } from '../utils/blackjackStrategy';
 import { judgeRecord, calcStrategyAccuracy, hasCardDetail } from '../utils/blackjackDetailEngine';
-import { formatAmount } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber } from '../utils/format';
 import TrackerGuide from '../components/TrackerGuide';
 
 // Laid out like the table: dealer on top, you below, then your bet, your play
@@ -71,7 +71,6 @@ function endTagOptions({ cardsComplete, isNatural, action, outcome, dealerUp }) 
   return [];
 }
 
-const signedMoney = (v, symbol) => `${v > 0 ? '+' : v < 0 ? '-' : ''}${symbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const toneOf = (v) => (v > 0 ? COLORS.success : v < 0 ? COLORS.danger : COLORS.textPrimary);
 
 // "10-6 vs 9 · Hit" and the strategy verdict, under a logged hand.
@@ -108,6 +107,7 @@ export default function BlackjackScreen({ navigation }) {
   const {
     quickChipsEnabled,
     currencySymbol = '$',
+    privacyMode = false,
     quickChipPresets,
     blackjackRules,
     blackjackCardEntry,
@@ -588,7 +588,7 @@ export default function BlackjackScreen({ navigation }) {
               color={insurance ? COLORS.primary : COLORS.textMuted}
             />
             <Text style={styles.insuranceText}>
-              Took insurance{betValid ? ` (${currencySymbol}${(bet / 2).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : ''}
+              Took insurance{betValid ? ` (${currencySymbol}${formatNumber(bet / 2)})` : ''}
             </Text>
           </TouchableOpacity>
           {insurance && (
@@ -647,7 +647,7 @@ export default function BlackjackScreen({ navigation }) {
         {/* SESSION STATS */}
         <View style={[styles.statsBox, SHADOWS.card]}>
           <Text style={styles.statsSubtext}>SESSION NET OUTCOME</Text>
-          <Text style={[styles.netAmount, { color: toneOf(totalNet) }]}>{signedMoney(totalNet, currencySymbol)}</Text>
+          <Text style={[styles.netAmount, { color: toneOf(totalNet) }]}>{formatMoney(totalNet, currencySymbol, privacyMode)}</Text>
 
           <View style={styles.statsRow}>
             <View style={styles.statPill}>
@@ -764,7 +764,7 @@ export default function BlackjackScreen({ navigation }) {
           )}
           {isSurrender && (
             <Text style={styles.helperText}>
-              Surrender gives back half your bet{betValid ? ` (−${currencySymbol}${(bet / 2).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : ''}.
+              Surrender gives back half your bet{betValid ? ` (−${currencySymbol}${formatNumber(bet / 2)})` : ''}.
             </Text>
           )}
 
@@ -839,13 +839,13 @@ export default function BlackjackScreen({ navigation }) {
                             {h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
                           </Text>
                           <Text style={[styles.historyNet, { color: toneOf(h.netChange) }]}>
-                            {signedMoney(h.netChange, currencySymbol)}
+                            {formatMoney(h.netChange, currencySymbol, privacyMode)}
                           </Text>
                         </View>
                       ))}
                       <View style={styles.splitGroupTotalRow}>
                         <Text style={styles.splitGroupTotalLabel}>Split Combined</Text>
-                        <Text style={[styles.historyNet, { color: toneOf(groupNet) }]}>{signedMoney(groupNet, currencySymbol)}</Text>
+                        <Text style={[styles.historyNet, { color: toneOf(groupNet) }]}>{formatMoney(groupNet, currencySymbol, privacyMode)}</Text>
                       </View>
                     </View>
                   </SwipeableRow>
@@ -871,7 +871,7 @@ export default function BlackjackScreen({ navigation }) {
                       </Text>
                       {hasCardDetail(r) && <HandDetailLine record={r} />}
                     </View>
-                    <Text style={[styles.historyNet, { color: toneOf(r.netChange) }]}>{signedMoney(r.netChange, currencySymbol)}</Text>
+                    <Text style={[styles.historyNet, { color: toneOf(r.netChange) }]}>{formatMoney(r.netChange, currencySymbol, privacyMode)}</Text>
                   </View>
                 </SwipeableRow>
               );

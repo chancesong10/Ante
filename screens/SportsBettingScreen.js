@@ -24,7 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
-import { formatAmount } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber } from '../utils/format';
 import TrackerGuide from '../components/TrackerGuide';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
@@ -42,7 +42,12 @@ const calcPayout = (stake, americanOdds) => {
 
 export default function SportsBettingScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { currencySymbol = '$', quickChipsEnabled, quickChipPresets } = usePreferences();
+  const {
+    currencySymbol = '$',
+    privacyMode = false,
+    quickChipsEnabled,
+    quickChipPresets,
+  } = usePreferences();
   const stakeChips =
     Array.isArray(quickChipPresets?.sports) && quickChipPresets.sports.length > 0
       ? quickChipPresets.sports
@@ -243,7 +248,7 @@ export default function SportsBettingScreen({ navigation }) {
               },
             ]}
           >
-            {totalNet > 0 ? '+' : totalNet < 0 ? '-' : ''}{currencySymbol}{Math.abs(totalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatMoney(totalNet, currencySymbol, privacyMode)}
           </Text>
 
           <View style={styles.statsRow}>
@@ -431,7 +436,7 @@ export default function SportsBettingScreen({ navigation }) {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.payoutPreviewValue}>+{currencySymbol}{projectedPayout.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+              <Text style={styles.payoutPreviewValue}>+{currencySymbol}{formatNumber(projectedPayout)}</Text>
             </View>
           )}
 
@@ -495,7 +500,7 @@ export default function SportsBettingScreen({ navigation }) {
                            <>
                              <Text style={styles.pendingStatusText}>Pending</Text>
                              <Text style={styles.potentialPayoutText}>
-                               To win {currencySymbol}{calcPayout(b.bet, b.odds).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                               To win {currencySymbol}{formatNumber(calcPayout(b.bet, b.odds))}
                              </Text>
                            </>
                          ) : (
@@ -512,7 +517,7 @@ export default function SportsBettingScreen({ navigation }) {
                                },
                              ]}
                            >
-                             {b.netChange > 0 ? '+' : b.netChange < 0 ? '-' : ''}{currencySymbol}{Math.abs(b.netChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                             {formatMoney(b.netChange, currencySymbol, privacyMode)}
                            </Text>
                          )}
                       </View>

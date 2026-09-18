@@ -25,7 +25,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
-import { formatAmount } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber } from '../utils/format';
 import TrackerGuide from '../components/TrackerGuide';
 
 const STREETS = [
@@ -50,6 +50,7 @@ export default function PokerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const {
     currencySymbol = '$',
+    privacyMode = false,
     quickChipPresets,
     setQuickChipPreset,
     isLoaded: prefsLoaded,
@@ -410,7 +411,7 @@ export default function PokerScreen({ navigation }) {
                 >
                   <Text style={styles.mismatchLabel}>{b.label}</Text>
                   <Text style={styles.mismatchAmount}>
-                    {currencySymbol}{b.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencySymbol}{formatNumber(b.amount)}
                   </Text>
                 </View>
               ))}
@@ -480,7 +481,7 @@ export default function PokerScreen({ navigation }) {
         variant: 'primary',
         icon: 'trophy-outline',
         title: 'Everyone Folded',
-        message: `The table folded to you. Take the ${currencySymbol}${effectiveTotalPot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pot for a ${foldWinNet >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(foldWinNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} net. Folded someone by mistake? Go back and hit "Undo Fold" on their card.`,
+        message: `The table folded to you. Take the ${currencySymbol}${formatNumber(effectiveTotalPot)} pot for a ${foldWinNet >= 0 ? '+' : '-'}${currencySymbol}${formatNumber(Math.abs(foldWinNet))} net. Folded someone by mistake? Go back and hit "Undo Fold" on their card.`,
         confirmText: 'Take the Pot',
         cancelText: 'Go Back',
         onConfirm: handleWinByFold,
@@ -1046,7 +1047,7 @@ export default function PokerScreen({ navigation }) {
                     {opp.folded ? (
                       <Text style={styles.foldedContributionText}>
                         Folded on {opp.foldedStreet || 'this street'} • Contributed {currencySymbol}
-                        {oppTotalContributed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total
+                        {formatNumber(oppTotalContributed)} total
                       </Text>
                     ) : (
                       <>
@@ -1135,7 +1136,7 @@ export default function PokerScreen({ navigation }) {
                       showdownResult === 'win' && styles.showdownOptionSubActive,
                     ]}
                   >
-                    + {currencySymbol}{(effectiveTotalPot - heroTotalInvestment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    + {currencySymbol}{formatNumber(effectiveTotalPot - heroTotalInvestment)}
                   </Text>
                 </TouchableOpacity>
 
@@ -1197,7 +1198,7 @@ export default function PokerScreen({ navigation }) {
                       showdownResult === 'loss' && styles.showdownOptionSubActive,
                     ]}
                   >
-                    - {currencySymbol}{heroTotalInvestment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    - {currencySymbol}{formatNumber(heroTotalInvestment)}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1220,7 +1221,7 @@ export default function PokerScreen({ navigation }) {
                           ]}
                         >
                           {w}-Way Split ({currencySymbol}
-                          {(effectiveTotalPot / w).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                          {formatNumber(effectiveTotalPot / w)})
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -1245,13 +1246,13 @@ export default function PokerScreen({ navigation }) {
                   ]}
                 >
                   {showdownResult === 'win'
-                    ? `+${currencySymbol}${(effectiveTotalPot - heroTotalInvestment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ? `+${currencySymbol}${formatNumber(effectiveTotalPot - heroTotalInvestment)}`
                     : showdownResult === 'split'
-                    ? `${(effectiveTotalPot / splitWay - heroTotalInvestment) >= 0 ? '+' : ''}${currencySymbol}${(effectiveTotalPot / splitWay - heroTotalInvestment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                    : `-${currencySymbol}${heroTotalInvestment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    ? `${(effectiveTotalPot / splitWay - heroTotalInvestment) >= 0 ? '+' : ''}${currencySymbol}${formatNumber(effectiveTotalPot / splitWay - heroTotalInvestment)}`
+                    : `-${currencySymbol}${formatNumber(heroTotalInvestment)}`}
                 </Text>
                 <Text style={styles.showdownSummarySub}>
-                  Total Pot: {currencySymbol}{effectiveTotalPot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • Your Bet: {currencySymbol}{heroTotalInvestment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  Total Pot: {currencySymbol}{formatNumber(effectiveTotalPot)} • Your Bet: {currencySymbol}{formatNumber(heroTotalInvestment)}
                 </Text>
               </View>
             </View>
@@ -1278,7 +1279,7 @@ export default function PokerScreen({ navigation }) {
             >
               <Ionicons name="trophy" size={18} color={COLORS.textDark} style={{ marginRight: 6 }} />
               <Text style={styles.handPrimaryBtnText}>
-                Take Pot ({foldWinNet >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(foldWinNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                Take Pot ({foldWinNet >= 0 ? '+' : '-'}{currencySymbol}{formatNumber(Math.abs(foldWinNet))})
               </Text>
             </TouchableOpacity>
           ) : !isShowdown ? (
@@ -1319,7 +1320,7 @@ export default function PokerScreen({ navigation }) {
                 </View>
                 <Text style={styles.modalTitle}>Fold Assessment</Text>
                 <Text style={styles.modalSubtitle}>
-                  You committed {currencySymbol}{heroTotalInvestment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} up to {STREETS[currentStreetIdx]?.label}.
+                  You committed {currencySymbol}{formatNumber(heroTotalInvestment)} up to {STREETS[currentStreetIdx]?.label}.
                   Tag this fold for your behavioral analytics:
                 </Text>
               </View>
@@ -1441,9 +1442,7 @@ export default function PokerScreen({ navigation }) {
               },
             ]}
           >
-            {sessionTotalNet > 0 ? '+' : sessionTotalNet < 0 ? '-' : ''}
-            {currencySymbol}
-            {Math.abs(sessionTotalNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatMoney(sessionTotalNet, currencySymbol, privacyMode)}
           </Text>
 
           {/* Metric Pills Row */}
@@ -1585,9 +1584,7 @@ export default function PokerScreen({ navigation }) {
                             },
                           ]}
                         >
-                          {h.netChange > 0 ? '+' : h.netChange < 0 ? '-' : ''}
-                          {currencySymbol}
-                          {Math.abs(h.netChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatMoney(h.netChange, currencySymbol, privacyMode)}
                         </Text>
                         <Text style={styles.historyOutcomeLabel}>
                           {isWin ? 'WON' : isFold ? `FOLD (${h.streetFolded})` : isSplit ? 'SPLIT' : 'LOST'}

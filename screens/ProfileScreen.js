@@ -33,7 +33,7 @@ import { usePurchases } from '../context/PurchasesContext';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { getOrCreateDeviceId } from '../services/storageService';
 import { exportSessionsCsv } from '../utils/exportSessions';
-import { formatAmount } from '../utils/format';
+import { formatAmount, formatMoney } from '../utils/format';
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
 // the common four stay at the top of a long list. Dollar-family currencies
@@ -439,16 +439,6 @@ export default function ProfileScreen({ navigation }) {
     };
   }, [sessionHistory]);
 
-  const formatAmount = (val, prefix = false) => {
-    if (privacyMode) return '••••••';
-    const sign = val > 0 ? '+' : val < 0 ? '-' : '';
-    const formatted = `${currencySymbol}${Math.abs(val).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-    return prefix ? `${sign}${formatted}` : formatted;
-  };
-
   const handleCopySeed = async () => {
     await Clipboard.setStringAsync(deviceId);
     setCopiedSeed(true);
@@ -756,7 +746,7 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <CountUp
               value={stats.totalNet}
-              format={(v) => formatAmount(v, true)}
+              format={(v) => formatMoney(v, currencySymbol, privacyMode)}
               animate={!privacyMode}
               style={[
                 styles.gridCardValue,
@@ -784,7 +774,7 @@ export default function ProfileScreen({ navigation }) {
               <Ionicons name="flame-outline" size={moderateScale(15)} color={COLORS.accentOrange} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
-              {privacyMode ? '••••••' : `${currencySymbol}${stats.totalWagered.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {formatMoney(stats.totalWagered, currencySymbol, privacyMode, { signed: false })}
             </Text>
             <Text style={styles.gridCardFoot}>Lifetime volume</Text>
           </View>

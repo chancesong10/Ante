@@ -264,14 +264,14 @@ const SessionRow = React.memo(function SessionRow({
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>Buy-in</Text>
               <Text style={styles.statVal}>
-                {privacyMode ? '••••' : `${currencySymbol}${num(session.buyIn).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                {formatMoney(num(session.buyIn), currencySymbol, privacyMode, { signed: false })}
               </Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>Cash-out</Text>
               <Text style={styles.statVal}>
-                {privacyMode ? '••••' : `${currencySymbol}${num(session.cashOut).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                {formatMoney(num(session.cashOut), currencySymbol, privacyMode, { signed: false })}
               </Text>
             </View>
           </View>
@@ -287,13 +287,13 @@ const SessionRow = React.memo(function SessionRow({
                 <View style={styles.buyInRow}>
                   <Text style={styles.buyInLabel}>Buy-in</Text>
                   <Text style={styles.buyInValue}>
-                    {privacyMode ? '••••' : `${currencySymbol}${num(session.buyIn).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    {formatMoney(num(session.buyIn), currencySymbol, privacyMode, { signed: false })}
                   </Text>
                 </View>
                 <View style={styles.buyInRow}>
                   <Text style={styles.buyInLabel}>Cash-out</Text>
                   <Text style={styles.buyInValue}>
-                    {privacyMode ? '••••' : `${currencySymbol}${num(session.cashOut).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    {formatMoney(num(session.cashOut), currencySymbol, privacyMode, { signed: false })}
                   </Text>
                 </View>
                 <View style={[styles.buyInRow, styles.buyInTotalRow]}>

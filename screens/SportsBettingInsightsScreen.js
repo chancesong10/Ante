@@ -10,7 +10,7 @@ import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { computeSportsInsights } from '../utils/sportsStatsEngine';
-import { formatNumber } from '../utils/format';
+import { formatNumber, formatMoney } from '../utils/format';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
 import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
@@ -68,7 +68,7 @@ function getLeakCopy(leak, { fmtMoney, fmtPct }) {
 
 export default function SportsBettingInsightsScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
-  const { currencySymbol = '$' } = usePreferences();
+  const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const { user } = useAuth();
   const { isPro } = usePurchases();
   const isLocked = !isPro;
@@ -90,7 +90,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
   const hasEnoughData = stats.totalHands >= 5;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtMoney = (v) => formatMoney(v, currencySymbol, privacyMode);
 
   const outcomes = stats.outcomeBreakdown;
   const returns = stats.returnStats;
@@ -123,6 +123,12 @@ export default function SportsBettingInsightsScreen({ navigation }) {
   const [copied, setCopied] = useState(false);
 
   const buildReportText = () => {
+    // A shared report is an explicit export, like the CSV — it always carries
+    // real figures, even with privacy mode on, or it would be useless. These
+    // shadow the masked helpers above for the whole report, getLeakCopy
+    // included, since that takes its formatters as parameters.
+    const fmtMoney = (v) => formatMoney(v, currencySymbol, false);
+    const fmtDollar = (v) => formatMoney(v, currencySymbol, false, { signed: false });
     const lines = [];
     lines.push('ANTE — SPORTS BETTING INSIGHTS REPORT');
     lines.push(`Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
@@ -185,8 +191,8 @@ export default function SportsBettingInsightsScreen({ navigation }) {
     lines.push('');
 
     lines.push('STAKE SIZE AFTER OUTCOME');
-    lines.push(`After a win: ${currencySymbol}${betSizeAfterOutcome.avgBetAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-    lines.push(`After a loss: ${currencySymbol}${betSizeAfterOutcome.avgBetAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    lines.push(`After a win: ${fmtDollar(betSizeAfterOutcome.avgBetAfterWin)}`);
+    lines.push(`After a loss: ${fmtDollar(betSizeAfterOutcome.avgBetAfterLoss)}`);
     lines.push('');
 
     if (tiers) {
@@ -384,8 +390,8 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               {/* Stake Size After Outcome */}
               <View style={[styles.card, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>STAKE SIZE AFTER OUTCOME</Text>
-                <StatLine label="After a Win" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
-                <StatLine label="After a Loss" value={`${currencySymbol}${betSizeAfterOutcome.avgBetAfterLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} locked={isLocked} />
+                <StatLine label="After a Win" value={formatMoney(betSizeAfterOutcome.avgBetAfterWin, currencySymbol, privacyMode, { signed: false })} locked={isLocked} />
+                <StatLine label="After a Loss" value={formatMoney(betSizeAfterOutcome.avgBetAfterLoss, currencySymbol, privacyMode, { signed: false })} locked={isLocked} />
                 {!isLocked && chasesLosses && (
                   <View style={styles.insightNote}>
                     <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />

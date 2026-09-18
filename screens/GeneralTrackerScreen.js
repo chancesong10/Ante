@@ -17,6 +17,7 @@ import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
+import { formatMoney } from '../utils/format';
 import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
@@ -24,7 +25,7 @@ import TrackerGuide from '../components/TrackerGuide';
 
 export default function GeneralTrackerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { currencySymbol = '$' } = usePreferences();
+  const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const { user } = useAuth();
   const {
     activeSession,
@@ -175,7 +176,7 @@ export default function GeneralTrackerScreen({ navigation }) {
               },
             ]}
           >
-            {hasValidNumbers ? `${liveNet > 0 ? '+' : liveNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(liveNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+            {hasValidNumbers ? formatMoney(liveNet, currencySymbol, privacyMode) : '—'}
           </Text>
           <Text style={styles.statsHint}>
             For slots, craps, keno, or anything you'd rather log simply

@@ -18,7 +18,7 @@ import BankrollLineChart from '../components/BankrollLineChart';
 import { GameIconTile } from '../components/GameIcon';
 import CountUp from '../components/CountUp';
 import usePullToRefresh from '../components/usePullToRefresh';
-import { formatNumber } from '../utils/format';
+import { formatNumber, formatMoney } from '../utils/format';
 
 // Trajectory chart geometry. Each half is a fixed band; inside it a strip is
 // reserved for the value label so a full-height bar can never push its own
@@ -84,7 +84,7 @@ export default function AnalyticsScreen({ navigation }) {
 
     const profitFactor =
       totalGrossLosses > 0
-        ? (totalGrossWins / totalGrossLosses).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        ? formatNumber(totalGrossWins / totalGrossLosses)
         : totalGrossWins > 0
         ? '∞'
         : '0.00';
@@ -210,14 +210,7 @@ export default function AnalyticsScreen({ navigation }) {
     };
   }, [sessionHistory]);
 
-  const formatNet = (val) => {
-    if (privacyMode) return '••••••';
-    const sign = val > 0 ? '+' : val < 0 ? '-' : '';
-    return `${sign}${currencySymbol}${Math.abs(val).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
+  const formatNet = (val) => formatMoney(val, currencySymbol, privacyMode);
 
   const netColor = (val) =>
     val > 0 ? COLORS.success : val < 0 ? COLORS.danger : COLORS.textPrimary;
@@ -543,9 +536,7 @@ export default function AnalyticsScreen({ navigation }) {
                 bestSession > 0 && { color: COLORS.success },
               ]}
             >
-              {privacyMode
-                ? '••••••'
-                : `${bestSession > 0 ? '+' : bestSession < 0 ? '-' : ''}${currencySymbol}${Math.abs(bestSession).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {formatMoney(bestSession, currencySymbol, privacyMode)}
             </Text>
           </View>
 
@@ -557,9 +548,7 @@ export default function AnalyticsScreen({ navigation }) {
                 worstSession < 0 && { color: COLORS.danger },
               ]}
             >
-              {privacyMode
-                ? '••••••'
-                : `${worstSession > 0 ? '+' : worstSession < 0 ? '-' : ''}${currencySymbol}${Math.abs(worstSession).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {formatMoney(worstSession, currencySymbol, privacyMode)}
             </Text>
           </View>
 
@@ -575,9 +564,7 @@ export default function AnalyticsScreen({ navigation }) {
                   : null,
               ]}
             >
-              {privacyMode
-                ? '••••••'
-                : `${avgSessionNet > 0 ? '+' : avgSessionNet < 0 ? '-' : ''}${currencySymbol}${Math.abs(avgSessionNet).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {formatMoney(avgSessionNet, currencySymbol, privacyMode)}
             </Text>
           </View>
 

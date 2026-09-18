@@ -7,6 +7,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { formatMoney } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { computeLifetimeInsights } from '../utils/lifetimeInsightsEngine';
@@ -69,7 +70,7 @@ const GAME_ICONS = {
 
 export default function LifetimeInsightsScreen({ navigation }) {
   const { sessionHistory } = useVisibleSessionHistory();
-  const { currencySymbol = '$' } = usePreferences();
+  const { currencySymbol = '$', privacyMode = false } = usePreferences();
   const { user } = useAuth();
   const { isPro } = usePurchases();
   const isLocked = !isPro;
@@ -94,7 +95,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
   const hasEnoughData = stats.totalSessions >= 5;
 
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
-  const fmtMoney = (v) => `${v >= 0 ? '+' : '-'}${currencySymbol}${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtMoney = (v) => formatMoney(v, currencySymbol, privacyMode);
   const fmtDuration = (minutes) => {
     const total = Math.round(minutes);
     const h = Math.floor(total / 60);
@@ -120,6 +121,9 @@ export default function LifetimeInsightsScreen({ navigation }) {
   const [copied, setCopied] = useState(false);
 
   const buildReportText = () => {
+    // A shared report is an explicit export, like the CSV — it always carries
+    // real figures, even with privacy mode on, or it would be useless.
+    const fmtMoney = (v) => formatMoney(v, currencySymbol, false);
     const lines = [];
     lines.push('ANTE — LIFETIME INSIGHTS REPORT');
     lines.push(`Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);

@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
-import { formatAmount } from '../utils/format';
+import { formatAmount, formatNumber } from '../utils/format';
 
 export default function ResponsibleGamingAlertModal({
   visible,
@@ -64,7 +64,7 @@ export default function ResponsibleGamingAlertModal({
               STOP-LOSS THRESHOLD REACHED
             </Text>
             <Text style={styles.subtitle}>
-              Your live session outcome has dropped to {currencySymbol}{Math.abs(netOutcome).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, crossing your {currencySymbol}{formatAmount(thresholdAmount)} safety limit.
+              Your live session outcome has dropped to {currencySymbol}{formatNumber(Math.abs(netOutcome))}, crossing your {currencySymbol}{formatAmount(thresholdAmount)} safety limit.
             </Text>
 
             {/* Live Metrics Grid */}
@@ -79,7 +79,7 @@ export default function ResponsibleGamingAlertModal({
                 >
                   {netOutcome < 0 ? '-' : '+'}
                   {currencySymbol}
-                  {Math.abs(netOutcome).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatNumber(Math.abs(netOutcome))}
                 </Text>
               </View>
 

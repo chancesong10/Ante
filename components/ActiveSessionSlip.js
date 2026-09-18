@@ -5,6 +5,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { GameIconTile } from './GameIcon';
 import LivePulseDot from './LivePulseDot';
+import { formatMoney } from '../utils/format';
 
 // Computes what a running session is worth right now. Mirrors the tracker
 // screens' own live totals: hand-based games sum netChange, buy-in games use
@@ -73,9 +74,7 @@ export default function ActiveSessionSlip({ session, currencySymbol = '$', priva
         </View>
 
         <Text style={[styles.net, { color: tone }]} numberOfLines={1}>
-          {privacyMode
-            ? '••••'
-            : `${net > 0 ? '+' : net < 0 ? '-' : ''}${currencySymbol}${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          {formatMoney(net, currencySymbol, privacyMode)}
         </Text>
       </TouchableOpacity>
 
