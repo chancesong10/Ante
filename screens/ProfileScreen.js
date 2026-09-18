@@ -20,6 +20,7 @@ import * as Clipboard from 'expo-clipboard';
 import ConfirmModal from '../components/ConfirmModal';
 import { hapticSuccess } from '../utils/haptics';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { screenStyles } from '../constants/screenStyles';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { PLUS_NAME } from '../constants/brand';
 import Toggle from '../components/Toggle';
@@ -533,10 +534,10 @@ export default function ProfileScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <ScrollView
-        style={styles.container}
+        style={screenStyles.container}
         contentContainerStyle={[
           styles.contentContainer,
           { paddingBottom: insets.bottom + moderateScale(96) },
@@ -1812,14 +1813,6 @@ export default function ProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   contentContainer: {
     paddingHorizontal: SPACING.pageHorizontal,
     paddingTop: SPACING.sm,

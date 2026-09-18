@@ -11,6 +11,7 @@ import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { screenStyles } from '../constants/screenStyles';
 import { moderateScale } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
@@ -613,7 +614,7 @@ export default function BlackjackScreen({ navigation }) {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[screenStyles.container, { paddingTop: insets.top }]}>
       <View style={styles.topNav}>
         <TouchableOpacity
           style={styles.backBtn}
@@ -625,9 +626,9 @@ export default function BlackjackScreen({ navigation }) {
         </TouchableOpacity>
         <TrackerGuide gameType="Blackjack" navigation={navigation} />
 
-        <View style={styles.navTitleContainer}>
+        <View style={screenStyles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />
-          <Text style={styles.navTitle}>Live Blackjack</Text>
+          <Text style={screenStyles.navTitle}>Live Blackjack</Text>
         </View>
 
         <TouchableOpacity style={styles.headerEndButton} activeOpacity={0.8} onPress={handleEndSessionPress}>
@@ -898,10 +899,6 @@ export default function BlackjackScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -920,16 +917,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-  },
-  navTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  navTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
   },
   headerEndButton: {
     flexDirection: 'row',

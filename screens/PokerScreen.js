@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { screenStyles } from '../constants/screenStyles';
 import { moderateScale, SPACING, RADIUS } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
@@ -584,7 +585,7 @@ export default function PokerScreen({ navigation }) {
     const isValidCount = !isNaN(count) && count >= 2 && count <= 10;
 
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[screenStyles.container, { paddingTop: insets.top }]}>
         <View style={styles.topNav}>
           <TouchableOpacity
             style={styles.backBtn}
@@ -595,9 +596,9 @@ export default function PokerScreen({ navigation }) {
             <Ionicons name="close" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
           <TrackerGuide gameType="Poker" navigation={navigation} />
-          <View style={styles.navTitleContainer}>
+          <View style={screenStyles.navTitleContainer}>
             <MaterialCommunityIcons name="cards-playing-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.navTitle}>Poker Setup</Text>
+            <Text style={screenStyles.navTitle}>Poker Setup</Text>
           </View>
           <View style={{ width: 38 }} />
         </View>
@@ -650,7 +651,7 @@ export default function PokerScreen({ navigation }) {
 
   if (viewMode === 'setup' && setupStep === 'blinds') {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[screenStyles.container, { paddingTop: insets.top }]}>
         <View style={styles.topNav}>
           <TouchableOpacity
             style={styles.backBtn}
@@ -660,9 +661,9 @@ export default function PokerScreen({ navigation }) {
           >
             <Ionicons name="arrow-back" size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
-          <View style={styles.navTitleContainer}>
+          <View style={screenStyles.navTitleContainer}>
             <MaterialCommunityIcons name="cards-playing-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.navTitle}>Poker Setup</Text>
+            <Text style={screenStyles.navTitle}>Poker Setup</Text>
           </View>
           <View style={{ width: 38 }} />
         </View>
@@ -860,7 +861,7 @@ export default function PokerScreen({ navigation }) {
 
     return (
       <View
-        style={[styles.container, { paddingTop: insets.top }]}
+        style={[screenStyles.container, { paddingTop: insets.top }]}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -887,9 +888,9 @@ export default function PokerScreen({ navigation }) {
             <Ionicons name="arrow-back" size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
 
-          <View style={styles.navTitleContainer}>
+          <View style={screenStyles.navTitleContainer}>
             <LivePulseDot size={8} color={COLORS.danger} />
-            <Text style={styles.navTitle}>
+            <Text style={screenStyles.navTitle}>
               Hand #{totalHandsCount + 1} • {STREETS[currentStreetIdx]?.label}
             </Text>
           </View>
@@ -1358,7 +1359,7 @@ export default function PokerScreen({ navigation }) {
   // VIEW 3: POKER SESSION DASHBOARD
   // ==========================================
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[screenStyles.container, { paddingTop: insets.top }]}>
       {/* Top Navigation */}
       <View style={styles.topNav}>
         <TouchableOpacity
@@ -1371,9 +1372,9 @@ export default function PokerScreen({ navigation }) {
         </TouchableOpacity>
         <TrackerGuide gameType="Poker" navigation={navigation} />
 
-        <View style={styles.navTitleContainer}>
+        <View style={screenStyles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />
-          <Text style={styles.navTitle}>Live Poker</Text>
+          <Text style={screenStyles.navTitle}>Live Poker</Text>
         </View>
 
         <TouchableOpacity
@@ -1598,10 +1599,6 @@ export default function PokerScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1621,21 +1618,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  navTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   liveIndicatorDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: COLORS.primary,
-  },
-  navTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
   },
   headerEndButton: {
     flexDirection: 'row',

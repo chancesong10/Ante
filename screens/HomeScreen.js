@@ -13,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
+import { screenStyles } from '../constants/screenStyles';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession, formatDuration, sessionHasContent, formatSessionDateTime } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
@@ -246,7 +247,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right']}>
       <ActiveSessionsModal
         visible={sessionsModalVisible}
         sessions={activeSessionList}
@@ -269,7 +270,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
       />
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <ScrollView
-        style={styles.container}
+        style={screenStyles.container}
         contentContainerStyle={[
           styles.contentContainer,
           {
@@ -471,14 +472,6 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   contentContainer: {
     paddingHorizontal: SPACING.pageHorizontal,
     paddingTop: SPACING.sm,
