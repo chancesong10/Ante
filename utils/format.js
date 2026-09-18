@@ -47,6 +47,20 @@ export const hexToRgba = (hex, alpha) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+// Short relative time for recency — minutes and hours, where relativeDay's
+// day granularity would round everything recent to 'Today'. Used by the sync
+// status row, where 'synced 2m ago' and 'synced this morning' mean different
+// things to someone checking whether their data actually left the device.
+export const relativeTime = (timestamp) => {
+  if (!timestamp) return '';
+  const mins = Math.floor(Math.max(0, Date.now() - timestamp) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return relativeDay(timestamp, 'a while ago');
+};
+
 // Short relative date ("Today" / "Yesterday" / "3d ago" / "2w ago"). Built
 // from arithmetic rather than Intl, which Hermes covers unevenly. Falls back
 // to the caller's preformatted string past a year, or when startTime is absent.

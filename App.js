@@ -10,7 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PreferencesProvider, usePreferences } from './context/PreferencesContext';
 import { AuthProvider } from './context/AuthContext';
 import { PurchasesProvider } from './context/PurchasesContext';
-import { useSyncEngine } from './context/SyncContext';
+import { useSyncEngine, SyncStatusProvider } from './context/SyncContext';
 import { SessionEndFxProvider, useSessionEndFx } from './context/SessionEndFxContext';
 
 import PokerScreen from './screens/PokerScreen';
@@ -427,7 +427,11 @@ export default function App() {
             <PurchasesProvider>
               <PreferencesProvider>
                 <SessionProvider>
-                  <AppShell />
+                  {/* Above AppShell, which is where useSyncEngine runs, so the
+                      engine can publish status and Profile can read it. */}
+                  <SyncStatusProvider>
+                    <AppShell />
+                  </SyncStatusProvider>
                 </SessionProvider>
               </PreferencesProvider>
             </PurchasesProvider>

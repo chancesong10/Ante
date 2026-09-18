@@ -25,7 +25,7 @@ import { PLUS_NAME } from '../constants/brand';
 import Toggle from '../components/Toggle';
 import CountUp from '../components/CountUp';
 import ReorderableGameList from '../components/ReorderableGameList';
-import { useVisibleSessionHistory } from '../context/SyncContext';
+import { useVisibleSessionHistory, useSyncStatus } from '../context/SyncContext';
 import { usePreferences, DEFAULT_QUICK_CHIP_PRESETS } from '../context/PreferencesContext';
 import { DEFAULT_GAME_ORDER, sanitizeGameOrder } from '../constants/games';
 import { useAuth } from '../context/AuthContext';
@@ -33,7 +33,7 @@ import { usePurchases } from '../context/PurchasesContext';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { getOrCreateDeviceId } from '../services/storageService';
 import { exportSessionsCsv } from '../utils/exportSessions';
-import { formatAmount, formatMoney } from '../utils/format';
+import { formatAmount, formatMoney, relativeTime } from '../utils/format';
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
 // the common four stay at the top of a long list. Dollar-family currencies
@@ -92,9 +92,37 @@ const CHIP_PRESET_GAMES = [
   { id: 'baccarat', label: 'Baccarat', count: 5 },
 ];
 
+// What the sync row says, per state. Kept beside the row rather than inline
+// so the copy for a failure reads as one deliberate sentence: it has to admit
+// something went wrong without implying the user lost anything, because they
+// haven't — everything is on the device either way.
+function syncRowCopy({ state, lastSyncedAt, error }) {
+  switch (state) {
+    case 'syncing':
+      return { icon: 'sync-outline', tone: 'muted', title: 'Cloud Sync', subtitle: 'Syncing…' };
+    case 'synced':
+      return {
+        icon: 'cloud-done-outline',
+        tone: 'ok',
+        title: 'Cloud Sync',
+        subtitle: lastSyncedAt ? `Last synced ${relativeTime(lastSyncedAt)}` : 'Up to date',
+      };
+    case 'error':
+      return {
+        icon: 'cloud-offline-outline',
+        tone: 'bad',
+        title: 'Cloud Sync',
+        subtitle: `Couldn't sync — will retry. Your sessions are safe on this device.${error ? ` (${error})` : ''}`,
+      };
+    default:
+      return { icon: 'cloud-outline', tone: 'muted', title: 'Cloud Sync', subtitle: 'Waiting to sync' };
+  }
+}
+
 export default function ProfileScreen({ navigation }) {
   // clearAllSessions comes through useVisibleSessionHistory's passthrough.
   const { sessionHistory, clearAllSessions, releaseAccountSessions } = useVisibleSessionHistory();
+  const syncStatus = useSyncStatus();
   const {
     user,
     profile,
@@ -649,6 +677,33 @@ export default function ProfileScreen({ navigation }) {
           <>
             <Text style={styles.sectionTitle}>ACCOUNT</Text>
             <View style={[styles.menuCard, SHADOWS.card]}>
+              {/* Cloud sync state. Every failure path in syncService ends at
+                  console.error, so without this the app looked identical
+                  whether pushes were succeeding or failing every time. */}
+              {(() => {
+                const copy = syncRowCopy(syncStatus);
+                const tone =
+                  copy.tone === 'ok'
+                    ? COLORS.success
+                    : copy.tone === 'bad'
+                    ? COLORS.danger
+                    : COLORS.icon;
+                return (
+                  <>
+                    <View style={styles.menuRow}>
+                      <View style={styles.menuIconCircle}>
+                        <Ionicons name={copy.icon} size={moderateScale(18)} color={tone} />
+                      </View>
+                      <View style={styles.menuTextGroup}>
+                        <Text style={styles.menuTitle}>{copy.title}</Text>
+                        <Text style={styles.menuSubtitle}>{copy.subtitle}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.menuDivider} />
+                  </>
+                );
+              })()}
+
               <TouchableOpacity
                 style={styles.menuRow}
                 activeOpacity={0.7}

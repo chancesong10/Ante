@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from './AuthContext';
 import { useSessionHistory } from './SessionContext';
 import { pushSessions, deleteCloudSessions, pullSessions } from '../services/syncService';
@@ -47,6 +48,31 @@ async function withTransientRetry(operation) {
   return operation();
 }
 
+// Sync status, surfaced so the UI can say whether the cloud actually has the
+// data. Without this the app looked identical whether every push was
+// succeeding or every push was failing, and the README promises sessions
+// "survive a new phone" — someone would only find out otherwise when they
+// got one.
+//
+// Deliberately kept out of SessionContext: this is presentation state about
+// the sync process, and putting it in either session context would make every
+// screen reading history re-render on each status change.
+const SyncStatusContext = createContext(null);
+
+const IDLE_STATUS = { state: 'idle', lastSyncedAt: null, error: null };
+
+export function SyncStatusProvider({ children }) {
+  const [status, setStatus] = useState(IDLE_STATUS);
+  const value = useMemo(() => ({ ...status, setStatus }), [status]);
+  return <SyncStatusContext.Provider value={value}>{children}</SyncStatusContext.Provider>;
+}
+
+// Safe outside the provider — callers get a permanent idle rather than a
+// throw, since a missing status is never worth crashing a screen over.
+export function useSyncStatus() {
+  return useContext(SyncStatusContext) ?? { ...IDLE_STATUS, setStatus: () => {} };
+}
+
 // Watches auth state + the cold-path sessionHistory context and keeps
 // Supabase in sync in the background. Deliberately reads only
 // SessionHistoryContext (never ActiveSessionContext) so the app's hottest
@@ -54,6 +80,32 @@ async function withTransientRetry(operation) {
 export function useSyncEngine() {
   const { user } = useAuth();
   const { sessionHistory, isLoaded, mergeSessionsFromCloud, markSessionsSynced } = useSessionHistory();
+  const { setStatus } = useSyncStatus();
+
+  const reportSyncing = useCallback(
+    () => setStatus((prev) => ({ ...prev, state: 'syncing', error: null })),
+    [setStatus]
+  );
+  const reportSynced = useCallback(
+    () => setStatus({ state: 'synced', lastSyncedAt: Date.now(), error: null }),
+    [setStatus]
+  );
+  const reportFailed = useCallback(
+    (error) => setStatus((prev) => ({ ...prev, state: 'error', error: error?.message || 'Sync failed' })),
+    [setStatus]
+  );
+
+  // Returning to the foreground is the one moment worth retrying on its own.
+  // The write-through effect below only fires when sessionHistory changes, so
+  // a push that failed while offline would sit unretried until the user
+  // happened to record another session — which could be days, or never.
+  const [foregroundNonce, setForegroundNonce] = useState(0);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') setForegroundNonce((n) => n + 1);
+    });
+    return () => sub?.remove?.();
+  }, []);
 
   const lastUserId = useRef(null);
   // id -> syncVersion(session) as of the last confirmed push/pull, so the
@@ -69,6 +121,7 @@ export function useSyncEngine() {
   // safe to write-through," causing the write-through effect to independently
   // push the same not-yet-known-as-synced sessions a second time.
   const isReconciling = useRef(false);
+  const lastForegroundNonce = useRef(0);
 
   // On sign-in (null -> user), run the one-time reconciliation across all
   // three (well, four) sync cases: backfill any legacy non-UUID ids so they
@@ -85,12 +138,22 @@ export function useSyncEngine() {
     }
     lastUserId.current = userId;
 
+    // A foreground event re-opens reconciliation so a previously failed sync
+    // gets another attempt. Reconciling is a pull + merge + push of what is
+    // already known, and pushSessions upserts by id, so repeating it is safe.
+    if (foregroundNonce !== lastForegroundNonce.current) {
+      lastForegroundNonce.current = foregroundNonce;
+      if (userId) hasReconciled.current = false;
+    }
+
     if (!userId || hasReconciled.current || isReconciling.current) return;
     isReconciling.current = true;
 
     (async () => {
       try {
-        const { sessions: cloudSessions } = await withTransientRetry(() => pullSessions(userId));
+        reportSyncing();
+        const { sessions: cloudSessions, error: pullError } = await withTransientRetry(() => pullSessions(userId));
+        if (pullError) reportFailed(pullError);
         mergeSessionsFromCloud(cloudSessions.map((s) => ({ ...s, syncedUserId: userId })));
 
         const toPush = sessionHistory.filter((s) => {
@@ -101,6 +164,8 @@ export function useSyncEngine() {
 
         const { error } = await withTransientRetry(() => pushSessions(userId, toPush));
         const pushed = error ? [] : toPush;
+        if (error) reportFailed(error);
+        else if (!pullError) reportSynced();
         if (pushed.length) markSessionsSynced(pushed.map((s) => s.id), userId);
         knownVersions.current = new Map([
           ...cloudSessions.map((s) => [s.id, syncVersion(s)]),
@@ -111,7 +176,17 @@ export function useSyncEngine() {
         isReconciling.current = false;
       }
     })();
-  }, [user, isLoaded, sessionHistory, mergeSessionsFromCloud, markSessionsSynced]);
+  }, [
+    user,
+    isLoaded,
+    sessionHistory,
+    mergeSessionsFromCloud,
+    markSessionsSynced,
+    foregroundNonce,
+    reportSyncing,
+    reportSynced,
+    reportFailed,
+  ]);
 
   // Ongoing write-through: after the initial reconciliation, diff the
   // current sessions against the last-known-synced versions on every change —
@@ -145,19 +220,28 @@ export function useSyncEngine() {
     if (!toPush.length && !removedIds.length) return;
 
     (async () => {
+      reportSyncing();
+      let failure = null;
       if (toPush.length) {
         const { error } = await withTransientRetry(() => pushSessions(userId, toPush));
-        if (!error) {
+        if (error) {
+          failure = error;
+        } else {
           markSessionsSynced(toPush.map((s) => s.id), userId);
           toPush.forEach((s) => knownVersions.current.set(s.id, syncVersion(s)));
         }
       }
       if (removedIds.length) {
         const { error } = await withTransientRetry(() => deleteCloudSessions(userId, removedIds));
-        if (error) removedIds.forEach((id) => knownVersions.current.set(id, 0));
+        if (error) {
+          failure = failure || error;
+          removedIds.forEach((id) => knownVersions.current.set(id, 0));
+        }
       }
+      if (failure) reportFailed(failure);
+      else reportSynced();
     })();
-  }, [sessionHistory, isLoaded, user, markSessionsSynced]);
+  }, [sessionHistory, isLoaded, user, markSessionsSynced, reportSyncing, reportSynced, reportFailed]);
 
   // Reset local sync bookkeeping on sign-out so a later sign-in re-runs
   // reconciliation instead of assuming the previous account's state.
@@ -166,8 +250,9 @@ export function useSyncEngine() {
       hasReconciled.current = false;
       isReconciling.current = false;
       knownVersions.current = new Map();
+      setStatus(IDLE_STATUS);
     }
-  }, [user]);
+  }, [user, setStatus]);
 }
 
 // Manual "pull down to refresh" for screens that show history. Deliberately
