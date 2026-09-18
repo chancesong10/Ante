@@ -723,13 +723,18 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => updatePreferences && updatePreferences({ privacyMode: !privacyMode })}
             hitSlop={TOUCH_TARGET.hitSlop}
             style={styles.privacyToggleBtn}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: privacyMode }}
+            accessibilityLabel="Hide amounts app-wide"
           >
             <Ionicons
               name={privacyMode ? 'eye-off-outline' : 'eye-outline'}
               size={moderateScale(16)}
               color={COLORS.textSecondary}
             />
-            <Text style={styles.privacyToggleText}>{privacyMode ? 'Hidden' : 'Visible'}</Text>
+            <Text style={styles.privacyToggleText}>
+              {privacyMode ? 'Amounts hidden' : 'Hide amounts'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -982,6 +987,32 @@ export default function ProfileScreen({ navigation }) {
         {/* Section 3: Security & Data Vault */}
         <Text style={styles.sectionTitle}>DATA VAULT & SECURITY</Text>
         <View style={[styles.menuCard, SHADOWS.card]}>
+          {/* Hide Amounts. Lives here rather than only above the vault grid,
+              which made an app-wide preference look scoped to that grid. */}
+          <View style={styles.menuRow}>
+            <View style={styles.menuIconCircle}>
+              <Ionicons
+                name={privacyMode ? 'eye-off-outline' : 'eye-outline'}
+                size={moderateScale(18)}
+                color={COLORS.accentCyan}
+              />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Hide Amounts</Text>
+              <Text style={styles.menuSubtitle}>
+                Masks every figure app-wide. Live bets and pots stay visible so trackers
+                remain usable.
+              </Text>
+            </View>
+            <Toggle
+              value={privacyMode}
+              onValueChange={(val) => updatePreferences?.({ privacyMode: val })}
+              accessibilityLabel="Hide amounts"
+            />
+          </View>
+
+          <View style={styles.menuDivider} />
+
           {/* Device Anonymous ID */}
           <TouchableOpacity
             style={styles.menuRow}
