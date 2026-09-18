@@ -52,6 +52,200 @@ const BLIND_MODES = [
   { key: 'both', label: 'Small + Big Blind' },
 ];
 
+// The blind shortcuts, Call, and the chip grid. Rendered once for the hero
+// and once per opponent, so it is the single most repeated subtree in the
+// app — memoised for that reason.
+const BetChips = React.memo(function BetChips({
+  currentBet,
+  onChipPress,
+  onCall,
+  who,
+  currentStreetMaxBet,
+  sbVal,
+  bbVal,
+  chipDenominations,
+  currencySymbol,
+}) {
+  const canCall = currentStreetMaxBet > currentBet;
+
+  return (
+    <>
+      <View style={styles.blindCallRow}>
+        {sbVal > 0 && (
+          <TouchableOpacity
+            style={[styles.blindCallBtn, styles.blindCallBtnBlind]}
+            onPress={() => onChipPress(sbVal)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={`Post small blind, add ${currencySymbol}${formatAmount(sbVal)} to ${who} bet`}
+          >
+            <Text style={styles.blindCallBtnBlindText}>
+              SB +{currencySymbol}{formatAmount(sbVal)}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {bbVal > 0 && (
+          <TouchableOpacity
+            style={[styles.blindCallBtn, styles.blindCallBtnBlind]}
+            onPress={() => onChipPress(bbVal)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={`Post big blind, add ${currencySymbol}${formatAmount(bbVal)} to ${who} bet`}
+          >
+            <Text style={styles.blindCallBtnBlindText}>
+              BB +{currencySymbol}{formatAmount(bbVal)}
+            </Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.blindCallBtn,
+            canCall ? styles.blindCallBtnCall : styles.blindCallBtnCallDisabled,
+          ]}
+          onPress={canCall ? onCall : undefined}
+          disabled={!canCall}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canCall }}
+          accessibilityLabel={
+            canCall
+              ? `Call ${currencySymbol}${formatAmount(currentStreetMaxBet)} for ${who} bet`
+              : 'Call unavailable, no bet to match'
+          }
+        >
+          <Text
+            style={
+              canCall ? styles.blindCallBtnCallText : styles.blindCallBtnCallTextDisabled
+            }
+          >
+            Call {currencySymbol}{formatAmount(currentStreetMaxBet)}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.chipGrid}>
+        {chipDenominations.map((chip) => (
+          <TouchableOpacity
+            key={chip}
+            style={styles.chipButton}
+            onPress={() => onChipPress(chip)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={`Add ${currencySymbol}${formatAmount(chip)} to ${who} bet`}
+          >
+            <View style={styles.chipInnerCircle}>
+              <Text style={styles.chipText}>
+                +{currencySymbol}
+                {formatAmount(chip)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </>
+  );
+});
+
+// One player's bet card. Only re-renders when that player's own row changes,
+// rather than on every keystroke anywhere at the table.
+const OpponentCard = React.memo(function OpponentCard({
+  opp,
+  label,
+  currentStreetKey,
+  currencySymbol,
+  currentStreetMaxBet,
+  sbVal,
+  bbVal,
+  chipDenominations,
+  onClearBet,
+  onBetChange,
+  onChipPress,
+  onCall,
+  onToggleFold,
+}) {
+  const oppBet = opp.streetBets[currentStreetKey] || 0;
+  const oppTotalContributed =
+    (opp.streetBets.preflop || 0) +
+    (opp.streetBets.flop || 0) +
+    (opp.streetBets.turn || 0) +
+    (opp.streetBets.river || 0);
+
+  return (
+    <View style={[styles.card, SHADOWS.card, opp.folded && styles.playerCardFolded]}>
+      <View style={styles.streetBetHeader}>
+        <Text style={styles.sectionHeaderTitle}>{label}</Text>
+        {opp.folded ? (
+          <View style={styles.foldedBadge}>
+            <Text style={styles.foldedBadgeText}>FOLDED</Text>
+          </View>
+        ) : (
+          oppBet > 0 && (
+            <TouchableOpacity onPress={() => onClearBet(opp.id)} style={styles.clearBtn}>
+              <Ionicons name="refresh" size={14} color={COLORS.danger} style={{ marginRight: 3 }} />
+              <Text style={styles.clearBtnText}>Reset $0</Text>
+            </TouchableOpacity>
+          )
+        )}
+      </View>
+
+      {opp.folded ? (
+        <Text style={styles.foldedContributionText}>
+          Folded on {opp.foldedStreet || 'this street'} • Contributed {currencySymbol}
+          {formatNumber(oppTotalContributed)} total
+        </Text>
+      ) : (
+        <>
+          <View style={styles.heroBetDisplayRow}>
+            <Text style={styles.heroBetSymbol}>{currencySymbol}</Text>
+            <TextInput
+              style={styles.heroBetInput}
+              keyboardType="numeric"
+              placeholder="0"
+              placeholderTextColor={COLORS.textMuted}
+              value={oppBet > 0 ? String(oppBet) : ''}
+              onChangeText={(text) => onBetChange(opp.id, text)}
+            />
+            <Text style={styles.heroBetPhaseTag}>
+              {oppBet === 0 ? 'Check / $0' : 'Committed'}
+            </Text>
+          </View>
+
+          <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
+          <BetChips
+            currentBet={oppBet}
+            onChipPress={(val) => onChipPress(opp.id, val)}
+            onCall={() => onCall(opp.id)}
+            who={`${label}'s`}
+            currentStreetMaxBet={currentStreetMaxBet}
+            sbVal={sbVal}
+            bbVal={bbVal}
+            chipDenominations={chipDenominations}
+            currencySymbol={currencySymbol}
+          />
+        </>
+      )}
+
+      <TouchableOpacity
+        style={[styles.foldToggleBtn, opp.folded && styles.foldToggleBtnActive]}
+        onPress={() => onToggleFold(opp.id)}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={opp.folded ? `Undo fold for ${label}` : `Fold ${label}`}
+      >
+        <Ionicons
+          name={opp.folded ? 'refresh' : 'close-circle-outline'}
+          size={16}
+          color={opp.folded ? COLORS.textSecondary : COLORS.danger}
+          style={{ marginRight: 6 }}
+        />
+        <Text style={[styles.foldToggleBtnText, opp.folded && styles.foldToggleBtnTextActive]}>
+          {opp.folded ? 'Undo Fold' : 'Fold This Player'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 export default function PokerScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const {
@@ -262,16 +456,19 @@ export default function PokerScreen({ navigation }) {
   };
 
   // --- Handlers: Incremental Quick Chips for Hero Bet ---
-  const handleHeroChipPress = (chipValue) => {
-    hapticLight();
-    const val = parseFloat(chipValue) || 0;
-    const current = streetBets[currentStreetKey] || 0;
-    const updated = current + val;
-    setStreetBets((prev) => ({
-      ...prev,
-      [currentStreetKey]: updated,
-    }));
-  };
+  const handleHeroChipPress = useCallback(
+    (chipValue) => {
+      hapticLight();
+      const val = parseFloat(chipValue) || 0;
+      // Updater form rather than reading streetBets: keeps this out of the
+      // dependency list, so the reference survives every keystroke.
+      setStreetBets((prev) => ({
+        ...prev,
+        [currentStreetKey]: (prev[currentStreetKey] || 0) + val,
+      }));
+    },
+    [currentStreetKey]
+  );
 
   const handleHeroClearBet = () => {
     setStreetBets((prev) => ({
@@ -288,68 +485,83 @@ export default function PokerScreen({ navigation }) {
     }));
   };
 
-  const handleHeroCall = () => {
+  const handleHeroCall = useCallback(() => {
     hapticLight();
     setStreetBets((prev) => ({
       ...prev,
       [currentStreetKey]: currentStreetMaxBet,
     }));
-  };
+  }, [currentStreetKey, currentStreetMaxBet]);
 
   // --- Handlers: Other Players' Bets & Folds ---
-  const handleOpponentChipPress = (id, chipValue) => {
-    hapticLight();
-    const val = parseFloat(chipValue) || 0;
-    setOpponents((prev) =>
-      prev.map((o) =>
-        o.id === id
-          ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: (o.streetBets[currentStreetKey] || 0) + val } }
-          : o
-      )
-    );
-  };
+  const handleOpponentChipPress = useCallback(
+    (id, chipValue) => {
+      hapticLight();
+      const val = parseFloat(chipValue) || 0;
+      setOpponents((prev) =>
+        prev.map((o) =>
+          o.id === id
+            ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: (o.streetBets[currentStreetKey] || 0) + val } }
+            : o
+        )
+      );
+    },
+    [currentStreetKey]
+  );
 
-  const handleOpponentClearBet = (id) => {
-    setOpponents((prev) =>
-      prev.map((o) =>
-        o.id === id ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: 0 } } : o
-      )
-    );
-  };
+  const handleOpponentClearBet = useCallback(
+    (id) => {
+      setOpponents((prev) =>
+        prev.map((o) =>
+          o.id === id ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: 0 } } : o
+        )
+      );
+    },
+    [currentStreetKey]
+  );
 
-  const handleOpponentDirectBetChange = (id, text) => {
-    const val = Math.max(0, parseFloat(text) || 0);
-    setOpponents((prev) =>
-      prev.map((o) =>
-        o.id === id ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: val } } : o
-      )
-    );
-  };
+  const handleOpponentDirectBetChange = useCallback(
+    (id, text) => {
+      const val = Math.max(0, parseFloat(text) || 0);
+      setOpponents((prev) =>
+        prev.map((o) =>
+          o.id === id ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: val } } : o
+        )
+      );
+    },
+    [currentStreetKey]
+  );
 
-  const handleToggleOpponentFold = (id) => {
-    setOpponents((prev) =>
-      prev.map((o) =>
-        o.id === id
-          ? {
-              ...o,
-              folded: !o.folded,
-              foldedStreet: !o.folded ? STREETS[currentStreetIdx]?.label : null,
-            }
-          : o
-      )
-    );
-  };
+  const handleToggleOpponentFold = useCallback(
+    (id) => {
+      setOpponents((prev) =>
+        prev.map((o) =>
+          o.id === id
+            ? {
+                ...o,
+                folded: !o.folded,
+                foldedStreet: !o.folded ? STREETS[currentStreetIdx]?.label : null,
+              }
+            : o
+        )
+      );
+    },
+    [currentStreetIdx]
+  );
 
-  const handleOpponentCall = (id) => {
-    hapticLight();
-    setOpponents((prev) =>
-      prev.map((o) =>
-        o.id === id
-          ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: currentStreetMaxBet } }
-          : o
-      )
-    );
-  };
+  const handleOpponentCall = useCallback(
+    (id) => {
+      hapticLight();
+      setOpponents((prev) =>
+        prev.map((o) =>
+          o.id === id
+            ? { ...o, streetBets: { ...o.streetBets, [currentStreetKey]: currentStreetMaxBet } }
+            : o
+        )
+      );
+    },
+    [currentStreetKey, currentStreetMaxBet]
+  );
 
   // --- Handlers: Player Names ---
   const handlePlayerNameChange = (id, name) => {
@@ -620,86 +832,6 @@ export default function PokerScreen({ navigation }) {
   if (viewMode === 'hand') {
     const isShowdown = currentStreetIdx === 4;
 
-    const renderBetChips = (currentBet, onChipPress, onCall, who = 'your') => {
-      const canCall = currentStreetMaxBet > currentBet;
-
-      return (
-        <>
-          <View style={styles.blindCallRow}>
-            {sbVal > 0 && (
-              <TouchableOpacity
-                style={[styles.blindCallBtn, styles.blindCallBtnBlind]}
-                onPress={() => onChipPress(sbVal)}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel={`Post small blind, add ${currencySymbol}${formatAmount(sbVal)} to ${who} bet`}
-              >
-                <Text style={styles.blindCallBtnBlindText}>
-                  SB +{currencySymbol}{formatAmount(sbVal)}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {bbVal > 0 && (
-              <TouchableOpacity
-                style={[styles.blindCallBtn, styles.blindCallBtnBlind]}
-                onPress={() => onChipPress(bbVal)}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel={`Post big blind, add ${currencySymbol}${formatAmount(bbVal)} to ${who} bet`}
-              >
-                <Text style={styles.blindCallBtnBlindText}>
-                  BB +{currencySymbol}{formatAmount(bbVal)}
-                </Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[
-                styles.blindCallBtn,
-                canCall ? styles.blindCallBtnCall : styles.blindCallBtnCallDisabled,
-              ]}
-              onPress={canCall ? onCall : undefined}
-              disabled={!canCall}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canCall }}
-              accessibilityLabel={
-                canCall
-                  ? `Call ${currencySymbol}${formatAmount(currentStreetMaxBet)} for ${who} bet`
-                  : 'Call unavailable, no bet to match'
-              }
-            >
-              <Text
-                style={
-                  canCall ? styles.blindCallBtnCallText : styles.blindCallBtnCallTextDisabled
-                }
-              >
-                Call {currencySymbol}{formatAmount(currentStreetMaxBet)}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.chipGrid}>
-            {chipDenominations.map((chip) => (
-              <TouchableOpacity
-                key={chip}
-                style={styles.chipButton}
-                onPress={() => onChipPress(chip)}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel={`Add ${currencySymbol}${formatAmount(chip)} to ${who} bet`}
-              >
-                <View style={styles.chipInnerCircle}>
-                  <Text style={styles.chipText}>
-                    +{currencySymbol}
-                    {formatAmount(chip)}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
-      );
-    };
 
     return (
       <View
@@ -818,103 +950,38 @@ export default function PokerScreen({ navigation }) {
 
                 {/* Incremental Quick Chips */}
                 <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
-                {renderBetChips(currentHeroBet, handleHeroChipPress, handleHeroCall, 'your')}
+                <BetChips
+                  currentBet={currentHeroBet}
+                  onChipPress={handleHeroChipPress}
+                  onCall={handleHeroCall}
+                  who="your"
+                  currentStreetMaxBet={currentStreetMaxBet}
+                  sbVal={sbVal}
+                  bbVal={bbVal}
+                  chipDenominations={chipDenominations}
+                  currencySymbol={currencySymbol}
+                />
               </View>
 
               {/* Other Players' Bets for Current Street */}
-              {opponents.map((opp) => {
-                const oppBet = opp.streetBets[currentStreetKey] || 0;
-                const oppTotalContributed =
-                  (opp.streetBets.preflop || 0) +
-                  (opp.streetBets.flop || 0) +
-                  (opp.streetBets.turn || 0) +
-                  (opp.streetBets.river || 0);
-
-                return (
-                  <View
-                    key={opp.id}
-                    style={[styles.card, SHADOWS.card, opp.folded && styles.playerCardFolded]}
-                  >
-                    <View style={styles.streetBetHeader}>
-                      <Text style={styles.sectionHeaderTitle}>{getPlayerLabel(opp.id)}</Text>
-                      {opp.folded ? (
-                        <View style={styles.foldedBadge}>
-                          <Text style={styles.foldedBadgeText}>FOLDED</Text>
-                        </View>
-                      ) : (
-                        oppBet > 0 && (
-                          <TouchableOpacity
-                            onPress={() => handleOpponentClearBet(opp.id)}
-                            style={styles.clearBtn}
-                          >
-                            <Ionicons name="refresh" size={14} color={COLORS.danger} style={{ marginRight: 3 }} />
-                            <Text style={styles.clearBtnText}>Reset $0</Text>
-                          </TouchableOpacity>
-                        )
-                      )}
-                    </View>
-
-                    {opp.folded ? (
-                      <Text style={styles.foldedContributionText}>
-                        Folded on {opp.foldedStreet || 'this street'} • Contributed {currencySymbol}
-                        {formatNumber(oppTotalContributed)} total
-                      </Text>
-                    ) : (
-                      <>
-                        <View style={styles.heroBetDisplayRow}>
-                          <Text style={styles.heroBetSymbol}>{currencySymbol}</Text>
-                          <TextInput
-                            style={styles.heroBetInput}
-                            keyboardType="numeric"
-                            placeholder="0"
-                            placeholderTextColor={COLORS.textMuted}
-                            value={oppBet > 0 ? String(oppBet) : ''}
-                            onChangeText={(text) => handleOpponentDirectBetChange(opp.id, text)}
-                          />
-                          <Text style={styles.heroBetPhaseTag}>
-                            {oppBet === 0 ? 'Check / $0' : 'Committed'}
-                          </Text>
-                        </View>
-
-                        <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
-                        {renderBetChips(
-                          oppBet,
-                          (val) => handleOpponentChipPress(opp.id, val),
-                          () => handleOpponentCall(opp.id),
-                          `${getPlayerLabel(opp.id)}'s`
-                        )}
-                      </>
-                    )}
-
-                    <TouchableOpacity
-                      style={[styles.foldToggleBtn, opp.folded && styles.foldToggleBtnActive]}
-                      onPress={() => handleToggleOpponentFold(opp.id)}
-                      activeOpacity={0.8}
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        opp.folded
-                          ? `Undo fold for ${getPlayerLabel(opp.id)}`
-                          : `Fold ${getPlayerLabel(opp.id)}`
-                      }
-                    >
-                      <Ionicons
-                        name={opp.folded ? 'refresh' : 'close-circle-outline'}
-                        size={16}
-                        color={opp.folded ? COLORS.textSecondary : COLORS.danger}
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text
-                        style={[
-                          styles.foldToggleBtnText,
-                          opp.folded && styles.foldToggleBtnTextActive,
-                        ]}
-                      >
-                        {opp.folded ? 'Undo Fold' : 'Fold This Player'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
+              {opponents.map((opp) => (
+                <OpponentCard
+                  key={opp.id}
+                  opp={opp}
+                  label={getPlayerLabel(opp.id)}
+                  currentStreetKey={currentStreetKey}
+                  currencySymbol={currencySymbol}
+                  currentStreetMaxBet={currentStreetMaxBet}
+                  sbVal={sbVal}
+                  bbVal={bbVal}
+                  chipDenominations={chipDenominations}
+                  onClearBet={handleOpponentClearBet}
+                  onBetChange={handleOpponentDirectBetChange}
+                  onChipPress={handleOpponentChipPress}
+                  onCall={handleOpponentCall}
+                  onToggleFold={handleToggleOpponentFold}
+                />
+              ))}
             </>
           ) : (
             // SHOWDOWN STAGE (STAGE 5)

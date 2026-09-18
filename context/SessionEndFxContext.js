@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import SessionEndOverlay from '../components/SessionEndOverlay';
 import { usePreferences } from './PreferencesContext';
 
@@ -77,8 +77,14 @@ export function SessionEndFxProvider({ children, onNavigate }) {
     playNext();
   }, [playNext]);
 
+  // Memoised because the provider re-renders on every fx transition and on
+  // every preferences change, and a fresh object literal here would re-render
+  // all seven tracker screens each time — none of which care about anything
+  // but the function itself, which never changes.
+  const value = useMemo(() => ({ endSessionWithFx }), [endSessionWithFx]);
+
   return (
-    <SessionEndFxContext.Provider value={{ endSessionWithFx }}>
+    <SessionEndFxContext.Provider value={value}>
       {children}
       <SessionEndOverlay
         key={fx?.id || 'empty'}
