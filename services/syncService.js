@@ -1,5 +1,12 @@
 import { supabase } from './supabaseClient';
 
+// Access control lives in the database, not here. The `.eq('user_id', ...)`
+// filters below narrow a query — they do not enforce anything: the anon key
+// ships inside the app binary, so anyone can extract it and issue their own
+// PostgREST requests. Row-level security on `sessions` is the only thing
+// keeping one account out of another's rows. See supabase/SCHEMA_CONTRACT.md
+// for the policies that have to be in place.
+
 // Maps a locally stored session record onto the `sessions` table's columns.
 // `data` keeps the full record so nothing is lost across the two divergent
 // shapes (mode: 'hands' vs mode: 'buyInCashOut').
