@@ -55,9 +55,6 @@ RLS state, policies, function definitions, triggers on both `public` and
 
 The individual queries, if you'd rather run them piecemeal:
 
-The schema can also be read from the dashboard's SQL editor. These three
-queries return everything that matters:
-
 ```sql
 -- tables and columns
 select table_name, column_name, data_type, is_nullable, column_default
