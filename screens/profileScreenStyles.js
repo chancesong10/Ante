@@ -6,6 +6,33 @@ import { COLORS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 
 export const styles = StyleSheet.create({
+  // Used by ProfileScreen on the two destructive rows and by the settings
+  // screens split out of it. It was previously only defined in
+  // ManageSubscriptionScreen, so Profile's references resolved to undefined
+  // and the danger tint silently did nothing.
+  menuIconCircleDanger: {
+    backgroundColor: COLORS.dangerMuted,
+    borderColor: COLORS.dangerBorder,
+  },
+
+  // Nav shell for the settings screens that hang off Profile. Profile itself
+  // is a tab and has no header, so these live here rather than there.
+  topNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.pageHorizontal,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.cardBorder,
+  },
+  backBtn: { padding: 4, minWidth: moderateScale(30) },
+  backBtnSpacer: { minWidth: moderateScale(30) },
+  scrollContent: {
+    paddingHorizontal: SPACING.pageHorizontal,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xl,
+  },
   contentContainer: {
     paddingHorizontal: SPACING.pageHorizontal,
     paddingTop: SPACING.sm,

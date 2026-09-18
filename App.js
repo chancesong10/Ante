@@ -31,6 +31,8 @@ import LifetimeInsightsScreen from './screens/LifetimeInsightsScreen';
 import LegalScreen from './screens/LegalScreen';
 import ManageSubscriptionScreen from './screens/ManageSubscriptionScreen';
 import AntePlusScreen from './screens/AntePlusScreen';
+import AccountScreen from './screens/AccountScreen';
+import DataPrivacyScreen from './screens/DataPrivacyScreen';
 import AuthScreen from './screens/AuthScreen';
 
 import StartSessionModal from './components/StartSessionModal';
@@ -372,6 +374,8 @@ function AppContent({ navigationRef }) {
           <Stack.Screen name="Legal" component={LegalScreen} />
           <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
           <Stack.Screen name="AntePlus" component={AntePlusScreen} />
+          <Stack.Screen name="Account" component={AccountScreen} />
+          <Stack.Screen name="DataPrivacy" component={DataPrivacyScreen} />
           <Stack.Screen name="Auth" component={AuthScreen} options={{ presentation: 'modal' }} />
         </Stack.Navigator>
       </NavigationContainer>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
-import ConfirmModal from '../components/ConfirmModal';
 import { hapticSuccess } from '../utils/haptics';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { styles } from './profileScreenStyles';
@@ -31,9 +29,8 @@ import { usePreferences, DEFAULT_QUICK_CHIP_PRESETS } from '../context/Preferenc
 import { DEFAULT_GAME_ORDER, sanitizeGameOrder } from '../constants/games';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
+import ConfirmModal from '../components/ConfirmModal';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
-import { getOrCreateDeviceId } from '../services/storageService';
-import { exportSessionsCsv } from '../utils/exportSessions';
 import { formatAmount, formatMoney, relativeTime, netTone } from '../utils/format';
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
@@ -121,20 +118,9 @@ function syncRowCopy({ state, lastSyncedAt, error }) {
 }
 
 export default function ProfileScreen({ navigation }) {
-  // clearAllSessions comes through useVisibleSessionHistory's passthrough.
-  const { sessionHistory, clearAllSessions, releaseAccountSessions } = useVisibleSessionHistory();
+  const { sessionHistory } = useVisibleSessionHistory();
   const syncStatus = useSyncStatus();
-  const {
-    user,
-    profile,
-    signOut,
-    updateUsername,
-    hasPasswordLogin,
-    updatePasswordWithCurrent,
-    sendPasswordChangeCode,
-    updatePasswordWithCode,
-    deleteAccount,
-  } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const {
     isPro,
     isLoading: purchasesLoading,
@@ -157,7 +143,6 @@ export default function ProfileScreen({ navigation }) {
     gameOrder = DEFAULT_GAME_ORDER,
   } = usePreferences();
 
-  const [deviceId, setDeviceId] = useState('ante_vault_seed');
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
   const [limitsModalVisible, setLimitsModalVisible] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
@@ -169,171 +154,32 @@ export default function ProfileScreen({ navigation }) {
   // Temporary local state for modal controls
   const [tempStopLossAlert, setTempStopLossAlert] = useState(stopLossAlert);
   const [tempLossLimit, setTempLossLimit] = useState(String(stopLossAmount));
-  const [copiedSeed, setCopiedSeed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   // Account settings — 'username' | 'password' | 'delete' | null
-  const [accountModal, setAccountModal] = useState(null);
   // Typed-back email address that arms the delete button.
-  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
-  const [tempUsername, setTempUsername] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   // Google-only accounts prove identity with an emailed code instead.
-  const [codeSent, setCodeSent] = useState(false);
-  const [verifyCode, setVerifyCode] = useState('');
-  const [accountBusy, setAccountBusy] = useState(false);
-  const [accountError, setAccountError] = useState(null);
-  const [accountNotice, setAccountNotice] = useState(null);
 
   const [restoring, setRestoring] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [dataModal, setDataModal] = useState(null);
-
-  const openUsernameModal = () => {
-    setTempUsername(profile?.username || '');
-    setAccountError(null);
-    setAccountModal('username');
-  };
-
-  const openPasswordModal = () => {
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setVerifyCode('');
-    setCodeSent(false);
-    setAccountError(null);
-    setAccountModal('password');
-  };
-
-  const openDeleteAccountModal = () => {
-    setCurrentPassword('');
-    setDeleteConfirmEmail('');
-    setAccountError(null);
-    setAccountModal('delete');
-  };
-
-  // Case/whitespace-insensitive: this is a confirmation of intent, not a
-  // password, and failing someone over a capital letter in their own email
-  // address would just teach them to paste it.
-  const deleteEmailMatches =
-    !!user?.email && deleteConfirmEmail.trim().toLowerCase() === user.email.trim().toLowerCase();
-
-  const handleDeleteAccount = async () => {
-    if (!deleteEmailMatches) {
-      setAccountError('Type your email address exactly to confirm.');
-      return;
-    }
-    if (hasPasswordLogin && !currentPassword) {
-      setAccountError('Enter your current password.');
-      return;
-    }
-    // Captured before the delete: `user` is null by the time it resolves,
-    // and the local cleanup below needs the id that's about to stop existing.
-    const deletedUserId = user?.id;
-
-    setAccountBusy(true);
-    setAccountError(null);
-    try {
-      await deleteAccount(currentPassword);
-      // Only after the server confirms. Runs post-sign-out, so the sync
-      // engine is already idle and won't try to push these back up.
-      releaseAccountSessions(deletedUserId);
-      setAccountModal(null);
-      setDataModal({
-        variant: 'primary',
-        icon: 'checkmark-circle-outline',
-        title: 'Account deleted',
-        message:
-          'Your account and everything synced to it are gone. The sessions recorded on this device are still here — erase them from Data & Privacy if you want them gone too.',
-        confirmText: 'Got It',
-        showCancel: false,
-        onConfirm: () => setDataModal(null),
-      });
-    } catch (err) {
-      setAccountError(err?.message || "That account couldn't be deleted. Try again.");
-    } finally {
-      setAccountBusy(false);
-    }
-  };
-
-  const handleSendCode = async () => {
-    setAccountBusy(true);
-    setAccountError(null);
-    try {
-      await sendPasswordChangeCode();
-      setCodeSent(true);
-    } catch (err) {
-      setAccountError(err?.message || "That code couldn't be sent. Try again.");
-    } finally {
-      setAccountBusy(false);
-    }
-  };
-
-  const closeAccountModal = () => {
-    if (accountBusy) return; // don't drop a request that's mid-flight
-    setAccountModal(null);
-    setAccountError(null);
-  };
+  // For this screen's own flows only — restore, sign-out, feedback. The
+  // account and data dialogs went with their screens.
+  const [profileModal, setProfileModal] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const flashNotice = (text) => {
-    setAccountNotice(text);
-    setTimeout(() => setAccountNotice(null), 2600);
+    setNotice(text);
+    setTimeout(() => setNotice(null), 2600);
   };
 
-  const handleSaveUsername = async () => {
-    const name = tempUsername.trim();
-    if (name.length < 2) {
-      setAccountError('Pick a username of at least 2 characters.');
-      return;
-    }
-    setAccountBusy(true);
-    setAccountError(null);
-    try {
-      await updateUsername(name);
-      setAccountModal(null);
-      flashNotice('Username updated.');
-    } catch (err) {
-      setAccountError(err?.message || "That username couldn't be saved. Try again.");
-    } finally {
-      setAccountBusy(false);
-    }
-  };
 
-  const handleSavePassword = async () => {
-    if (hasPasswordLogin && !currentPassword) {
-      setAccountError('Enter your current password.');
-      return;
-    }
-    if (!hasPasswordLogin && !verifyCode.trim()) {
-      setAccountError('Enter the code we emailed you.');
-      return;
-    }
-    if (newPassword.length < 8) {
-      setAccountError('Use at least 8 characters.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setAccountError("Those two passwords don't match.");
-      return;
-    }
-    setAccountBusy(true);
-    setAccountError(null);
-    try {
-      if (hasPasswordLogin) {
-        await updatePasswordWithCurrent(currentPassword, newPassword);
-      } else {
-        await updatePasswordWithCode(verifyCode, newPassword);
-      }
-      setAccountModal(null);
-      flashNotice('Password updated.');
-    } catch (err) {
-      setAccountError(err?.message || "That password couldn't be saved. Try again.");
-    } finally {
-      setAccountBusy(false);
-    }
-  };
+
+
+
+
+
+
+
+
 
   const activeProEntitlement = customerInfo?.entitlements?.active?.[ANTE_PRO_ENTITLEMENT_ID];
   const proPlanLabel = activeProEntitlement
@@ -356,7 +202,7 @@ export default function ProfileScreen({ navigation }) {
     try {
       const result = await restorePurchases();
       if (!result.success) {
-        setDataModal({
+        setProfileModal({
           variant: 'warning',
           icon: 'alert-circle-outline',
           title: "Couldn't restore",
@@ -364,7 +210,7 @@ export default function ProfileScreen({ navigation }) {
             "We couldn't reach the store to check for previous purchases. Check your connection and try again.",
           confirmText: 'Got It',
           showCancel: false,
-          onConfirm: () => setDataModal(null),
+          onConfirm: () => setProfileModal(null),
         });
       } else {
         flashNotice(
@@ -376,33 +222,7 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const handleExport = async () => {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      const { message } = await exportSessionsCsv(sessionHistory);
-      if (message) flashNotice(message);
-    } finally {
-      setExporting(false);
-    }
-  };
 
-  const handleClearData = () => {
-    setDataModal({
-      variant: 'danger',
-      icon: 'trash-outline',
-      title: 'Erase all session data?',
-      message: `This permanently deletes all ${sessionHistory.length} recorded sessions from this device${user ? ' and from your account' : ''}. Your preferences and ${PLUS_NAME} membership are not affected. This cannot be undone.`,
-      confirmText: 'Erase Everything',
-      cancelText: 'Cancel',
-      onConfirm: () => {
-        clearAllSessions();
-        setDataModal(null);
-        flashNotice('All session data erased.');
-      },
-      onCancel: () => setDataModal(null),
-    });
-  };
 
   const handleSendFeedback = () => {
     const body = `\n\n---\nAnte v1.0.0 · ${Platform.OS}\n`;
@@ -424,12 +244,6 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      const id = await getOrCreateDeviceId();
-      if (id) setDeviceId(id);
-    })();
-  }, []);
 
   // --- Dynamic Financial & Volume Calculations ---
   const stats = useMemo(() => {
@@ -468,11 +282,6 @@ export default function ProfileScreen({ navigation }) {
     };
   }, [sessionHistory]);
 
-  const handleCopySeed = async () => {
-    await Clipboard.setStringAsync(deviceId);
-    setCopiedSeed(true);
-    setTimeout(() => setCopiedSeed(false), 2500);
-  };
 
   const handleOpenLimitsModal = () => {
     setTempStopLossAlert(stopLossAlert);
@@ -708,65 +517,23 @@ export default function ProfileScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.menuRow}
                 activeOpacity={0.7}
-                onPress={openUsernameModal}
+                onPress={() => navigation.navigate('Account')}
               >
-                <View style={styles.menuIconCircle}>
-                  <Ionicons name="person-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
+                <View style={[styles.menuIconCircle]}>
+                  <Ionicons name="person-circle-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
                 </View>
                 <View style={styles.menuTextGroup}>
-                  <Text style={styles.menuTitle}>Username</Text>
-                  <Text style={styles.menuSubtitle} numberOfLines={1}>
-                    {profile?.username || 'Not set yet'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-
-              <View style={styles.menuDivider} />
-
-              <TouchableOpacity
-                style={styles.menuRow}
-                activeOpacity={0.7}
-                onPress={openPasswordModal}
-              >
-                <View style={styles.menuIconCircle}>
-                  <Ionicons name="key-outline" size={moderateScale(18)} color={COLORS.warning} />
-                </View>
-                <View style={styles.menuTextGroup}>
-                  <Text style={styles.menuTitle}>Password</Text>
-                  <Text style={styles.menuSubtitle}>Set a new password for this account</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-
-              <View style={styles.menuDivider} />
-
-              <TouchableOpacity
-                style={styles.menuRow}
-                activeOpacity={0.7}
-                onPress={openDeleteAccountModal}
-              >
-                <View style={[styles.menuIconCircle, styles.menuIconCircleDanger]}>
-                  <Ionicons
-                    name="person-remove-outline"
-                    size={moderateScale(18)}
-                    color={COLORS.danger}
-                  />
-                </View>
-                <View style={styles.menuTextGroup}>
-                  <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Delete Account</Text>
-                  <Text style={styles.menuSubtitle}>
-                    Permanently close this account and erase what's synced to it
-                  </Text>
+                  <Text style={styles.menuTitle}>Account</Text>
+                  <Text style={styles.menuSubtitle}>Username, password, and deleting your account</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            {!!accountNotice && (
+            {!!notice && (
               <View style={styles.noticeRow}>
                 <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
-                <Text style={styles.noticeText}>{accountNotice}</Text>
+                <Text style={styles.noticeText}>{notice}</Text>
               </View>
             )}
           </>
@@ -1035,102 +802,23 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Section 3: Security & Data Vault */}
+        {/* Section 3: Security & Data Vault. The flows themselves live on
+            their own screen — erasing everything and exporting your history
+            are not settings rows, and they were sharing this screen's state
+            bag with the haptics toggle. */}
         <Text style={styles.sectionTitle}>DATA VAULT & SECURITY</Text>
         <View style={[styles.menuCard, SHADOWS.card]}>
-          {/* Hide Amounts. Lives here rather than only above the vault grid,
-              which made an app-wide preference look scoped to that grid. */}
-          <View style={styles.menuRow}>
-            <View style={styles.menuIconCircle}>
-              <Ionicons
-                name={privacyMode ? 'eye-off-outline' : 'eye-outline'}
-                size={moderateScale(18)}
-                color={COLORS.accentCyan}
-              />
-            </View>
-            <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Hide Amounts</Text>
-              <Text style={styles.menuSubtitle}>
-                Masks every figure app-wide. Live bets and pots stay visible so trackers
-                remain usable.
-              </Text>
-            </View>
-            <Toggle
-              value={privacyMode}
-              onValueChange={(val) => updatePreferences?.({ privacyMode: val })}
-              accessibilityLabel="Hide amounts"
-            />
-          </View>
-
-          <View style={styles.menuDivider} />
-
-          {/* Device Anonymous ID */}
           <TouchableOpacity
             style={styles.menuRow}
             activeOpacity={0.7}
-            onPress={handleCopySeed}
+            onPress={() => navigation.navigate('DataPrivacy')}
           >
             <View style={styles.menuIconCircle}>
-              <Ionicons name="finger-print-outline" size={moderateScale(18)} color={COLORS.accentViolet} />
+              <Ionicons name="shield-checkmark-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Vault Device Seed</Text>
-              <Text style={styles.menuSubtitle} numberOfLines={1}>
-                {deviceId.slice(0, 18)}...
-              </Text>
-            </View>
-            <View style={styles.copyBadge}>
-              <Ionicons
-                name={copiedSeed ? 'checkmark' : 'copy-outline'}
-                size={14}
-                color={copiedSeed ? COLORS.success : COLORS.primary}
-              />
-              <Text style={[styles.copyBadgeText, copiedSeed && { color: COLORS.success }]}>
-                {copiedSeed ? 'Copied' : 'Copy'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.menuDivider} />
-
-          {/* CSV, because the point of exporting is to open it in a spreadsheet. */}
-          <TouchableOpacity
-            style={styles.menuRow}
-            activeOpacity={0.7}
-            onPress={handleExport}
-            disabled={exporting}
-          >
-            <View style={styles.menuIconCircle}>
-              <Ionicons
-                name="download-outline"
-                size={moderateScale(18)}
-                color={COLORS.accentCyan}
-              />
-            </View>
-            <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Export Session History</Text>
-              <Text style={styles.menuSubtitle}>
-                {sessionHistory.length > 0
-                  ? `${sessionHistory.length} session${sessionHistory.length === 1 ? '' : 's'} as a CSV file`
-                  : 'Nothing recorded yet'}
-              </Text>
-            </View>
-            {exporting ? (
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            ) : (
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.menuDivider} />
-
-          <TouchableOpacity style={styles.menuRow} activeOpacity={0.7} onPress={handleClearData}>
-            <View style={[styles.menuIconCircle, styles.menuIconCircleDanger]}>
-              <Ionicons name="trash-outline" size={moderateScale(18)} color={COLORS.danger} />
-            </View>
-            <View style={styles.menuTextGroup}>
-              <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Erase All Data</Text>
-              <Text style={styles.menuSubtitle}>Permanently delete every recorded session</Text>
+              <Text style={styles.menuTitle}>Data & Privacy</Text>
+              <Text style={styles.menuSubtitle}>Hide amounts, export your history, erase everything</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
@@ -1194,289 +882,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      <ConfirmModal visible={!!dataModal} {...dataModal} />
-
-      {/* CHANGE USERNAME MODAL */}
-      <Modal
-        visible={accountModal === 'username'}
-        transparent
-        animationType="fade"
-        onRequestClose={closeAccountModal}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
-        >
-          <TouchableWithoutFeedback onPress={closeAccountModal}>
-            <View style={styles.modalOverlay}>
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={(e) => e.stopPropagation()}
-                style={[styles.modalSheet, SHADOWS.card]}
-              >
-                <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Change Username</Text>
-                  <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
-                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.limitSub}>This is the name shown on your profile.</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.textInput}
-                    value={tempUsername}
-                    onChangeText={setTempUsername}
-                    placeholderTextColor={COLORS.textMuted}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    maxLength={24}
-                  />
-                </View>
-
-                {!!accountError && <Text style={styles.accountError}>{accountError}</Text>}
-
-                <TouchableOpacity
-                  style={[styles.saveModalBtn, accountBusy && styles.saveModalBtnBusy]}
-                  activeOpacity={0.85}
-                  onPress={handleSaveUsername}
-                  disabled={accountBusy}
-                >
-                  {accountBusy ? (
-                    <ActivityIndicator size="small" color={COLORS.textDark} />
-                  ) : (
-                    <Text style={styles.saveModalBtnText}>Save Username</Text>
-                  )}
-                </TouchableOpacity>
-              </TouchableOpacity>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* CHANGE PASSWORD MODAL */}
-      <Modal
-        visible={accountModal === 'password'}
-        transparent
-        animationType="fade"
-        onRequestClose={closeAccountModal}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
-        >
-          <TouchableWithoutFeedback onPress={closeAccountModal}>
-            <View style={styles.modalOverlay}>
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={(e) => e.stopPropagation()}
-                style={[styles.modalSheet, SHADOWS.card]}
-              >
-                <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Change Password</Text>
-                  <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
-                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-
-                {hasPasswordLogin ? (
-                  <>
-                    <Text style={styles.limitSub}>
-                      Confirm your current password, then choose a new one.
-                    </Text>
-                    <View style={styles.inputContainer}>
-                      <TextInput
-                        style={styles.textInput}
-                        value={currentPassword}
-                        onChangeText={setCurrentPassword}
-                        placeholder="Current password"
-                        placeholderTextColor={COLORS.textMuted}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.limitSub}>
-                      You signed in with Google, so there's no current password to confirm.
-                      We'll email a code to {user?.email} instead.
-                    </Text>
-                    {codeSent ? (
-                      <View style={styles.inputContainer}>
-                        <TextInput
-                          style={styles.textInput}
-                          value={verifyCode}
-                          onChangeText={setVerifyCode}
-                          placeholder="6-digit code"
-                          placeholderTextColor={COLORS.textMuted}
-                          keyboardType="number-pad"
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                          maxLength={8}
-                        />
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.secondaryModalBtn}
-                        activeOpacity={0.85}
-                        onPress={handleSendCode}
-                        disabled={accountBusy}
-                      >
-                        {accountBusy ? (
-                          <ActivityIndicator size="small" color={COLORS.textPrimary} />
-                        ) : (
-                          <Text style={styles.secondaryModalBtnText}>Email me a code</Text>
-                        )}
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
-
-                {(hasPasswordLogin || codeSent) && (
-                  <View style={[styles.inputContainer, { marginTop: SPACING.xs }]}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={newPassword}
-                      onChangeText={setNewPassword}
-                      placeholder="New password (8+ characters)"
-                      placeholderTextColor={COLORS.textMuted}
-                      secureTextEntry
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
-                )}
-                {(hasPasswordLogin || codeSent) && (
-                  <View style={[styles.inputContainer, { marginTop: SPACING.xs }]}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      placeholder="Confirm new password"
-                      placeholderTextColor={COLORS.textMuted}
-                      secureTextEntry
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
-                )}
-
-                {!!accountError && <Text style={styles.accountError}>{accountError}</Text>}
-
-                {(hasPasswordLogin || codeSent) && (
-                  <TouchableOpacity
-                    style={[styles.saveModalBtn, accountBusy && styles.saveModalBtnBusy]}
-                    activeOpacity={0.85}
-                    onPress={handleSavePassword}
-                    disabled={accountBusy}
-                  >
-                    {accountBusy ? (
-                      <ActivityIndicator size="small" color={COLORS.textDark} />
-                    ) : (
-                      <Text style={styles.saveModalBtnText}>Save Password</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* DELETE ACCOUNT MODAL */}
-      <Modal
-        visible={accountModal === 'delete'}
-        transparent
-        animationType="fade"
-        onRequestClose={closeAccountModal}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
-        >
-          <TouchableWithoutFeedback onPress={closeAccountModal}>
-            <View style={styles.modalOverlay}>
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={(e) => e.stopPropagation()}
-                style={[styles.modalSheet, SHADOWS.card]}
-              >
-                <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Delete Account</Text>
-                  <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
-                    <Ionicons name="close" size={22} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.limitSub}>
-                  This permanently deletes your account and every session synced to it. It cannot
-                  be undone.
-                </Text>
-                <Text style={styles.deleteNote}>
-                  Sessions recorded on this device stay on this device — erase them from Data &
-                  Privacy if you want those gone too. An {PLUS_NAME} subscription is billed by the
-                  store, so cancel it from your {Platform.OS === 'ios' ? 'App Store' : 'Google Play'}{' '}
-                  account settings.
-                </Text>
-
-                {hasPasswordLogin && (
-                  <View style={styles.inputContainer}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={currentPassword}
-                      onChangeText={setCurrentPassword}
-                      placeholder="Current password"
-                      placeholderTextColor={COLORS.textMuted}
-                      secureTextEntry
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
-                )}
-
-                {/* The address goes here rather than in the placeholder: a
-                    single-line TextInput truncates anything longer than the
-                    field, and most real emails are longer than the field. */}
-                <Text style={styles.deleteConfirmPrompt}>
-                  Type <Text style={styles.deleteConfirmEmail}>{user?.email}</Text> to confirm:
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.textInput}
-                    value={deleteConfirmEmail}
-                    onChangeText={setDeleteConfirmEmail}
-                    placeholder="Email address"
-                    placeholderTextColor={COLORS.textMuted}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                {!!accountError && <Text style={styles.accountError}>{accountError}</Text>}
-
-                <TouchableOpacity
-                  style={[
-                    styles.deleteModalBtn,
-                    (!deleteEmailMatches || accountBusy) && styles.deleteModalBtnDisabled,
-                  ]}
-                  activeOpacity={0.85}
-                  onPress={handleDeleteAccount}
-                  disabled={!deleteEmailMatches || accountBusy}
-                >
-                  {accountBusy ? (
-                    <ActivityIndicator size="small" color={COLORS.textPrimary} />
-                  ) : (
-                    <Text style={styles.deleteModalBtnText}>Delete My Account</Text>
-                  )}
-                </TouchableOpacity>
-              </TouchableOpacity>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </Modal>
+      <ConfirmModal visible={!!profileModal} {...profileModal} />
 
       {/* CURRENCY SELECTOR MODAL */}
       <Modal
