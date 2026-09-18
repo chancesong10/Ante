@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
@@ -376,7 +377,7 @@ export default function BlackjackScreen({ navigation }) {
         };
       };
       logHandToActiveSession({
-        id: now,
+        id: Crypto.randomUUID(),
         type: 'split',
         hands: [toHand(splitHand1), toHand(splitHand2)],
         // Every hand keeps the rules it was played under, cards or not.
@@ -411,7 +412,7 @@ export default function BlackjackScreen({ navigation }) {
     }
 
     logHandToActiveSession({
-      id: now,
+      id: Crypto.randomUUID(),
       type: 'single',
       bet,
       doubled,

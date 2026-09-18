@@ -81,22 +81,6 @@ export function PurchasesProvider({ children }) {
     })();
   }, [user?.id, authIsLoading]);
 
-  // Dev aid: whenever CustomerInfo changes, log which entitlement
-  // identifiers RevenueCat actually returned so a mismatch with
-  // ANTE_PRO_ENTITLEMENT_ID is obvious. Remove once the entitlement
-  // wiring is confirmed.
-  useEffect(() => {
-    if (!__DEV__ || !customerInfo) return;
-    console.log(
-      'PurchasesContext: active entitlements =',
-      Object.keys(customerInfo.entitlements?.active ?? {}),
-      '| all entitlements =',
-      Object.keys(customerInfo.entitlements?.all ?? {}),
-      '| looking for =',
-      ANTE_PRO_ENTITLEMENT_ID
-    );
-  }, [customerInfo]);
-
   const refreshCustomerInfo = useCallback(async () => {
     try {
       const info = await fetchCustomerInfo();

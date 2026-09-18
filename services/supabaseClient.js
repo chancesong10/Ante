@@ -12,7 +12,13 @@ import { createClient } from '@supabase/supabase-js';
 // in SecureStore (iOS Keychain / Android Keystore) — a stolen AsyncStorage
 // blob is useless without that key.
 class LargeSecureStore {
-  async _encrypt(key, value) {
+  // Returns the ciphertext and the key that encrypted it without writing
+  // either. setItem persists the ciphertext first and the key second, so a
+  // process death mid-write leaves a blob whose key is still the previous
+  // one — which fails the JSON check below and is discarded cleanly. Writing
+  // the key first would instead pair a fresh key with stale ciphertext and
+  // hand the SDK plausible-looking garbage.
+  async _encrypt(value) {
     const encryptionKey = aesjs.utils.hex.fromBytes(await Crypto.getRandomBytesAsync(32));
     const cipher = new aesjs.ModeOfOperation.ctr(
       aesjs.utils.hex.toBytes(encryptionKey),
@@ -20,22 +26,31 @@ class LargeSecureStore {
     );
     const encryptedBytes = cipher.encrypt(aesjs.utils.utf8.toBytes(value));
 
-    await SecureStore.setItemAsync(key, encryptionKey);
-
-    return aesjs.utils.hex.fromBytes(encryptedBytes);
+    return { encryptionKey, ciphertext: aesjs.utils.hex.fromBytes(encryptedBytes) };
   }
 
+  // CTR decryption never throws on a wrong key — it XORs whatever it is
+  // given and returns bytes. The only way to know the key matched is to
+  // check the result is still the JSON that was stored. Anything else is
+  // dropped, turning corruption into a clean re-login rather than a parse
+  // throw inside the Supabase SDK on every launch.
   async _decrypt(key, value) {
     const encryptionKeyHex = await SecureStore.getItemAsync(key);
     if (!encryptionKeyHex) return null;
 
-    const cipher = new aesjs.ModeOfOperation.ctr(
-      aesjs.utils.hex.toBytes(encryptionKeyHex),
-      new aesjs.Counter(1)
-    );
-    const decryptedBytes = cipher.decrypt(aesjs.utils.hex.toBytes(value));
-
-    return aesjs.utils.utf8.fromBytes(decryptedBytes);
+    try {
+      const cipher = new aesjs.ModeOfOperation.ctr(
+        aesjs.utils.hex.toBytes(encryptionKeyHex),
+        new aesjs.Counter(1)
+      );
+      const decryptedBytes = cipher.decrypt(aesjs.utils.hex.toBytes(value));
+      const decrypted = aesjs.utils.utf8.fromBytes(decryptedBytes);
+      JSON.parse(decrypted);
+      return decrypted;
+    } catch {
+      await this.removeItem(key);
+      return null;
+    }
   }
 
   async getItem(key) {
@@ -50,8 +65,9 @@ class LargeSecureStore {
   }
 
   async setItem(key, value) {
-    const encrypted = await this._encrypt(key, value);
-    await AsyncStorage.setItem(key, encrypted);
+    const { encryptionKey, ciphertext } = await this._encrypt(value);
+    await AsyncStorage.setItem(key, ciphertext);
+    await SecureStore.setItemAsync(key, encryptionKey);
   }
 }
 

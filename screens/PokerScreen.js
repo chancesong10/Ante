@@ -10,6 +10,7 @@ import {
   Dimensions,
   BackHandler,
 } from 'react-native';
+import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -34,6 +35,10 @@ const STREETS = [
   { key: 'river', label: 'River (5th)', short: 'River' },
   { key: 'showdown', label: 'Showdown', short: 'Result' },
 ];
+
+// Half a cent — below this two money figures are the same amount as far as
+// the player is concerned, since every amount is rendered to two decimals.
+const MONEY_EPSILON = 0.005;
 
 const BLIND_MODES = [
   { key: 'none', label: 'No Blinds' },
@@ -368,6 +373,10 @@ export default function PokerScreen({ navigation }) {
   };
 
   // --- Handlers: Street Betting Validation & Advancement ---
+  // Bets are accumulated floats: a chip path of 0.10 + 0.20 lands on
+  // 0.30000000000000004, which is not === a typed 0.30 even though both
+  // render as "$0.30". Comparing to the half-cent keeps that drift from
+  // blocking a street behind a mismatch list whose rows look identical.
   const getStreetMismatch = () => {
     const liveBets = [{ label: 'You', amount: currentHeroBet }];
     opponents.forEach((o) => {
@@ -377,7 +386,7 @@ export default function PokerScreen({ navigation }) {
     });
     if (liveBets.length <= 1) return null;
     const first = liveBets[0].amount;
-    return liveBets.some((b) => b.amount !== first) ? liveBets : null;
+    return liveBets.some((b) => Math.abs(b.amount - first) > MONEY_EPSILON) ? liveBets : null;
   };
 
   const handleAdvanceStreet = (targetIdx) => {
@@ -422,7 +431,7 @@ export default function PokerScreen({ navigation }) {
     setFoldModalVisible(false);
 
     const handRecord = {
-      id: Date.now(),
+      id: Crypto.randomUUID(),
       gameType: 'Poker',
       outcome: 'fold',
       foldReason, // 'bluffed' | 'good_fold' | 'no_show'
@@ -443,7 +452,7 @@ export default function PokerScreen({ navigation }) {
     closeAlertModal();
 
     const handRecord = {
-      id: Date.now(),
+      id: Crypto.randomUUID(),
       gameType: 'Poker',
       outcome: 'win',
       wonBy: 'fold', // uncontested — table folded to the hero
@@ -499,7 +508,7 @@ export default function PokerScreen({ navigation }) {
     }
 
     const handRecord = {
-      id: Date.now(),
+      id: Crypto.randomUUID(),
       gameType: 'Poker',
       outcome: showdownResult,
       splitCount: showdownResult === 'split' ? splitWay : 1,

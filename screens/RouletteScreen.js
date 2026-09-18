@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
@@ -98,7 +99,7 @@ export default function RouletteScreen({ navigation }) {
     outcome === 'win' ? hapticSuccess() : hapticLight();
 
     const record = {
-      id: Date.now().toString() + Math.random().toString(36).substring(7),
+      id: Crypto.randomUUID(),
       type: 'single',
       betType: betType.id,
       betLabel: betType.label,
