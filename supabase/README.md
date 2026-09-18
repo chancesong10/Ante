@@ -38,7 +38,22 @@ git add supabase/migrations && git commit -m "Capture Supabase schema and RLS po
 `db pull` writes a single baseline migration describing the current remote
 state — tables, columns, constraints, functions, and policies.
 
-### If the CLI can't authenticate
+### db pull requires Docker
+
+`db pull` and `db dump` both build a throwaway shadow database in a container
+to diff against, so both fail with `docker: command not found` on a machine
+without Docker or Podman — even though the connection to the remote database
+itself succeeds. Either install Docker Desktop, or use the dashboard route
+below, which needs nothing installed.
+
+### Capturing without Docker (or if the CLI can't authenticate)
+
+Run `capture-schema.sql` from this directory in the dashboard SQL editor
+(SQL Editor -> New query -> paste -> Run). It returns columns, constraints,
+RLS state, policies, function definitions, triggers on both `public` and
+`auth`, and role grants as one result set. Everything in it is a SELECT.
+
+The individual queries, if you'd rather run them piecemeal:
 
 The schema can also be read from the dashboard's SQL editor. These three
 queries return everything that matters:
