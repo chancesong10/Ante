@@ -6,7 +6,7 @@ Derived from the app source, then **verified against the live database on
 
 Every line cites the code that depends on it.
 
-## Verification result: the access-control model is sound
+## Verification result: sound, and since hardened
 
 All four items that would have been serious were correct as found:
 
@@ -18,8 +18,7 @@ All four items that would have been serious were correct as found:
 - `delete_account()` is `security definer` with `search_path` pinned to `''`,
   takes no parameters, and derives the user from `auth.uid()`
 
-Four hardening items remain, none of them exploitable today. They are listed
-at the bottom.
+Four hardening items found alongside them have since been applied; see below.
 
 ## Table: `sessions`
 
@@ -73,53 +72,26 @@ Written by `services/syncService.js` (`toRow`).
 - [x] Deletes `sessions`, then `profiles`, then `auth.users`, explicitly
       rather than trusting cascade
 
-## Outstanding hardening
+## Hardening applied
 
-None of these is exploitable as the app stands. Ranked by how much they'd
-matter if something else changed.
+All four items are done, in `migrations/20260918014500_harden_grants_and_signup.sql`.
+None was exploitable as the app stood; each closed a gap that would only
+matter once something else changed.
 
-### 1. `anon` holds full table privileges
-
-Supabase grants `all` on public tables to `anon`, `authenticated`, and
-`service_role` by default, so `anon` currently has `insert, select, update,
-delete, truncate, references, trigger` on both tables. RLS is what neutralizes
-this: `auth.uid()` is null for an anon token, so every policy evaluates false.
-
-Two reasons to revoke it anyway. First, the app never reads or writes either
-table as `anon` — sync only runs with a `userId`, and the profile query only
-runs with a session — so the grant buys nothing. Second, **`truncate` is not
-subject to RLS at all.** PostgREST doesn't expose `truncate`, so there is no
-route to it today; the privilege simply shouldn't exist.
-
-```sql
-revoke all on public.sessions from anon;
-revoke all on public.profiles from anon;
-revoke truncate on public.sessions, public.profiles from authenticated;
-```
-
-### 2. Policies target `public` rather than `authenticated`
-
-All six policies are `to public`, which includes `anon`. Safe in practice —
-`auth.uid()` is null for anon, so `auth.uid() = user_id` is null and the row is
-filtered out — but the intent reads better, and fails safer, as
-`to authenticated`.
-
-### 3. `handle_new_user()` pins `search_path` to `'public'`, not `''`
-
-`delete_account()` gets this right and `handle_new_user()` doesn't. The body
-only calls `coalesce` and `split_part`, both resolved from `pg_catalog` (always
-searched first), so there is no shadowing route today. Worth matching the
-stricter form for consistency.
-
-### 4. `handle_new_user()` has no fallback for a null email
-
-`profiles.email` is `not null` and the trigger inserts `new.email` directly. An
-auth provider that yields no email address would fail the insert, and because
-the trigger is `after insert` on `auth.users`, that failure aborts the signup
-transaction — the user simply can't sign up. Google and email/password both
-always supply an email, so this is latent rather than live; it would surface
-the day a provider like Apple (with private relay disabled) or phone auth is
-added.
+- [x] **`anon` grants revoked** on both tables. Supabase grants `all` to
+      `anon` by default and RLS neutralised it, but the app never touches
+      either table as `anon`, so the grant bought nothing — and it included
+      `truncate`, the one privilege RLS does not govern. `truncate` is also
+      revoked from `authenticated`.
+- [x] **Policies scoped to `authenticated`** rather than `public`.
+- [x] **`handle_new_user()` pins `search_path` to `''`**, matching
+      `delete_account()`, with every reference schema-qualified to suit.
+- [x] **Signup survives a null email.** `profiles.email` is `not null` and
+      the trigger inserted `new.email` directly, so a provider yielding no
+      address failed the insert — and an `after insert` trigger failure
+      aborts the whole signup transaction. It now falls back to an empty
+      string, and the username falls back past a blank local-part to the
+      column default.
 
 ### Not captured: indexes
 
