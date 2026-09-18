@@ -41,6 +41,7 @@ import { COLORS } from './constants/theme';
 import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useActiveSession, useSessionHistory } from './context/SessionContext';
 import { hapticLight } from './utils/haptics';
+import { shouldRaiseStopLossAlert, acknowledgedTier } from './utils/stopLoss';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -233,7 +234,7 @@ function AppContent({ navigationRef }) {
   const [appReady, setAppReady] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const { endSessionWithFx } = useSessionEndFx();
-  const { activeSessionList, endActiveSession } = useActiveSession();
+  const { activeSessionList, endActiveSession, updateActiveSessionMetadata } = useActiveSession();
   const { isLoaded: isSessionLoaded } = useSessionHistory();
   useSyncEngine();
   const {
@@ -244,11 +245,16 @@ function AppContent({ navigationRef }) {
   } = usePreferences();
 
   // Responsible Gaming Alert state. With several sessions able to run at
-  // once, the alert is *about* one of them — `alertSessionId` says which, and
-  // the snoozed loss tier is tracked per session id so a quiet blackjack
-  // table can't suppress a warning from a poker one.
+  // once, the alert is *about* one of them — `alertSessionId` says which.
+  //
+  // The snoozed loss tier is NOT tracked here. It lives on the session record
+  // itself (`alertedTier`), so it survives the app being killed and comes
+  // back with the session on relaunch: component state meant a session
+  // already well past its threshold re-alerted from tier zero every launch,
+  // for a warning the user had explicitly acknowledged minutes earlier.
+  // Storing it on the session also disposes of it when the session ends,
+  // rather than accumulating entries keyed on ids that no longer exist.
   const [alertSessionId, setAlertSessionId] = useState(null);
-  const [alertedTiers, setAlertedTiers] = useState({});
 
   // Live metrics for every running session, keyed by id.
   const sessionMetrics = useMemo(() => {
@@ -278,25 +284,36 @@ function AppContent({ navigationRef }) {
   }, [activeSessionList]);
 
   const alertSession = activeSessionList.find((s) => s.id === alertSessionId) || null;
-  const alertMetrics = sessionMetrics[alertSessionId] || {
-    netOutcome: 0,
-    totalBets: 0,
-    durationMinutes: 0,
-  };
+  const alertMetrics = useMemo(() => {
+    const base = sessionMetrics[alertSessionId] || {
+      netOutcome: 0,
+      totalBets: 0,
+      durationMinutes: 0,
+    };
+    if (!alertSession) return base;
+    // sessionMetrics only recomputes when a session changes, so its duration
+    // is stale by the time an alert opens on it. This one is measured as the
+    // alert is raised, which is the moment the figure is read.
+    return {
+      ...base,
+      durationMinutes: Math.max(0, Math.floor((Date.now() - alertSession.startTime) / 60000)),
+    };
+  }, [alertSession, alertSessionId, sessionMetrics]);
 
   // Monitor the stop-loss limit across every running session. One alert at a
   // time — whichever session crosses a new tier first raises it.
   useEffect(() => {
     if (!stopLossAlert || stopLossAmount <= 0 || alertSessionId) return;
 
-    const crossed = activeSessionList.find((s) => {
-      const netLoss = -(sessionMetrics[s.id]?.netOutcome ?? 0);
-      if (netLoss < stopLossAmount) return false;
-      return Math.floor(netLoss / stopLossAmount) > (alertedTiers[s.id] || 0);
-    });
+    const crossed = activeSessionList.find((s) =>
+      shouldRaiseStopLossAlert(s, sessionMetrics[s.id], {
+        enabled: stopLossAlert,
+        threshold: stopLossAmount,
+      })
+    );
 
     if (crossed) setAlertSessionId(crossed.id);
-  }, [activeSessionList, sessionMetrics, stopLossAlert, stopLossAmount, alertedTiers, alertSessionId]);
+  }, [activeSessionList, sessionMetrics, stopLossAlert, stopLossAmount, alertSessionId]);
 
   const handleEndSession = () => {
     const session = alertSession;
@@ -315,10 +332,10 @@ function AppContent({ navigationRef }) {
     if (!session) return;
 
     // Snooze to the current loss tier so it only alerts if this session's
-    // losses deepen further.
-    const netLoss = -(sessionMetrics[session.id]?.netOutcome ?? 0);
-    const tier = netLoss >= stopLossAmount ? Math.floor(netLoss / stopLossAmount) : 0;
-    setAlertedTiers((prev) => ({ ...prev, [session.id]: tier }));
+    // losses deepen further. Written onto the session so the acknowledgement
+    // outlives the process.
+    const tier = acknowledgedTier(sessionMetrics[session.id]?.netOutcome ?? 0, stopLossAmount);
+    updateActiveSessionMetadata(session.gameType, { alertedTier: tier });
   };
 
 

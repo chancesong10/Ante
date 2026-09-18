@@ -70,7 +70,7 @@ This is the part you can't get anywhere else. Ante doesn't just total your losse
 - **Session fatigue** — whether your judgment erodes in the back half of a session
 - **Volatility**, **conditional win rates**, **bet-tier drop-off**, **bb/100**, day-of-week and session-length patterns
 
-Every finding carries its sample size, so you know when to trust it. Nothing is asserted from four hands.
+Every finding carries its sample size, so you know when to trust it. Patterns surface early, on as few as three or four hands — the sample is shown alongside every one precisely because a finding that thin is a signal to watch, not a verdict. Weigh them accordingly, and let the sample grow before you act on one.
 
 ### History and analytics
 
