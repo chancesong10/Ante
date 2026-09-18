@@ -39,7 +39,7 @@ export default function ResponsibleGamingAlertModal({
       statusBarTranslucent
       onRequestClose={onAcknowledge}
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay} accessibilityViewIsModal>
         <TouchableWithoutFeedback>
           <View style={[styles.modalCard, SHADOWS.card]}>
             {/* Warning Icon Badge */}

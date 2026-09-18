@@ -204,6 +204,8 @@ export default function SportsBettingScreen({ navigation }) {
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+          accessibilityRole="button"
+          accessibilityLabel="Back to home"
         >
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
@@ -402,7 +404,13 @@ export default function SportsBettingScreen({ navigation }) {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.chipWrapRowHorizontal}>
                     {stakeChips.map((chip) => (
-                      <TouchableOpacity key={chip} style={styles.stakeChip} onPress={() => handleStakeChipPress(chip)}>
+                      <TouchableOpacity
+                        key={chip}
+                        style={styles.stakeChip}
+                        onPress={() => handleStakeChipPress(chip)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add ${currencySymbol}${formatAmount(chip)} to stake`}
+                      >
                         <Text style={styles.stakeChipText}>{chip}</Text>
                       </TouchableOpacity>
                     ))}

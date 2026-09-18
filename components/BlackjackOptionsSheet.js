@@ -67,7 +67,7 @@ export default function BlackjackOptionsSheet({ visible, rules, cardEntry, onCha
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.overlay} accessibilityViewIsModal behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableWithoutFeedback>
             <View
               style={[

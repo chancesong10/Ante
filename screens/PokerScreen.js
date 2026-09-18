@@ -589,6 +589,8 @@ export default function PokerScreen({ navigation }) {
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+            accessibilityRole="button"
+            accessibilityLabel="Close setup and go home"
           >
             <Ionicons name="close" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
@@ -653,6 +655,8 @@ export default function PokerScreen({ navigation }) {
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => setSetupStep('players')}
+            accessibilityRole="button"
+            accessibilityLabel="Back to player count"
           >
             <Ionicons name="arrow-back" size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
@@ -773,7 +777,7 @@ export default function PokerScreen({ navigation }) {
   if (viewMode === 'hand') {
     const isShowdown = currentStreetIdx === 4;
 
-    const renderBetChips = (currentBet, onChipPress, onCall) => {
+    const renderBetChips = (currentBet, onChipPress, onCall, who = 'your') => {
       const canCall = currentStreetMaxBet > currentBet;
 
       return (
@@ -784,6 +788,8 @@ export default function PokerScreen({ navigation }) {
                 style={[styles.blindCallBtn, styles.blindCallBtnBlind]}
                 onPress={() => onChipPress(sbVal)}
                 activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={`Post small blind, add ${currencySymbol}${formatAmount(sbVal)} to ${who} bet`}
               >
                 <Text style={styles.blindCallBtnBlindText}>
                   SB +{currencySymbol}{formatAmount(sbVal)}
@@ -795,6 +801,8 @@ export default function PokerScreen({ navigation }) {
                 style={[styles.blindCallBtn, styles.blindCallBtnBlind]}
                 onPress={() => onChipPress(bbVal)}
                 activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={`Post big blind, add ${currencySymbol}${formatAmount(bbVal)} to ${who} bet`}
               >
                 <Text style={styles.blindCallBtnBlindText}>
                   BB +{currencySymbol}{formatAmount(bbVal)}
@@ -809,6 +817,13 @@ export default function PokerScreen({ navigation }) {
               onPress={canCall ? onCall : undefined}
               disabled={!canCall}
               activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canCall }}
+              accessibilityLabel={
+                canCall
+                  ? `Call ${currencySymbol}${formatAmount(currentStreetMaxBet)} for ${who} bet`
+                  : 'Call unavailable, no bet to match'
+              }
             >
               <Text
                 style={
@@ -827,6 +842,8 @@ export default function PokerScreen({ navigation }) {
                 style={styles.chipButton}
                 onPress={() => onChipPress(chip)}
                 activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={`Add ${currencySymbol}${formatAmount(chip)} to ${who} bet`}
               >
                 <View style={styles.chipInnerCircle}>
                   <Text style={styles.chipText}>
@@ -958,7 +975,7 @@ export default function PokerScreen({ navigation }) {
 
                 {/* Incremental Quick Chips */}
                 <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
-                {renderBetChips(currentHeroBet, handleHeroChipPress, handleHeroCall)}
+                {renderBetChips(currentHeroBet, handleHeroChipPress, handleHeroCall, 'your')}
               </View>
 
               {/* Other Players' Bets for Current Street */}
@@ -1020,7 +1037,8 @@ export default function PokerScreen({ navigation }) {
                         {renderBetChips(
                           oppBet,
                           (val) => handleOpponentChipPress(opp.id, val),
-                          () => handleOpponentCall(opp.id)
+                          () => handleOpponentCall(opp.id),
+                          `${getPlayerLabel(opp.id)}'s`
                         )}
                       </>
                     )}
@@ -1029,6 +1047,12 @@ export default function PokerScreen({ navigation }) {
                       style={[styles.foldToggleBtn, opp.folded && styles.foldToggleBtnActive]}
                       onPress={() => handleToggleOpponentFold(opp.id)}
                       activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        opp.folded
+                          ? `Undo fold for ${getPlayerLabel(opp.id)}`
+                          : `Fold ${getPlayerLabel(opp.id)}`
+                      }
                     >
                       <Ionicons
                         name={opp.folded ? 'refresh' : 'close-circle-outline'}
@@ -1337,7 +1361,12 @@ export default function PokerScreen({ navigation }) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Top Navigation */}
       <View style={styles.topNav}>
-        <TouchableOpacity style={styles.backBtn} onPress={handleLeaveSession}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={handleLeaveSession}
+          accessibilityRole="button"
+          accessibilityLabel="Leave session and go back"
+        >
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <TrackerGuide gameType="Poker" navigation={navigation} />

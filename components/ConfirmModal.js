@@ -58,7 +58,7 @@ export default function ConfirmModal({
       statusBarTranslucent
       onRequestClose={closeAction}
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay} accessibilityViewIsModal>
         <TouchableWithoutFeedback>
           <View style={[styles.modalCard, SHADOWS.card]}>
             <View

@@ -615,7 +615,12 @@ export default function BlackjackScreen({ navigation }) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.topNav}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+          accessibilityRole="button"
+          accessibilityLabel="Back to home"
+        >
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <TrackerGuide gameType="Blackjack" navigation={navigation} />

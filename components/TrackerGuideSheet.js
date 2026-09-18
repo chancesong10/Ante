@@ -100,7 +100,7 @@ export default function TrackerGuideSheet({ visible, gameType, onClose, navigati
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
+        <View style={styles.overlay} accessibilityViewIsModal>
           <TouchableWithoutFeedback onPress={() => {}}>
             <Animated.View
               style={[

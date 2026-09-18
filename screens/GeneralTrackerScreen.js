@@ -131,7 +131,12 @@ export default function GeneralTrackerScreen({ navigation }) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.topNav}>
-        <TouchableOpacity style={styles.backBtn} onPress={handleDiscardPress}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={handleDiscardPress}
+          accessibilityRole="button"
+          accessibilityLabel="Discard session and go back"
+        >
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <TrackerGuide gameType="General" navigation={navigation} />

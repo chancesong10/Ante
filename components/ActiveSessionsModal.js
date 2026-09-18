@@ -37,7 +37,7 @@ export default function ActiveSessionsModal({
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
+        <View style={styles.overlay} accessibilityViewIsModal>
           <TouchableWithoutFeedback>
             <View
               style={[

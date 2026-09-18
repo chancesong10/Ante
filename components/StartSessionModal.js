@@ -407,7 +407,7 @@ export default function StartSessionModal({
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
+        <View style={styles.overlay} accessibilityViewIsModal>
           <TouchableWithoutFeedback>
             <Animated.View
               style={[

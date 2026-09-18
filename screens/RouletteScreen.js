@@ -148,6 +148,8 @@ export default function RouletteScreen({ navigation }) {
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+          accessibilityRole="button"
+          accessibilityLabel="Back to home"
         >
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
@@ -258,7 +260,13 @@ export default function RouletteScreen({ navigation }) {
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.chipWrapRowHorizontal}>
                   {chipPreset.map((chip) => (
-                    <TouchableOpacity key={chip} style={styles.stakeChip} onPress={() => handleChipPress(chip)}>
+                    <TouchableOpacity
+                      key={chip}
+                      style={styles.stakeChip}
+                      onPress={() => handleChipPress(chip)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Add ${currencySymbol}${formatAmount(chip)} to bet`}
+                    >
                       <Text style={styles.stakeChipText}>
                         {currencySymbol}
                         {formatAmount(chip)}
