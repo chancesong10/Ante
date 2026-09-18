@@ -1,95 +1,147 @@
 # What the client requires from the backend
 
-Derived from the app source, not from the database. This is the checklist for
-verifying whatever `supabase db pull` returns — it says what the client would
-break without, and it is **not** a description of what production currently
-has. Where the two disagree, production is the truth and this file is the bug
-report.
+Derived from the app source, then **verified against the live database on
+2026-09-18**. The captured state is committed as
+`migrations/20260918004851_baseline.sql`.
 
 Every line cites the code that depends on it.
 
+## Verification result: the access-control model is sound
+
+All four items that would have been serious were correct as found:
+
+- RLS is **enabled** on both tables, not merely policied
+- The insert policy has `with check`, so a caller cannot insert rows owned by
+  someone else
+- Both update policies have `using` **and** `with check`, so a caller cannot
+  reassign a row to another user
+- `delete_account()` is `security definer` with `search_path` pinned to `''`,
+  takes no parameters, and derives the user from `auth.uid()`
+
+Four hardening items remain, none of them exploitable today. They are listed
+at the bottom.
+
 ## Table: `sessions`
 
-Written by `services/syncService.js:6-18` (`toRow`).
+Written by `services/syncService.js` (`toRow`).
 
-| Column | Type the client implies | Why |
+| Column | Live type | Why the client needs it |
 |---|---|---|
-| `id` | `uuid`, primary key | `pushSessions` upserts with `onConflict: 'id'`. `context/SyncContext.js:6-16` filters to UUID-shaped ids precisely because this column is `uuid` — non-UUID legacy ids are kept local rather than remapped. |
-| `user_id` | `uuid`, FK → `auth.users(id)`, on delete cascade | Every query filters on it. Cascade is what makes `delete_account()` remove sessions along with the user. |
-| `game_type` | `text` | `session.gameType` |
-| `mode` | `text` | `'hands'` or `'buyInCashOut'` |
-| `start_time` | `timestamptz` | Written as ISO; `pullSessions` orders by it descending (`syncService.js:41-44`). |
-| `end_time` | `timestamptz` | Written as ISO. |
-| `net_profit` | `numeric` | Defaults to `0` client-side when absent. |
-| `data` | `jsonb` | The full session record. **This is the only column read back** — `pullSessions` selects `data` alone, so the scalar columns above exist for querying and integrity, not for hydration. |
+| `id` | `uuid` not null, PK | `pushSessions` upserts with `onConflict: 'id'`. `context/SyncContext.js:6-16` filters to UUID-shaped ids precisely because this column is `uuid`. |
+| `user_id` | `uuid` not null, FK → `auth.users(id)` on delete cascade | Every query filters on it. |
+| `game_type` | `text` not null | `session.gameType` |
+| `mode` | `text` not null, `check in ('buyInCashOut','hands')` | Matches the two shapes `finalizeSession` produces. **A third mode would be rejected by the database** — update this constraint alongside any new mode. |
+| `start_time` | `timestamptz` not null | `pullSessions` orders by it descending. |
+| `end_time` | `timestamptz` not null | |
+| `net_profit` | `numeric` not null default `0` | |
+| `data` | `jsonb` not null | The full record, and **the only column read back** — `pullSessions` selects `data` alone. The scalar columns exist for querying and integrity, not hydration. |
+| `created_at` | `timestamptz` not null default `now()` | Not read by the client. |
 
-Operations the client performs:
-
-- `upsert(rows, { onConflict: 'id' })` — insert **and** update
-- `select('data').eq('user_id', userId).order('start_time', desc)`
-- `delete().eq('user_id', userId).in('id', sessionIds)`
-
-So the policies must permit `select`, `insert`, `update`, and `delete` for the
-owning user.
-
-### RLS checklist
-
-- [ ] RLS is **enabled** on the table (not just policies defined — a table with
-      policies but RLS off enforces nothing)
-- [ ] `select` policy restricted to `auth.uid() = user_id`
-- [ ] `insert` policy with `with_check (auth.uid() = user_id)` — without the
-      `with_check`, a caller can insert rows owned by someone else
-- [ ] `update` policy with **both** `using` and `with_check` on
-      `auth.uid() = user_id` — `using` alone allows reassigning a row to
-      another user
-- [ ] `delete` policy restricted to `auth.uid() = user_id`
-- [ ] No policy grants the `anon` role anything
+- [x] RLS enabled
+- [x] `sessions_select_own` — `using (auth.uid() = user_id)`
+- [x] `sessions_insert_own` — `with check (auth.uid() = user_id)`
+- [x] `sessions_update_own` — `using` and `with check`
+- [x] `sessions_delete_own` — `using (auth.uid() = user_id)`
 
 ## Table: `profiles`
 
-| Column | Type the client implies | Why |
+| Column | Live type | Why the client needs it |
 |---|---|---|
-| `id` | `uuid`, primary key, FK → `auth.users(id)` | `context/AuthContext.js:79-84` selects by it with `.single()`. |
-| `username` | `text` | Read on load; written by `updateUsername` (`AuthContext.js:215-223`). |
-| `email` | `text` | Read on load. |
-| `updated_at` | `timestamptz` | Written by `updateUsername`. |
+| `id` | `uuid` not null, PK, FK → `auth.users(id)` on delete cascade | `AuthContext.js:79-84` selects by it with `.single()`. |
+| `username` | `text` not null default `'Ante Highroller'` | Read on load; written by `updateUsername`. |
+| `email` | `text` not null | Read on load. |
+| `created_at` | `timestamptz` not null default `now()` | Not read by the client. |
+| `updated_at` | `timestamptz` not null default `now()` | Written by `updateUsername`. |
 
-`fetchProfile` uses `.single()`, which **errors when no row exists**. So a row
-must be created for every new user — normally an `on auth.users` insert trigger.
-Confirm that trigger exists; without it, the first load after signup logs
-`AuthContext: failed to load profile` and `profile` stays null.
-
-### RLS checklist
-
-- [ ] RLS enabled
-- [ ] `select` restricted to `auth.uid() = id`
-- [ ] `update` with `using` and `with_check` on `auth.uid() = id`
-- [ ] Insert handled by the signup trigger (`security definer`), not by a
-      permissive client-facing insert policy
+- [x] RLS enabled
+- [x] `profiles_select_own` — `using (auth.uid() = id)`
+- [x] `profiles_update_own` — `using` and `with check`
+- [x] Row creation handled by the `on_auth_user_created` trigger on
+      `auth.users`, which runs `handle_new_user()` (`security definer`). This
+      is what makes `fetchProfile`'s `.single()` safe — **it is load-bearing,
+      not incidental.** Without it the first load after signup fails.
 
 ## Function: `delete_account()`
 
-Called with no arguments from `context/AuthContext.js:259`. The comment above
-that call already points here: *"the anon key can't touch `auth.users`
-directly."*
+- [x] Exists in `public`, no parameters
+- [x] `security definer`
+- [x] `set search_path to ''`
+- [x] Derives the user from `auth.uid()` internally
+- [x] Raises `28000` when `auth.uid()` is null, rather than silently deleting
+      nothing and reporting success — which would sign someone out believing
+      their account was gone
+- [x] Deletes `sessions`, then `profiles`, then `auth.users`, explicitly
+      rather than trusting cascade
 
-- [ ] Exists in the `public` schema, callable by `authenticated`
-- [ ] `security definer` — it has to delete from `auth.users`, which the
-      caller's role cannot
-- [ ] `set search_path = ''` (or an explicit safe schema list). A `security
-      definer` function without a pinned `search_path` is the classic
-      privilege-escalation hole: a caller who can create objects in a schema
-      earlier on the path can shadow a function the body calls.
-- [ ] Derives the user from `auth.uid()` internally and takes **no** user id
-      parameter — a parameter would let any authenticated caller delete any
-      account
-- [ ] Not granted to `anon`
+## Outstanding hardening
 
-## Auth configuration (dashboard, not captured by `db pull`)
+None of these is exploitable as the app stands. Ranked by how much they'd
+matter if something else changed.
+
+### 1. `anon` holds full table privileges
+
+Supabase grants `all` on public tables to `anon`, `authenticated`, and
+`service_role` by default, so `anon` currently has `insert, select, update,
+delete, truncate, references, trigger` on both tables. RLS is what neutralizes
+this: `auth.uid()` is null for an anon token, so every policy evaluates false.
+
+Two reasons to revoke it anyway. First, the app never reads or writes either
+table as `anon` — sync only runs with a `userId`, and the profile query only
+runs with a session — so the grant buys nothing. Second, **`truncate` is not
+subject to RLS at all.** PostgREST doesn't expose `truncate`, so there is no
+route to it today; the privilege simply shouldn't exist.
+
+```sql
+revoke all on public.sessions from anon;
+revoke all on public.profiles from anon;
+revoke truncate on public.sessions, public.profiles from authenticated;
+```
+
+### 2. Policies target `public` rather than `authenticated`
+
+All six policies are `to public`, which includes `anon`. Safe in practice —
+`auth.uid()` is null for anon, so `auth.uid() = user_id` is null and the row is
+filtered out — but the intent reads better, and fails safer, as
+`to authenticated`.
+
+### 3. `handle_new_user()` pins `search_path` to `'public'`, not `''`
+
+`delete_account()` gets this right and `handle_new_user()` doesn't. The body
+only calls `coalesce` and `split_part`, both resolved from `pg_catalog` (always
+searched first), so there is no shadowing route today. Worth matching the
+stricter form for consistency.
+
+### 4. `handle_new_user()` has no fallback for a null email
+
+`profiles.email` is `not null` and the trigger inserts `new.email` directly. An
+auth provider that yields no email address would fail the insert, and because
+the trigger is `after insert` on `auth.users`, that failure aborts the signup
+transaction — the user simply can't sign up. Google and email/password both
+always supply an email, so this is latent rather than live; it would surface
+the day a provider like Apple (with private relay disabled) or phone auth is
+added.
+
+### Not captured: indexes
+
+The dashboard query in `capture-schema.sql` reads constraints, not indexes, so
+index coverage is unverified. `pullSessions` filters on `user_id` and orders by
+`start_time` — and Postgres does **not** create an index for a foreign key
+automatically. Worth checking:
+
+```sql
+select tablename, indexname, indexdef from pg_indexes
+where schemaname = 'public' order by tablename;
+```
+
+If there's nothing covering `user_id`, `create index on public.sessions
+(user_id, start_time desc);` matches the query exactly. Irrelevant at current
+row counts; cheap to add before it isn't.
+
+## Auth configuration (dashboard, not captured by a schema dump)
 
 - [ ] Redirect allowlist contains the app scheme — `ante://`. `AuthContext.js:10`
       derives it from `Linking.createURL('')`, so it follows `scheme` in
       `app.json`. A dev build with a different scheme needs its own entry.
-- [ ] Google provider configured (used by `signInWithGoogle`)
-- [ ] Email confirmations on, since the deep-link handler at `AuthContext.js:113-117`
-      exists to catch confirmation links
+- [x] Google provider configured (`signInWithGoogle` works)
+- [x] Email confirmations on (the deep-link handler at `AuthContext.js:113-117`
+      exists to catch confirmation links)

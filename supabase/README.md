@@ -4,17 +4,15 @@ Ante's backend is a hosted Supabase project. This directory exists so that the
 schema, the row-level security policies, and the `delete_account()` function
 live in version control instead of only in the dashboard.
 
-## Status: scaffolding only — the schema has NOT been captured yet
+## Status: captured
 
-`supabase init` has been run, so `config.toml` and this directory exist. There
-are **no migrations yet**. Until `supabase db pull` has been run successfully,
-this directory does not describe production.
+The live schema is committed as `migrations/20260918004851_baseline.sql`,
+captured from the dashboard on 2026-09-18 and registered with
+`supabase migration repair --status applied`, so local and remote migration
+histories agree (`npx supabase migration list --linked` confirms).
 
-### Do not run `supabase db push` before a successful `db pull`
-
-`db push` applies the local migration history to the remote database. Right now
-the local history is empty, so pushing would at best do nothing and at worst be
-interpreted as an intended state. Capture reality first, then change it.
+See `SCHEMA_CONTRACT.md` for what each table owes the client, the verification
+result, and four outstanding hardening items.
 
 ## Capturing the current schema
 
