@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -102,6 +102,9 @@ function MainTabNavigator({ onOpenAddModal }) {
       {/* 1. Home */}
       <Tab.Screen
         name="Home"
+        // React Navigation takes a render function through this prop. Nesting
+        // it as a JSX child is a different thing and does not work here.
+        // eslint-disable-next-line react/no-children-prop
         children={(props) => (
           <HomeScreen {...props} onOpenAddModal={onOpenAddModal} />
         )}

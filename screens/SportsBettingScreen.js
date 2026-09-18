@@ -8,7 +8,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -461,7 +460,6 @@ export default function SportsBettingScreen({ navigation }) {
 
             {sessionBets.map((b) => {
               const isExpanded = expandedBetId === b.id;
-              const isFav = b.odds < 0;
               const isPending = b.outcome === 'pending';
               return (
                 <SwipeableRow

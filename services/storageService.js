@@ -135,7 +135,7 @@ export async function getStoredSchemaVersion() {
   try {
     const raw = await AsyncStorage.getItem(KEYS.SCHEMA_VERSION);
     return raw ? parseInt(raw, 10) : 0;
-  } catch (err) {
+  } catch {
     return 0;
   }
 }

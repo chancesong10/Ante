@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, BackHandler } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, LAYOUT } from '../constants/layout';
 import { netTone, formatNumber, formatMoney } from '../utils/format';
 import { NavBar, Tappable } from '../components/ui';

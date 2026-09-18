@@ -1,5 +1,4 @@
 import {
-  getChronologicalBets,
   calcOddsEdge,
   calcFavoriteUnderdogStats,
   calcBetTypeStats,

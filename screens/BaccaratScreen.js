@@ -94,7 +94,8 @@ export default function BaccaratScreen({ navigation }) {
 
   const submitHand = (outcome) => {
     if (!hasValidBet) return;
-    outcome === 'win' ? hapticSuccess() : hapticLight();
+    if (outcome === 'win') hapticSuccess();
+    else hapticLight();
 
     const record = {
       id: Crypto.randomUUID(),

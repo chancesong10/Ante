@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { Animated, StyleSheet } from 'react-native';
+import { Animated } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { moderateScale } from '../constants/layout';
 
 export default function LivePulseDot({ size = 8, color = COLORS.danger, style }) {
   const pulse = useRef(new Animated.Value(1)).current;

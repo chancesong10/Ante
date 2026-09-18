@@ -11,8 +11,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
-import { moderateScale, fluidFont, SPACING, RADIUS, wp } from '../constants/layout';
-import { useVisibleSessionHistory, useCloudRefresh } from '../context/SyncContext';
+import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
+import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
 import BankrollLineChart from '../components/BankrollLineChart';
 import { GameIconTile } from '../components/GameIcon';

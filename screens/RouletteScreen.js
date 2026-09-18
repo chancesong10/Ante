@@ -97,7 +97,8 @@ export default function RouletteScreen({ navigation }) {
 
   const submitSpin = (outcome) => {
     if (!hasValidBet) return;
-    outcome === 'win' ? hapticSuccess() : hapticLight();
+    if (outcome === 'win') hapticSuccess();
+    else hapticLight();
 
     const record = {
       id: Crypto.randomUUID(),
