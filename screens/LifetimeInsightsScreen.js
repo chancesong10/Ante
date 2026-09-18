@@ -7,7 +7,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
-import { formatMoney } from '../utils/format';
+import { formatMoney, netTone } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { computeLifetimeInsights } from '../utils/lifetimeInsightsEngine';
@@ -373,11 +373,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
                       label={`${block.label} · ${block.range} (${block.sessions} sessions)`}
                       value={fmtMoney(block.avgNet)}
                       valueColor={
-                        block.avgNet > 0
-                          ? COLORS.success
-                          : block.avgNet < 0
-                          ? COLORS.danger
-                          : COLORS.textPrimary
+                        netTone(block.avgNet, privacyMode)
                       }
                       locked={isLocked}
                     />

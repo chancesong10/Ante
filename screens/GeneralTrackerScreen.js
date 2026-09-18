@@ -17,7 +17,7 @@ import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useAuth } from '../context/AuthContext';
-import { formatMoney } from '../utils/format';
+import { formatMoney, netTone } from '../utils/format';
 import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
@@ -173,11 +173,7 @@ export default function GeneralTrackerScreen({ navigation }) {
               {
                 color: !hasValidNumbers
                   ? COLORS.textPrimary
-                  : liveNet > 0
-                  ? COLORS.success
-                  : liveNet < 0
-                  ? COLORS.danger
-                  : COLORS.textPrimary,
+                  : netTone(liveNet, privacyMode),
               },
             ]}
           >

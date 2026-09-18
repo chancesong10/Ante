@@ -32,7 +32,7 @@ import {
   BACCARAT_TIE_ODDS_OPTIONS,
 } from '../utils/tableGameOdds';
 import { calcSessionSummary } from '../utils/tableGameStatsEngine';
-import { formatAmount, formatMoney, formatNumber } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
 import TrackerGuide from '../components/TrackerGuide';
 
 const BET_ON = ['Player', 'Banker', 'Tie'];
@@ -175,7 +175,7 @@ export default function BaccaratScreen({ navigation }) {
           <Text
             style={[
               styles.netAmount,
-              { color: totalNet > 0 ? COLORS.success : totalNet < 0 ? COLORS.danger : COLORS.textPrimary },
+              { color: netTone(totalNet, privacyMode) },
             ]}
           >
             {formatMoney(totalNet, currencySymbol, privacyMode)}
@@ -349,14 +349,13 @@ export default function BaccaratScreen({ navigation }) {
                       </Text>
                     </View>
                     <Text style={styles.historySubtext}>
-                      {currencySymbol}
-                      {formatAmount(h.bet)}
+                      {formatMoney(h.bet, currencySymbol, privacyMode, { signed: false })}
                     </Text>
                   </View>
                   <Text
                     style={[
                       styles.historyNet,
-                      { color: h.netChange > 0 ? COLORS.success : h.netChange < 0 ? COLORS.danger : COLORS.textPrimary },
+                      { color: netTone(h.netChange, privacyMode) },
                     ]}
                   >
                     {formatMoney(h.netChange, currencySymbol, privacyMode)}

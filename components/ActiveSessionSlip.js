@@ -5,7 +5,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { GameIconTile } from './GameIcon';
 import LivePulseDot from './LivePulseDot';
-import { formatMoney } from '../utils/format';
+import { formatMoney, netTone } from '../utils/format';
 
 // Computes what a running session is worth right now. Mirrors the tracker
 // screens' own live totals: hand-based games sum netChange, buy-in games use
@@ -43,7 +43,7 @@ export default function ActiveSessionSlip({ session, currencySymbol = '$', priva
   const net = liveNetOf(session);
   const count = liveCountOf(session);
   const unit = UNIT[session.gameType] || 'hands';
-  const tone = net > 0 ? COLORS.success : net < 0 ? COLORS.danger : COLORS.textPrimary;
+  const tone = netTone(net, privacyMode);
 
   return (
     <View style={[styles.slip, SHADOWS.card]}>

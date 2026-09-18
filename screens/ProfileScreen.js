@@ -34,7 +34,7 @@ import { usePurchases } from '../context/PurchasesContext';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { getOrCreateDeviceId } from '../services/storageService';
 import { exportSessionsCsv } from '../utils/exportSessions';
-import { formatAmount, formatMoney, relativeTime } from '../utils/format';
+import { formatAmount, formatMoney, relativeTime, netTone } from '../utils/format';
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
 // the common four stay at the top of a long list. Dollar-family currencies
@@ -812,12 +812,7 @@ export default function ProfileScreen({ navigation }) {
               style={[
                 styles.gridCardValue,
                 {
-                  color:
-                    stats.totalNet > 0
-                      ? COLORS.success
-                      : stats.totalNet < 0
-                      ? COLORS.danger
-                      : COLORS.textPrimary,
+                  color: netTone(stats.totalNet, privacyMode),
                 },
               ]}
               numberOfLines={1}

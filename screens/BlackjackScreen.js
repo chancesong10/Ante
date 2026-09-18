@@ -34,7 +34,7 @@ import {
   calcInsuranceNet,
 } from '../utils/blackjackStrategy';
 import { judgeRecord, calcStrategyAccuracy, hasCardDetail } from '../utils/blackjackDetailEngine';
-import { formatAmount, formatMoney, formatNumber } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
 import { buildSplitRecord } from '../utils/blackjackHand';
 import TrackerGuide from '../components/TrackerGuide';
 
@@ -73,7 +73,8 @@ function endTagOptions({ cardsComplete, isNatural, action, outcome, dealerUp }) 
   return [];
 }
 
-const toneOf = (v) => (v > 0 ? COLORS.success : v < 0 ? COLORS.danger : COLORS.textPrimary);
+// Thin wrapper so every call site goes neutral under privacy mode too.
+const toneOf = (v, privacyMode) => netTone(v, privacyMode);
 
 // "10-6 vs 9 · Hit" and the strategy verdict, under a logged hand.
 function HandDetailLine({ record }) {
@@ -647,7 +648,7 @@ export default function BlackjackScreen({ navigation }) {
         {/* SESSION STATS */}
         <View style={[styles.statsBox, SHADOWS.card]}>
           <Text style={styles.statsSubtext}>SESSION NET OUTCOME</Text>
-          <Text style={[styles.netAmount, { color: toneOf(totalNet) }]}>{formatMoney(totalNet, currencySymbol, privacyMode)}</Text>
+          <Text style={[styles.netAmount, { color: toneOf(totalNet, privacyMode) }]}>{formatMoney(totalNet, currencySymbol, privacyMode)}</Text>
 
           <View style={styles.statsRow}>
             <View style={styles.statPill}>
@@ -833,19 +834,18 @@ export default function BlackjackScreen({ navigation }) {
                       {r.hands.map((h, i) => (
                         <View key={i} style={styles.historyRow}>
                           <Text style={styles.historyText}>
-                            Hand {i + 1}: {currencySymbol}
-                            {formatAmount(h.bet)}
+                            Hand {i + 1}: {formatMoney(h.bet, currencySymbol, privacyMode, { signed: false })}
                             {h.doubled ? ' (2x)' : ''}
                             {h.blackjack ? ' (BJ)' : ''} — {h.outcome.toUpperCase()}
                           </Text>
-                          <Text style={[styles.historyNet, { color: toneOf(h.netChange) }]}>
+                          <Text style={[styles.historyNet, { color: toneOf(h.netChange, privacyMode) }]}>
                             {formatMoney(h.netChange, currencySymbol, privacyMode)}
                           </Text>
                         </View>
                       ))}
                       <View style={styles.splitGroupTotalRow}>
                         <Text style={styles.splitGroupTotalLabel}>Split Combined</Text>
-                        <Text style={[styles.historyNet, { color: toneOf(groupNet) }]}>{formatMoney(groupNet, currencySymbol, privacyMode)}</Text>
+                        <Text style={[styles.historyNet, { color: toneOf(groupNet, privacyMode) }]}>{formatMoney(groupNet, currencySymbol, privacyMode)}</Text>
                       </View>
                     </View>
                   </SwipeableRow>
@@ -871,7 +871,7 @@ export default function BlackjackScreen({ navigation }) {
                       </Text>
                       {hasCardDetail(r) && <HandDetailLine record={r} />}
                     </View>
-                    <Text style={[styles.historyNet, { color: toneOf(r.netChange) }]}>{formatMoney(r.netChange, currencySymbol, privacyMode)}</Text>
+                    <Text style={[styles.historyNet, { color: toneOf(r.netChange, privacyMode) }]}>{formatMoney(r.netChange, currencySymbol, privacyMode)}</Text>
                   </View>
                 </SwipeableRow>
               );

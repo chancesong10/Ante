@@ -29,7 +29,7 @@ import { liveNetOf, liveCountOf } from '../components/ActiveSessionSlip';
 import { useCommitPress } from '../components/CommitAnimation';
 import { useReduceMotion } from '../components/ui';
 import { hapticLight } from '../utils/haptics';
-import { formatMoney } from '../utils/format';
+import { formatMoney, netTone } from '../utils/format';
 
 // One recent-session row. Plays the same commit beat as the start-session
 // sheet's game cards — press-in, the tile flooding with the game's colour, a
@@ -107,7 +107,7 @@ function RecentSessionCard({
               styles.sessionNet,
               {
                 color:
-                  net > 0 ? COLORS.success : net < 0 ? COLORS.danger : COLORS.textPrimary,
+                  netTone(net, privacyMode),
               },
             ]}
           >
@@ -334,12 +334,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
                   style={[
                     styles.activeNetAmount,
                     {
-                      color:
-                        activeNet > 0
-                          ? COLORS.success
-                          : activeNet < 0
-                          ? COLORS.danger
-                          : COLORS.textPrimary,
+                      color: netTone(activeNet, privacyMode),
                     },
                   ]}
                 >
@@ -368,12 +363,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
             style={[
               styles.balanceAmount,
               {
-                color:
-                  totalNet > 0
-                    ? COLORS.success
-                    : totalNet < 0
-                    ? COLORS.danger
-                    : COLORS.textPrimary,
+                color: netTone(totalNet, privacyMode),
               },
             ]}
           >

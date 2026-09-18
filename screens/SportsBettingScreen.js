@@ -23,7 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
-import { formatAmount, formatMoney, formatNumber } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
 import TrackerGuide from '../components/TrackerGuide';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
@@ -241,11 +241,7 @@ export default function SportsBettingScreen({ navigation }) {
               styles.netAmount,
               {
                 color:
-                  totalNet > 0
-                    ? COLORS.success
-                    : totalNet < 0
-                    ? COLORS.danger
-                    : COLORS.textPrimary,
+                  netTone(totalNet, privacyMode),
               },
             ]}
           >
@@ -506,7 +502,7 @@ export default function SportsBettingScreen({ navigation }) {
                            <>
                              <Text style={styles.pendingStatusText}>Pending</Text>
                              <Text style={styles.potentialPayoutText}>
-                               To win {currencySymbol}{formatNumber(calcPayout(b.bet, b.odds))}
+                               To win {formatMoney(calcPayout(b.bet, b.odds), currencySymbol, privacyMode, { signed: false })}
                              </Text>
                            </>
                          ) : (
@@ -515,11 +511,7 @@ export default function SportsBettingScreen({ navigation }) {
                                styles.historyNet,
                                {
                                  color:
-                                   b.netChange > 0
-                                     ? COLORS.success
-                                     : b.netChange < 0
-                                     ? COLORS.danger
-                                     : COLORS.textPrimary,
+                                   netTone(b.netChange, privacyMode),
                                },
                              ]}
                            >

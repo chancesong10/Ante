@@ -26,7 +26,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
-import { formatAmount, formatMoney, formatNumber } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
 import {
   heroInvestment,
   derivePot,
@@ -1256,11 +1256,7 @@ export default function PokerScreen({ navigation }) {
               styles.netAmount,
               {
                 color:
-                  sessionTotalNet > 0
-                    ? COLORS.success
-                    : sessionTotalNet < 0
-                    ? COLORS.danger
-                    : COLORS.textPrimary,
+                  netTone(sessionTotalNet, privacyMode),
               },
             ]}
           >
@@ -1388,7 +1384,7 @@ export default function PokerScreen({ navigation }) {
                           )}
                         </View>
                         <Text style={styles.historySubtitle}>
-                          Bet: {currencySymbol}{formatAmount(h.heroInvestment)} • Pot: {currencySymbol}{formatAmount(h.pot)}
+                          Bet: {formatMoney(h.heroInvestment, currencySymbol, privacyMode, { signed: false })} • Pot: {formatMoney(h.pot, currencySymbol, privacyMode, { signed: false })}
                         </Text>
                       </View>
 
@@ -1398,11 +1394,7 @@ export default function PokerScreen({ navigation }) {
                             styles.historyNet,
                             {
                               color:
-                                h.netChange > 0
-                                  ? COLORS.success
-                                  : h.netChange < 0
-                                  ? COLORS.danger
-                                  : COLORS.textPrimary,
+                                netTone(h.netChange, privacyMode),
                             },
                           ]}
                         >

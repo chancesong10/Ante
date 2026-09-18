@@ -178,8 +178,8 @@ const SessionRow = React.memo(function SessionRow({
   const handRecords = Array.isArray(session.hands) ? session.hands : [];
 
   const handNet = (value) => (
-    <Text style={[styles.handNet, { color: netTone(value) }]}>
-      {formatMoney(value, currencySymbol, false)}
+    <Text style={[styles.handNet, { color: netTone(value, privacyMode) }]}>
+      {formatMoney(value, currencySymbol, privacyMode)}
     </Text>
   );
 
@@ -227,7 +227,7 @@ const SessionRow = React.memo(function SessionRow({
                   color={session.starred ? COLORS.warning : COLORS.textMuted}
                 />
               </Tappable>
-              <Text style={[styles.netProfitText, { color: netTone(session.netProfit) }]}>
+              <Text style={[styles.netProfitText, { color: netTone(session.netProfit, privacyMode) }]}>
                 {formatMoney(session.netProfit, currencySymbol, privacyMode)}
               </Text>
             </View>
@@ -298,7 +298,7 @@ const SessionRow = React.memo(function SessionRow({
                 </View>
                 <View style={[styles.buyInRow, styles.buyInTotalRow]}>
                   <Text style={styles.buyInTotalLabel}>Net result</Text>
-                  <Text style={[styles.buyInTotalValue, { color: netTone(session.netProfit) }]}>
+                  <Text style={[styles.buyInTotalValue, { color: netTone(session.netProfit, privacyMode) }]}>
                     {formatMoney(session.netProfit, currencySymbol, privacyMode)}
                   </Text>
                 </View>
@@ -312,7 +312,9 @@ const SessionRow = React.memo(function SessionRow({
                   const renderHandData = (hand, index, isSub = false) => {
                     let title = isSub ? `Hand ${index + 1}` : session.gameType === 'Sports Betting' ? `Bet ${index + 1}` : `Hand ${index + 1}`;
                     let betVal = hand.heroInvestment !== undefined ? hand.heroInvestment : hand.bet;
-                    let betStr = `${currencySymbol}${formatAmount(betVal)}`;
+                    // Masked with the rest of the row: the bet plus the
+                    // outcome is enough to reconstruct the net.
+                    let betStr = formatMoney(betVal, currencySymbol, privacyMode, { signed: false });
                     
                     if (hand.doubled) betStr += ' (2x)';
                     if (hand.blackjack) betStr += ' (BJ)';
@@ -323,7 +325,8 @@ const SessionRow = React.memo(function SessionRow({
                     let playStr = null;
                     if (session.gameType === 'Poker' || hand.gameType === 'Poker') {
                       if (hand.position) title += ` (${hand.position})`;
-                      if (hand.pot !== undefined) playStr = `Pot: ${currencySymbol}${formatAmount(hand.pot)}`;
+                      if (hand.pot !== undefined)
+                        playStr = `Pot: ${formatMoney(hand.pot, currencySymbol, privacyMode, { signed: false })}`;
                     } else if (session.gameType === 'Roulette') {
                       playStr = hand.betLabel || 'Bet';
                       if (hand.wheel === 'single') playStr += ' (0)';

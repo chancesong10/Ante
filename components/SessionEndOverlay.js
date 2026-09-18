@@ -148,8 +148,14 @@ export default function SessionEndOverlay({
   if (!visible) return null;
 
   const net = fx.net || 0;
-  const wash = net > 0 ? COLORS.washWin : net < 0 ? COLORS.washLoss : COLORS.washNeutral;
-  const tone = netTone(net);
+  const wash = privacyMode
+    ? COLORS.washNeutral
+    : net > 0
+    ? COLORS.washWin
+    : net < 0
+    ? COLORS.washLoss
+    : COLORS.washNeutral;
+  const tone = netTone(net, privacyMode);
 
   // Origin sits where the End Session button does, so the wash reads as
   // spreading out from the thing that was pressed.

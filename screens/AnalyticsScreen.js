@@ -19,7 +19,7 @@ import BankrollLineChart from '../components/BankrollLineChart';
 import { GameIconTile } from '../components/GameIcon';
 import CountUp from '../components/CountUp';
 import usePullToRefresh from '../components/usePullToRefresh';
-import { formatNumber, formatMoney } from '../utils/format';
+import { formatNumber, formatMoney, netTone } from '../utils/format';
 
 // Trajectory chart geometry. Each half is a fixed band; inside it a strip is
 // reserved for the value label so a full-height bar can never push its own
@@ -213,8 +213,7 @@ export default function AnalyticsScreen({ navigation }) {
 
   const formatNet = (val) => formatMoney(val, currencySymbol, privacyMode);
 
-  const netColor = (val) =>
-    val > 0 ? COLORS.success : val < 0 ? COLORS.danger : COLORS.textPrimary;
+  const netColor = (val) => netTone(val, privacyMode);
 
   return (
     <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right']}>
@@ -558,11 +557,7 @@ export default function AnalyticsScreen({ navigation }) {
             <Text
               style={[
                 styles.gridValue,
-                avgSessionNet > 0
-                  ? { color: COLORS.success }
-                  : avgSessionNet < 0
-                  ? { color: COLORS.danger }
-                  : null,
+                { color: netTone(avgSessionNet, privacyMode) },
               ]}
             >
               {formatMoney(avgSessionNet, currencySymbol, privacyMode)}

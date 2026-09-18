@@ -6,8 +6,18 @@ import { COLORS } from '../constants/theme';
 const DAY_MS = 86400000;
 
 // Result colour: green for profit, red for loss, neutral ink for break-even.
-export const netTone = (value) =>
-  value > 0 ? COLORS.success : value < 0 ? COLORS.danger : COLORS.textPrimary;
+//
+// Goes neutral under privacy mode. Masking the figure while still painting the
+// row green or red leaks the half of it that usually matters — someone reading
+// over your shoulder does not need the number to see that you are down.
+export const netTone = (value, privacyMode = false) =>
+  privacyMode
+    ? COLORS.textPrimary
+    : value > 0
+    ? COLORS.success
+    : value < 0
+    ? COLORS.danger
+    : COLORS.textPrimary;
 
 // Money for display. `signed` adds a +/− for deltas and results; turn it off
 // for standalone figures. Privacy mode collapses to a fixed-width mask so the

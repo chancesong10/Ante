@@ -34,7 +34,7 @@ import {
   rouletteHouseEdge,
 } from '../utils/tableGameOdds';
 import { calcSessionSummary } from '../utils/tableGameStatsEngine';
-import { formatAmount, formatMoney, formatNumber } from '../utils/format';
+import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
 import TrackerGuide from '../components/TrackerGuide';
 
 const BET_TYPES = ROULETTE_BET_TYPES;
@@ -180,7 +180,7 @@ export default function RouletteScreen({ navigation }) {
           <Text
             style={[
               styles.netAmount,
-              { color: totalNet > 0 ? COLORS.success : totalNet < 0 ? COLORS.danger : COLORS.textPrimary },
+              { color: netTone(totalNet, privacyMode) },
             ]}
           >
             {formatMoney(totalNet, currencySymbol, privacyMode)}
@@ -336,14 +336,13 @@ export default function RouletteScreen({ navigation }) {
                       </Text>
                     </View>
                     <Text style={styles.historySubtext}>
-                      {currencySymbol}
-                      {formatAmount(s.bet)}
+                      {formatMoney(s.bet, currencySymbol, privacyMode, { signed: false })}
                     </Text>
                   </View>
                   <Text
                     style={[
                       styles.historyNet,
-                      { color: s.netChange > 0 ? COLORS.success : s.netChange < 0 ? COLORS.danger : COLORS.textPrimary },
+                      { color: netTone(s.netChange, privacyMode) },
                     ]}
                   >
                     {formatMoney(s.netChange, currencySymbol, privacyMode)}
