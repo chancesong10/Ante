@@ -18,6 +18,7 @@ import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/
 import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
+import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers — same split
@@ -35,22 +36,22 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
     case 'double_down_underuse':
       return {
         title: "You're Leaving Profitable Doubles on the Table",
-        detail: `You double down on ${fmtPct(leak.rate)} of hands (n=${leak.sample}), well under the ~${leak.benchmarkRate}% basic strategy suggests. Underdoubling gives up known long-run value on strong hands.`,
+        detail: `You double down on ${fmtPct(leak.rate)} of hands, well under the ~${leak.benchmarkRate}% basic strategy suggests. Underdoubling gives up known long-run value on strong hands.`,
       };
     case 'double_down_overuse':
       return {
         title: "You're Doubling More Than Basic Strategy Suggests",
-        detail: `You double down on ${fmtPct(leak.rate)} of hands (n=${leak.sample}), well above the ~${leak.benchmarkRate}% basic strategy suggests. Worth checking you're only doubling hard 9–11 and strong soft hands.`,
+        detail: `You double down on ${fmtPct(leak.rate)} of hands, well above the ~${leak.benchmarkRate}% basic strategy suggests. Worth checking you're only doubling hard 9–11 and strong soft hands.`,
       };
     case 'doubling_underperformance':
       return {
         title: "Your Doubles Aren't Paying Off",
-        detail: `Doubled hands are running at ${leak.doubledRoi.toFixed(1)}% ROI (n=${leak.sample})${leak.notDoubledRoi !== null ? `, well behind your ${leak.notDoubledRoi.toFixed(1)}% ROI on hands you didn't double` : ''}. Small samples of doubles swing hard, but this is worth tracking.`,
+        detail: `Doubled hands are running at ${leak.doubledRoi.toFixed(1)}% ROI${leak.notDoubledRoi !== null ? `, well behind your ${leak.notDoubledRoi.toFixed(1)}% ROI on hands you didn't double` : ''}. Small samples of doubles swing hard, but this is worth tracking.`,
       };
     case 'bet_tier_dropoff':
       return {
         title: 'Your Win Rate Drops on Your Biggest Bets',
-        detail: `Your win rate is ${fmtPct(leak.smallWinRate)} on your smallest bets (n=${leak.sampleSmall}) but only ${fmtPct(leak.largeWinRate)} on your largest (n=${leak.sampleLarge}). That can be variance, but it can also mean bigger bets are going in on worse decisions.`,
+        detail: `Your win rate is ${fmtPct(leak.smallWinRate)} on your smallest bets but only ${fmtPct(leak.largeWinRate)} on your largest. That can be variance, but it can also mean bigger bets are going in on worse decisions.`,
       };
     case 'volatility':
       return {
@@ -75,7 +76,7 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
     case 'six_five_tables':
       return {
         title: '6:5 Tables Are Shorting Your Blackjacks',
-        detail: `${fmtPct(leak.share)} of your hands with table rules recorded (n=${leak.hands}) were at tables paying 6:5 for blackjack, which adds about 1.4% to the house edge.${leak.blackjacks > 0 ? ` Your ${leak.blackjacks} blackjack${leak.blackjacks === 1 ? '' : 's'} there paid ${fmtDollar(leak.cost)} less than at 3:2.` : ''}`,
+        detail: `${fmtPct(leak.share)} of your hands with table rules recorded were at tables paying 6:5 for blackjack, which adds about 1.4% to the house edge.${leak.blackjacks > 0 ? ` Your ${leak.blackjacks} blackjack${leak.blackjacks === 1 ? '' : 's'} there paid ${fmtDollar(leak.cost)} less than at 3:2.` : ''}`,
       };
     default:
       return { title: 'Leak Detected', detail: '' };
@@ -192,19 +193,19 @@ export default function InsightsScreen({ route, navigation }) {
     lines.push('');
 
     lines.push('CONDITIONAL WIN RATE (pushes excluded from rate)');
-    lines.push(`After a Win (n=${cwr.afterWin.sample}): ${fmtPct(cwr.afterWin.rate)}`);
-    lines.push(`After a Loss (n=${cwr.afterLoss.sample}): ${fmtPct(cwr.afterLoss.rate)}`);
-    lines.push(`After 2 Wins (n=${cwr.afterTwoWins.sample}): ${fmtPct(cwr.afterTwoWins.rate)}`);
-    lines.push(`After 2 Losses (n=${cwr.afterTwoLosses.sample}): ${fmtPct(cwr.afterTwoLosses.rate)}`);
+    lines.push(`After a Win: ${fmtPct(cwr.afterWin.rate)}`);
+    lines.push(`After a Loss: ${fmtPct(cwr.afterLoss.rate)}`);
+    lines.push(`After 2 Wins: ${fmtPct(cwr.afterTwoWins.rate)}`);
+    lines.push(`After 2 Losses: ${fmtPct(cwr.afterTwoLosses.rate)}`);
     lines.push('');
 
     if (isBlackjack) {
       lines.push('DOUBLING PERFORMANCE');
       lines.push(
-        `Doubled (n=${dbl.doubled.sample}): ${fmtPct(dbl.doubled.winRate)} win rate, ROI ${dbl.doubled.roi !== null ? `${dbl.doubled.roi.toFixed(1)}%` : '—'}`
+        `Doubled: ${fmtPct(dbl.doubled.winRate)} win rate, ROI ${dbl.doubled.roi !== null ? `${dbl.doubled.roi.toFixed(1)}%` : '—'}`
       );
       lines.push(
-        `Not doubled (n=${dbl.notDoubled.sample}): ${fmtPct(dbl.notDoubled.winRate)} win rate, ROI ${dbl.notDoubled.roi !== null ? `${dbl.notDoubled.roi.toFixed(1)}%` : '—'}`
+        `Not doubled: ${fmtPct(dbl.notDoubled.winRate)} win rate, ROI ${dbl.notDoubled.roi !== null ? `${dbl.notDoubled.roi.toFixed(1)}%` : '—'}`
       );
       if (ddr) {
         lines.push(`Double-down frequency: ${ddr.rate.toFixed(1)}% of hands (reference: ~${ddr.benchmarkRate}%)`);
@@ -223,10 +224,10 @@ export default function InsightsScreen({ route, navigation }) {
         });
       }
       if (detail.doubling) {
-        lines.push(`Doubled when strategy says double: ${fmtPct(detail.doubling.takenRate)} (n=${detail.doubling.chances}); doubles strategy says to avoid: ${detail.doubling.badDoubles}`);
+        lines.push(`Doubled when strategy says double: ${fmtPct(detail.doubling.takenRate)}; doubles strategy says to avoid: ${detail.doubling.badDoubles}`);
       }
       detail.situations.forEach((s) => {
-        lines.push(`${s.label}: vs dealer 2–6 ${s.vsWeak.sample ? fmtMoney(s.vsWeak.net) : '—'} (n=${s.vsWeak.sample}), vs dealer 7–A ${s.vsStrong.sample ? fmtMoney(s.vsStrong.net) : '—'} (n=${s.vsStrong.sample})`);
+        lines.push(`${s.label}: vs dealer 2–6 ${s.vsWeak.sample ? fmtMoney(s.vsWeak.net) : '—'}, vs dealer 7–A ${s.vsStrong.sample ? fmtMoney(s.vsStrong.net) : '—'}`);
       });
       if (detail.insurance) {
         lines.push(`Insurance: taken ${detail.insurance.taken} of ${detail.insurance.offered} times, net ${fmtMoney(detail.insurance.net)}`);
@@ -271,9 +272,9 @@ export default function InsightsScreen({ route, navigation }) {
 
     if (lenPerf) {
       lines.push('PERFORMANCE BY SESSION LENGTH');
-      lines.push(`Short, ≤10 hands (n=${lenPerf.short.sample}): ${lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}`);
-      lines.push(`Medium, 11–25 hands (n=${lenPerf.medium.sample}): ${lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}`);
-      lines.push(`Large, 25+ hands (n=${lenPerf.long.sample}): ${lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}`);
+      lines.push(`Short, ≤10 hands: ${lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}`);
+      lines.push(`Medium, 11–25 hands: ${lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}`);
+      lines.push(`Large, 25+ hands: ${lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}`);
       lines.push('');
     }
 
@@ -392,94 +393,57 @@ export default function InsightsScreen({ route, navigation }) {
                 </View>
               )}
 
-              {/* Performance overview — the baseline everything below is relative to */}
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>Performance overview</Text>
+              {/* The Basics */}
+              <ExpandableSection title="The Basics" defaultExpanded={true}>
                 <Text style={styles.cardHint}>Your actual results across {outcomes.sample} hands</Text>
 
                 {isLocked ? (
                   <>
-                    <View style={styles.outcomeBarRow}>
-                      <View style={[styles.outcomeBarSeg, { flex: 1, backgroundColor: COLORS.background }]} />
-                    </View>
-                    <View style={styles.outcomeLegendRow}>
-                      <SkeletonBar width={80} height={12} />
-                      <SkeletonBar width={80} height={12} />
-                      <SkeletonBar width={80} height={12} />
-                    </View>
+                    <SkeletonBar width="100%" height={6} style={{ marginBottom: 16 }} />
+                    <SkeletonBar width="100%" height={6} style={{ marginBottom: 16 }} />
+                    <SkeletonBar width="100%" height={6} style={{ marginBottom: 16 }} />
                   </>
                 ) : (
                   <>
-                    <View style={styles.outcomeBarRow}>
-                      {outcomes.winRate > 0 && (
-                        <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />
-                      )}
-                      {outcomes.pushRate > 0 && (
-                        <View style={[styles.outcomeBarSeg, { flex: outcomes.pushRate, backgroundColor: COLORS.textMuted }]} />
-                      )}
-                      {outcomes.lossRate > 0 && (
-                        <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />
-                      )}
-                    </View>
-
-                    <View style={styles.outcomeLegendRow}>
-                      <View style={styles.outcomeLegendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                        <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)} ({outcomes.wins})</Text>
-                      </View>
-                      <View style={styles.outcomeLegendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                        <Text style={styles.outcomeLegendText}>Push {fmtPct(outcomes.pushRate)} ({outcomes.pushes})</Text>
-                      </View>
-                      <View style={styles.outcomeLegendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                        <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)} ({outcomes.losses})</Text>
-                      </View>
-                    </View>
+                    <ProgressBar label="Win" valueText={`${fmtPct(outcomes.winRate)} (${outcomes.wins})`} percent={outcomes.winRate} color={COLORS.success} />
+                    <ProgressBar label="Push" valueText={`${fmtPct(outcomes.pushRate)} (${outcomes.pushes})`} percent={outcomes.pushRate} color={COLORS.textMuted} />
+                    <ProgressBar label="Loss" valueText={`${fmtPct(outcomes.lossRate)} (${outcomes.losses})`} percent={outcomes.lossRate} color={COLORS.danger} />
                   </>
                 )}
 
                 <View style={styles.overviewDivider} />
 
-                <View style={styles.compareRow}>
-                  <CompareStat
-                    label="Net result"
-                    value={fmtMoney(returns.netProfit)}
-                    valueColor={netTone(returns.netProfit)}
-                    locked={isLocked}
-                  />
-                  <CompareStat
-                    label="Return on wagered"
-                    value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
-                    valueColor={netTone(returns.roi || 0)}
-                    locked={isLocked}
-                  />
-                  <CompareStat
-                    label="Avg / hand"
-                    value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'}
-                    locked={isLocked}
-                  />
-                </View>
+                {isLocked ? (
+                  <View style={styles.compareRow}>
+                    <CompareStat label="Net result" value="—" locked={true} />
+                    <CompareStat label="Return on wagered" value="—" locked={true} />
+                  </View>
+                ) : (
+                  <>
+                    <TrendArrow trend={returns.netProfit} label="Net result" valueText={fmtMoney(returns.netProfit)} goodIsUp={true} />
+                    <TrendArrow trend={returns.roi || 0} label="Return on wagered" valueText={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'} goodIsUp={true} />
+                    <TrendArrow trend={returns.avgResultPerHand || 0} label="Avg / hand" valueText={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} goodIsUp={true} />
+                  </>
+                )}
                 <Text style={styles.cardFootnote}>
                   {isBlackjack
                     ? "Return on wagered accounts for bet size, doubles, and blackjack's 3:2 payout — a more honest read on how you're actually doing than win rate alone."
                     : "Return on wagered accounts for bet size — a more honest read on how you're actually doing than win rate alone."}
                 </Text>
-              </View>
+              </ExpandableSection>
 
-              {/* Current streak */}
-              <View style={styles.card}>
+              {/* Your Habits */}
+              <ExpandableSection title="Your Habits">
                 <Text style={styles.cardLabel}>Current streak</Text>
                 {isLocked ? (
-                  <SkeletonBar width={110} height={26} style={{ marginTop: 4 }} />
+                  <SkeletonBar width={110} height={26} style={{ marginTop: 4, marginBottom: 16 }} />
                 ) : (
-                  <Text style={[styles.streakValue, { color: streakColor }]}>
+                  <Text style={[styles.streakValue, { color: streakColor, marginBottom: 16 }]}>
                     {stats.currentStreakType
                       ? `${stats.currentStreakLength} ${stats.currentStreakType === 'win' ? 'Win' : 'Loss'}${stats.currentStreakLength !== 1 ? 's' : ''}`
                       : 'None'}
                   </Text>
                 )}
-              </View>
 
               <View style={styles.rowCards}>
                 <View style={styles.halfCard}>
@@ -505,13 +469,13 @@ export default function InsightsScreen({ route, navigation }) {
               </View>
 
               {/* Conditional win rates */}
-              <View style={styles.card}>
+              <View style={{ marginTop: 16 }}>
                 <Text style={styles.cardLabel}>Conditional win rate</Text>
                 <Text style={styles.cardHint}>Your win rate depending on what just happened</Text>
-                <StatLine label={`After a win (n=${cwr.afterWin.sample})`} value={fmtPct(cwr.afterWin.rate)} locked={isLocked} />
-                <StatLine label={`After a loss (n=${cwr.afterLoss.sample})`} value={fmtPct(cwr.afterLoss.rate)} locked={isLocked} />
-                <StatLine label={`After 2 wins (n=${cwr.afterTwoWins.sample})`} value={fmtPct(cwr.afterTwoWins.rate)} locked={isLocked} />
-                <StatLine label={`After 2 losses (n=${cwr.afterTwoLosses.sample})`} value={fmtPct(cwr.afterTwoLosses.rate)} locked={isLocked} />
+                <StatLine label="After a win" value={fmtPct(cwr.afterWin.rate)} locked={isLocked} />
+                <StatLine label="After a loss" value={fmtPct(cwr.afterLoss.rate)} locked={isLocked} />
+                <StatLine label="After 2 wins" value={fmtPct(cwr.afterTwoWins.rate)} locked={isLocked} />
+                <StatLine label="After 2 losses" value={fmtPct(cwr.afterTwoLosses.rate)} locked={isLocked} />
                 {!isLocked && cwr.afterWin.rate !== null && cwr.afterLoss.rate !== null && (
                   <View style={styles.insightNote}>
                     <Ionicons name="information-circle-outline" size={moderateScale(16)} color={COLORS.textSecondary} />
@@ -525,6 +489,9 @@ export default function InsightsScreen({ route, navigation }) {
                 <Text style={styles.cardFootnote}>Pushes aren't counted as wins or losses in these rates.</Text>
               </View>
 
+              </ExpandableSection>
+              {/* Advanced Stats */}
+              <ExpandableSection title="Advanced Stats">
               {isBlackjack && (
                 <>
                   {/* Doubling performance */}
@@ -532,13 +499,13 @@ export default function InsightsScreen({ route, navigation }) {
                     <Text style={styles.cardLabel}>Doubling performance</Text>
                     <View style={styles.compareRow}>
                       <CompareStat
-                        label={`Doubled (n=${dbl.doubled.sample})`}
+                        label={`Doubled`}
                         value={fmtPct(dbl.doubled.winRate)}
                         sub={`ROI: ${dbl.doubled.roi !== null ? `${dbl.doubled.roi.toFixed(1)}%` : '—'}`}
                         locked={isLocked}
                       />
                       <CompareStat
-                        label={`Not doubled (n=${dbl.notDoubled.sample})`}
+                        label={`Not doubled`}
                         value={fmtPct(dbl.notDoubled.winRate)}
                         sub={`ROI: ${dbl.notDoubled.roi !== null ? `${dbl.notDoubled.roi.toFixed(1)}%` : '—'}`}
                         locked={isLocked}
@@ -558,7 +525,7 @@ export default function InsightsScreen({ route, navigation }) {
                         How often you double, vs. roughly how often basic strategy calls for it
                       </Text>
                       <View style={styles.compareRow}>
-                        <CompareStat label={`You (n=${ddr.sample})`} value={`${ddr.rate.toFixed(1)}%`} locked={isLocked} />
+                        <CompareStat label={`You`} value={`${ddr.rate.toFixed(1)}%`} locked={isLocked} />
                         <CompareStat label="Reference" value={`~${ddr.benchmarkRate}%`} />
                       </View>
                       <Text style={styles.cardFootnote}>
@@ -630,7 +597,7 @@ export default function InsightsScreen({ route, navigation }) {
                       <Text style={styles.cardHint}>Checked hand by hand against the cards you were actually dealt</Text>
                       <View style={styles.compareRow}>
                         <CompareStat
-                          label={`Doubled when you should (n=${detail.doubling.chances})`}
+                          label={`Doubled when you should`}
                           value={fmtPct(detail.doubling.takenRate)}
                           locked={isLocked}
                         />
@@ -649,7 +616,7 @@ export default function InsightsScreen({ route, navigation }) {
                       {detail.situations.map((s) => (
                         <StatLine
                           key={s.id}
-                          label={`${s.label} (n=${s.vsWeak.sample + s.vsStrong.sample})`}
+                          label={`${s.label}`}
                           value={`${s.vsWeak.sample ? fmtMoney(s.vsWeak.net) : '—'} / ${s.vsStrong.sample ? fmtMoney(s.vsStrong.net) : '—'}`}
                           locked={isLocked}
                         />
@@ -685,7 +652,7 @@ export default function InsightsScreen({ route, navigation }) {
                       <View style={styles.compareRow}>
                         {detail.dealerBust.weak.sample > 0 && (
                           <CompareStat
-                            label={`Dealer showing 2–6 (n=${detail.dealerBust.weak.sample})`}
+                            label={`Dealer showing 2–6`}
                             value={fmtPct(detail.dealerBust.weak.rate)}
                             sub={`usual ~${detail.dealerBust.weak.expectedRate.toFixed(0)}%`}
                             locked={isLocked}
@@ -693,7 +660,7 @@ export default function InsightsScreen({ route, navigation }) {
                         )}
                         {detail.dealerBust.strong.sample > 0 && (
                           <CompareStat
-                            label={`Dealer showing 7–A (n=${detail.dealerBust.strong.sample})`}
+                            label={`Dealer showing 7–A`}
                             value={fmtPct(detail.dealerBust.strong.rate)}
                             sub={`usual ~${detail.dealerBust.strong.expectedRate.toFixed(0)}%`}
                             locked={isLocked}
@@ -856,17 +823,17 @@ export default function InsightsScreen({ route, navigation }) {
                 <View style={styles.card}>
                   <Text style={styles.cardLabel}>Performance by session length</Text>
                   <StatLine
-                    label={`Short: ≤10 hands (n=${lenPerf.short.sample})`}
+                    label={`Short: ≤10 hands`}
                     value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
                     locked={isLocked}
                   />
                   <StatLine
-                    label={`Medium: 11–25 hands (n=${lenPerf.medium.sample})`}
+                    label={`Medium: 11–25 hands`}
                     value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
                     locked={isLocked}
                   />
                   <StatLine
-                    label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
+                    label={`Large: 25+ hands`}
                     value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
                     locked={isLocked}
                   />
@@ -875,6 +842,8 @@ export default function InsightsScreen({ route, navigation }) {
                   </Text>
                 </View>
               )}
+
+              </ExpandableSection>
 
               {/* Copy report */}
               <Tappable

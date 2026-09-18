@@ -453,7 +453,6 @@ export default function BlackjackScreen({ navigation }) {
 
   const optionsSummary = `${cardEntry ? 'Cards on' : 'Cards off'} · ${rulesSummary(rules)}`;
 
-  const outcomeLabel = (o) => (o === 'blackjack' ? `Blackjack ${rules.payout}` : OUTCOME_LABELS[o]);
   const outcomeActive = { win: styles.winActive, blackjack: styles.winActive, loss: styles.lossActive, push: styles.pushActive };
   const outcomeTextActive = {
     win: styles.outcomeTextActive,
@@ -473,14 +472,25 @@ export default function BlackjackScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityState={{ selected: current === o }}
         >
-          <Text
-            style={[styles.outcomeText, current === o && outcomeTextActive[o]]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.8}
-          >
-            {outcomeLabel(o)}
-          </Text>
+          {o === 'blackjack' ? (
+            <Text
+              style={[styles.outcomeText, current === o && outcomeTextActive[o]]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {rules.payout}
+            </Text>
+          ) : (
+            <Text
+              style={[styles.outcomeText, current === o && outcomeTextActive[o]]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {OUTCOME_LABELS[o]}
+            </Text>
+          )}
         </TouchableOpacity>
       ))}
     </View>

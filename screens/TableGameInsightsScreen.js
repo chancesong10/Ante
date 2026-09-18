@@ -17,6 +17,7 @@ import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 import { NavBar } from '../components/ui';
+import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
 
 // Insights for Roulette and Baccarat, one screen for both (route param
 // `gameType`). The two games measure the same thing — the house edge, and
@@ -37,7 +38,7 @@ function getLeakCopy(leak, { fmtMoney, fmtDollar, fmtPct }) {
     case 'tie_bets':
       return {
         title: 'Tie Bets Are Your Most Expensive Habit',
-        detail: `${fmtPct(leak.shareOfWagered)} of your baccarat action went on Tie (n=${leak.sample}), which carries a ${fmtPct(leak.houseEdge)} house edge. Those bets cost an expected ${fmtDollar(leak.expectedCost)}, ${fmtDollar(leak.extraCostVsBanker)} more than the same money on Banker.`,
+        detail: `${fmtPct(leak.shareOfWagered)} of your baccarat action went on Tie, which carries a ${fmtPct(leak.houseEdge)} house edge. Those bets cost an expected ${fmtDollar(leak.expectedCost)}, ${fmtDollar(leak.extraCostVsBanker)} more than the same money on Banker.`,
       };
     case 'martingale':
       return {
@@ -199,9 +200,9 @@ export default function TableGameInsightsScreen({ route, navigation }) {
 
     if (wheelMix) {
       lines.push('WHEEL MIX (share of action)');
-      lines.push(`Single 0: ${wheelShare(wheelMix.single.wagered)} (n=${wheelMix.single.sample})`);
-      lines.push(`Double 00: ${wheelShare(wheelMix.double.wagered)} (n=${wheelMix.double.sample})`);
-      if (wheelMix.unknown.sample > 0) lines.push(`Not recorded: ${wheelShare(wheelMix.unknown.wagered)} (n=${wheelMix.unknown.sample})`);
+      lines.push(`Single 0: ${wheelShare(wheelMix.single.wagered)}`);
+      lines.push(`Double 00: ${wheelShare(wheelMix.double.wagered)}`);
+      if (wheelMix.unknown.sample > 0) lines.push(`Not recorded: ${wheelShare(wheelMix.unknown.wagered)}`);
       if (wheelMix.double.sample > 0) lines.push(`Extra expected cost of double-zero: ${fmtDollar(wheelMix.extraCostFromDoubleZero)}`);
       lines.push('');
     }
@@ -210,7 +211,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
       lines.push('RESULTS BY BET TYPE');
       betTypes.forEach((t) => {
         lines.push(
-          `${t.label} (n=${t.sample}): hit ${fmtPct(t.hitRate)} vs. expected ${fmtPct(t.expectedHitRate)}, ${fmtPct(t.shareOfWagered)} of action, net ${fmtMoney(t.net)}`
+          `${t.label}: hit ${fmtPct(t.hitRate)} vs. expected ${fmtPct(t.expectedHitRate)}, ${fmtPct(t.shareOfWagered)} of action, net ${fmtMoney(t.net)}`
         );
       });
       lines.push('');
@@ -220,7 +221,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
       lines.push('WHERE YOUR MONEY GOES');
       sides.forEach((s) => {
         lines.push(
-          `${s.side} (n=${s.sample}): won ${fmtPct(s.winRate)} of decided hands vs. expected ${fmtPct(s.expectedWinRate)}, ${fmtPct(s.shareOfWagered)} of action, ${fmtEdge(s.houseEdge)} house edge, net ${fmtMoney(s.net)}`
+          `${s.side}: won ${fmtPct(s.winRate)} of decided hands vs. expected ${fmtPct(s.expectedWinRate)}, ${fmtPct(s.shareOfWagered)} of action, ${fmtEdge(s.houseEdge)} house edge, net ${fmtMoney(s.net)}`
         );
       });
       if (tieCost) {
@@ -231,7 +232,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
 
     if (prog) {
       lines.push('PROGRESSION BETTING');
-      lines.push(`Doubled after a loss: ${fmtPct(prog.rate)} (n=${prog.opportunities})`);
+      lines.push(`Doubled after a loss: ${fmtPct(prog.rate)}`);
       lines.push(`Longest doubling run: ${prog.longestChain}`);
       lines.push('');
     }
@@ -260,9 +261,9 @@ export default function TableGameInsightsScreen({ route, navigation }) {
 
     if (lenPerf) {
       lines.push('PERFORMANCE BY SESSION LENGTH');
-      lines.push(`Short, ≤10 ${unit}s (n=${lenPerf.short.sample}): ${lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/${unit}` : '—'}`);
-      lines.push(`Medium, 11–25 ${unit}s (n=${lenPerf.medium.sample}): ${lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/${unit}` : '—'}`);
-      lines.push(`Long, 25+ ${unit}s (n=${lenPerf.long.sample}): ${lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/${unit}` : '—'}`);
+      lines.push(`Short, ≤10 ${unit}s: ${lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/${unit}` : '—'}`);
+      lines.push(`Medium, 11–25 ${unit}s: ${lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/${unit}` : '—'}`);
+      lines.push(`Long, 25+ ${unit}s: ${lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/${unit}` : '—'}`);
       lines.push('');
     }
 
@@ -371,11 +372,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 </View>
               )}
 
-              {/* Performance Overview */}
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>PERFORMANCE OVERVIEW</Text>
-                <Text style={styles.cardHint}>Your actual results across {plural(outcomes.sample, unit)}</Text>
-
+              <ExpandableSection title="The Basics" defaultExpanded={true}>
                 {isLocked ? (
                   <>
                     <View style={styles.outcomeBarRow}>
@@ -389,252 +386,226 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                   </>
                 ) : (
                   <>
-                    <View style={styles.outcomeBarRow}>
-                      {outcomes.winRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.winRate, backgroundColor: COLORS.success }]} />}
-                      {outcomes.pushRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.pushRate, backgroundColor: COLORS.textMuted }]} />}
-                      {outcomes.lossRate > 0 && <View style={[styles.outcomeBarSeg, { flex: outcomes.lossRate, backgroundColor: COLORS.danger }]} />}
-                    </View>
-                    <View style={styles.outcomeLegendRow}>
-                      <View style={styles.outcomeLegendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                        <Text style={styles.outcomeLegendText}>Win {fmtPct(outcomes.winRate)}</Text>
-                      </View>
-                      {/* No push in roulette — a spin either hits or it doesn't. */}
-                      {!isRoulette && (
-                        <View style={styles.outcomeLegendItem}>
-                          <View style={[styles.legendDot, { backgroundColor: COLORS.textMuted }]} />
-                          <Text style={styles.outcomeLegendText}>Push {fmtPct(outcomes.pushRate)}</Text>
-                        </View>
-                      )}
-                      <View style={styles.outcomeLegendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                        <Text style={styles.outcomeLegendText}>Loss {fmtPct(outcomes.lossRate)}</Text>
-                      </View>
-                    </View>
+                    {outcomes.winRate > 0 && <ProgressBar label="Win Rate" valueText={fmtPct(outcomes.winRate)} percent={outcomes.winRate} color={COLORS.success} />}
+                    {!isRoulette && outcomes.pushRate > 0 && <ProgressBar label="Push Rate" valueText={fmtPct(outcomes.pushRate)} percent={outcomes.pushRate} color={COLORS.textMuted} />}
+                    {outcomes.lossRate > 0 && <ProgressBar label="Loss Rate" valueText={fmtPct(outcomes.lossRate)} percent={outcomes.lossRate} color={COLORS.danger} />}
                   </>
                 )}
 
                 <View style={styles.overviewDivider} />
 
-                <View style={styles.compareRow}>
-                  <CompareStat label="Net Result" value={fmtMoney(returns.netProfit)} valueColor={toneOf(returns.netProfit)} locked={isLocked} />
-                  <CompareStat
-                    label="Return on Wagered"
-                    value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
-                    valueColor={toneOf(returns.roi || 0)}
-                    locked={isLocked}
-                  />
-                  <CompareStat
-                    label={isRoulette ? 'Avg / Spin' : 'Avg / Hand'}
-                    value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'}
-                    locked={isLocked}
-                  />
-                </View>
-              </View>
+                <TrendArrow trend={returns.netProfit} label="Net Result" valueText={fmtMoney(returns.netProfit)} goodIsUp={true} />
+                <TrendArrow trend={returns.roi || 0} label="Return on Wagered" valueText={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'} goodIsUp={true} />
+                <TrendArrow trend={returns.avgResultPerHand || 0} label={isRoulette ? 'Avg / Spin' : 'Avg / Hand'} valueText={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} goodIsUp={true} />
+              </ExpandableSection>
 
-              {/* Roulette: wheel mix */}
-              {isRoulette && wheelMix && (
-                <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>WHEEL MIX</Text>
-                  <Text style={styles.cardHint}>Share of your action on each wheel — the one choice that moves roulette's house edge</Text>
-                  <View style={styles.compareRow}>
-                    <CompareStat label={`Single 0 (n=${wheelMix.single.sample})`} value={wheelShare(wheelMix.single.wagered)} sub="2.70% edge" locked={isLocked} />
-                    <CompareStat label={`Double 00 (n=${wheelMix.double.sample})`} value={wheelShare(wheelMix.double.wagered)} sub="5.26% edge" locked={isLocked} />
-                    {wheelMix.unknown.sample > 0 && (
-                      <CompareStat label={`Not recorded (n=${wheelMix.unknown.sample})`} value={wheelShare(wheelMix.unknown.wagered)} sub="older spins" locked={isLocked} />
+              <ExpandableSection title="Your Habits" defaultExpanded={false}>
+                {/* Roulette: wheel mix */}
+                {isRoulette && wheelMix && (
+                  <View style={[styles.card, SHADOWS.card]}>
+                    <Text style={styles.cardLabel}>WHEEL MIX</Text>
+                    <Text style={styles.cardHint}>Share of your action on each wheel — the one choice that moves roulette's house edge</Text>
+                    <View style={styles.compareRow}>
+                      <CompareStat label="Single 0" value={wheelShare(wheelMix.single.wagered)} sub="2.70% edge" locked={isLocked} />
+                      <CompareStat label="Double 00" value={wheelShare(wheelMix.double.wagered)} sub="5.26% edge" locked={isLocked} />
+                      {wheelMix.unknown.sample > 0 && (
+                        <CompareStat label="Not recorded" value={wheelShare(wheelMix.unknown.wagered)} sub="older spins" locked={isLocked} />
+                      )}
+                    </View>
+                    {!isLocked && wheelMix.double.sample > 0 && (
+                      <View style={styles.insightNote}>
+                        <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
+                        <Text style={styles.insightNoteText}>
+                          Your double-zero spins carried an expected {fmtDollar(wheelMix.extraCostFromDoubleZero)} more in house edge than the same bets on a single-zero wheel.
+                        </Text>
+                      </View>
                     )}
                   </View>
-                  {!isLocked && wheelMix.double.sample > 0 && (
-                    <View style={styles.insightNote}>
-                      <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
-                      <Text style={styles.insightNoteText}>
-                        Your double-zero spins carried an expected {fmtDollar(wheelMix.extraCostFromDoubleZero)} more in house edge than the same bets on a single-zero wheel.
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
+                )}
 
-              {/* Roulette: results by bet type */}
-              {isRoulette && betTypes.length > 0 && (
-                <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>RESULTS BY BET TYPE</Text>
-                  <Text style={styles.cardHint}>
-                    How often each bet hit against its true odds. A low hit rate on a 35:1 bet is expected, not a leak.
-                  </Text>
-                  {betTypes.map((t, i) => (
-                    <BreakdownRow
-                      key={t.id}
-                      first={i === 0}
-                      title={`${t.label}${t.odds !== null ? ` · ${t.odds}:1` : ''} (n=${t.sample})`}
-                      detail={`Hit ${fmtPct(t.hitRate)} · expected ${fmtPct(t.expectedHitRate)} · ${fmtPct(t.shareOfWagered)} of action`}
-                      value={fmtMoney(t.net)}
-                      valueColor={toneOf(t.net)}
-                      share={t.shareOfWagered}
-                      locked={isLocked}
-                    />
-                  ))}
-                </View>
-              )}
-
-              {/* Baccarat: where the money goes */}
-              {!isRoulette && sides.length > 0 && (
-                <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>WHERE YOUR MONEY GOES</Text>
-                  <Text style={styles.cardHint}>
-                    Each side against its true odds. A tie pushes Player and Banker bets, so their win rate counts decided hands only.
-                  </Text>
-                  {sides.map((s, i) => (
-                    <BreakdownRow
-                      key={s.side}
-                      first={i === 0}
-                      title={`${s.side} · ${fmtEdge(s.houseEdge)} edge (n=${s.sample})`}
-                      detail={`Won ${fmtPct(s.winRate)} · expected ${fmtPct(s.expectedWinRate)} · ${fmtPct(s.shareOfWagered)} of action`}
-                      value={fmtMoney(s.net)}
-                      valueColor={toneOf(s.net)}
-                      share={s.shareOfWagered}
-                      locked={isLocked}
-                    />
-                  ))}
-                  {!isLocked && tieCost && (
-                    <View style={styles.insightNote}>
-                      <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
-                      <Text style={styles.insightNoteText}>
-                        Your {fmtAmount(tieCost.tieWagered)} on Tie carried an expected cost of {fmtDollar(tieCost.expectedCost)}, {fmtDollar(tieCost.extraCostVsBanker)} more than the same money on Banker.
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Progression betting */}
-              {prog && (
-                <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>PROGRESSION BETTING</Text>
-                  <Text style={styles.cardHint}>
-                    {isRoulette
-                      ? 'How often you roughly doubled an even-money bet right after losing one'
-                      : 'How often you roughly doubled a Player or Banker bet right after losing one'}
-                  </Text>
-                  <View style={styles.compareRow}>
-                    <CompareStat label={`Doubled After a Loss (n=${prog.opportunities})`} value={fmtPct(prog.rate)} locked={isLocked} />
-                    <CompareStat label="Longest Doubling Run" value={String(prog.longestChain)} locked={isLocked} />
+                {/* Roulette: results by bet type */}
+                {isRoulette && betTypes.length > 0 && (
+                  <View style={[styles.card, SHADOWS.card]}>
+                    <Text style={styles.cardLabel}>RESULTS BY BET TYPE</Text>
+                    <Text style={styles.cardHint}>
+                      How often each bet hit against its true odds. A low hit rate on a 35:1 bet is expected, not a leak.
+                    </Text>
+                    {betTypes.map((t, i) => (
+                      <BreakdownRow
+                        key={t.id}
+                        first={i === 0}
+                        title={`${t.label}${t.odds !== null ? ` · ${t.odds}:1` : ''}`}
+                        detail={`Hit ${fmtPct(t.hitRate)} · expected ${fmtPct(t.expectedHitRate)} · ${fmtPct(t.shareOfWagered)} of action`}
+                        value={fmtMoney(t.net)}
+                        valueColor={toneOf(t.net)}
+                        share={t.shareOfWagered}
+                        locked={isLocked}
+                      />
+                    ))}
                   </View>
-                  <Text style={styles.cardFootnote}>
-                    Doubling after losses (a Martingale) doesn't change the house edge. It swaps lots of small wins for a rare, very large loss when a losing run meets the table limit or your bankroll.
-                  </Text>
-                </View>
-              )}
+                )}
 
-              {/* Bet size after outcome */}
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>BET SIZE AFTER OUTCOME</Text>
-                <StatLine label="After a Win" value={fmtDollar(sizing.avgBetAfterWin)} locked={isLocked} />
-                <StatLine label="After a Loss" value={fmtDollar(sizing.avgBetAfterLoss)} locked={isLocked} />
-                {!isLocked && chasesLosses && (
-                  <View style={styles.insightNote}>
-                    <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
-                    <Text style={styles.insightNoteText}>
-                      You bet {((betSizeDelta / (sizing.avgBetAfterWin || 1)) * 100).toFixed(0)}% more right after a loss than after a win — a loss-chasing pattern worth watching.
+                {/* Baccarat: where the money goes */}
+                {!isRoulette && sides.length > 0 && (
+                  <View style={[styles.card, SHADOWS.card]}>
+                    <Text style={styles.cardLabel}>WHERE YOUR MONEY GOES</Text>
+                    <Text style={styles.cardHint}>
+                      Each side against its true odds. A tie pushes Player and Banker bets, so their win rate counts decided hands only.
+                    </Text>
+                    {sides.map((s, i) => (
+                      <BreakdownRow
+                        key={s.side}
+                        first={i === 0}
+                        title={`${s.side} · ${fmtEdge(s.houseEdge)} edge`}
+                        detail={`Won ${fmtPct(s.winRate)} · expected ${fmtPct(s.expectedWinRate)} · ${fmtPct(s.shareOfWagered)} of action`}
+                        value={fmtMoney(s.net)}
+                        valueColor={toneOf(s.net)}
+                        share={s.shareOfWagered}
+                        locked={isLocked}
+                      />
+                    ))}
+                    {!isLocked && tieCost && (
+                      <View style={styles.insightNote}>
+                        <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
+                        <Text style={styles.insightNoteText}>
+                          Your {fmtAmount(tieCost.tieWagered)} on Tie carried an expected cost of {fmtDollar(tieCost.expectedCost)}, {fmtDollar(tieCost.extraCostVsBanker)} more than the same money on Banker.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Progression betting */}
+                {prog && (
+                  <View style={[styles.card, SHADOWS.card]}>
+                    <Text style={styles.cardLabel}>PROGRESSION BETTING</Text>
+                    <Text style={styles.cardHint}>
+                      {isRoulette
+                        ? 'How often you roughly doubled an even-money bet right after losing one'
+                        : 'How often you roughly doubled a Player or Banker bet right after losing one'}
+                    </Text>
+                    <View style={styles.compareRow}>
+                      <CompareStat label="Doubled After a Loss" value={fmtPct(prog.rate)} locked={isLocked} />
+                      <CompareStat label="Longest Doubling Run" value={String(prog.longestChain)} locked={isLocked} />
+                    </View>
+                    <Text style={styles.cardFootnote}>
+                      Doubling after losses (a Martingale) doesn't change the house edge. It swaps lots of small wins for a rare, very large loss when a losing run meets the table limit or your bankroll.
                     </Text>
                   </View>
                 )}
-                {!isLocked && disciplinedSizing && (
-                  <View style={styles.insightNote}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
-                    <Text style={styles.insightNoteText}>You don't bet bigger after a loss to try to win it back — that's disciplined sizing.</Text>
-                  </View>
-                )}
-              </View>
 
-              {/* Streaks */}
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>CURRENT STREAK</Text>
-                {isLocked ? (
-                  <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
-                ) : (
-                  <Text style={[styles.streakValue, { color: streakColor }]}>
-                    {streaks.currentStreakType
-                      ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'win' ? 'Win' : 'Loss'}${streaks.currentStreakLength !== 1 ? (streaks.currentStreakType === 'win' ? 's' : 'es') : ''}`
-                      : 'None'}
-                  </Text>
-                )}
-              </View>
-
-              <View style={styles.rowCards}>
-                <View style={[styles.halfCard, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>LONGEST WIN STREAK</Text>
-                  {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
-                </View>
-                <View style={[styles.halfCard, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>LONGEST LOSS STREAK</Text>
-                  {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
-                </View>
-              </View>
-
-              {/* Risk & Volatility — descriptive only; see buildLeakReport */}
-              <View style={[styles.card, SHADOWS.card]}>
-                <View style={styles.riskHeaderRow}>
-                  <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-                  {isLocked ? (
-                    <SkeletonBar width={56} height={18} />
-                  ) : (
-                    vol.riskLabel && (
-                      <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                        <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
-                      </View>
-                    )
+                {/* Bet size after outcome */}
+                <View style={[styles.card, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>BET SIZE AFTER OUTCOME</Text>
+                  <StatLine label="After a Win" value={fmtDollar(sizing.avgBetAfterWin)} locked={isLocked} />
+                  <StatLine label="After a Loss" value={fmtDollar(sizing.avgBetAfterLoss)} locked={isLocked} />
+                  {!isLocked && chasesLosses && (
+                    <View style={styles.insightNote}>
+                      <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
+                      <Text style={styles.insightNoteText}>
+                        You bet {((betSizeDelta / (sizing.avgBetAfterWin || 1)) * 100).toFixed(0)}% more right after a loss than after a win — a loss-chasing pattern worth watching.
+                      </Text>
+                    </View>
+                  )}
+                  {!isLocked && disciplinedSizing && (
+                    <View style={styles.insightNote}>
+                      <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
+                      <Text style={styles.insightNoteText}>You don't bet bigger after a loss to try to win it back — that's disciplined sizing.</Text>
+                    </View>
                   )}
                 </View>
-                <Text style={styles.cardHint}>
-                  {isLocked
-                    ? 'See how hard your results swing from one bet to the next.'
-                    : vol.riskLabel
-                    ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average bet, ${unit} to ${unit}. ${isRoulette ? 'Inside bets' : 'Tie bets'} swing hard by design, so this measures risk, not a mistake.`
-                    : 'Not enough variation yet to score this.'}
-                </Text>
-              </View>
 
-              {/* Day of Week */}
-              {dow && (
+                {/* Streaks */}
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                  <StatLine
-                    label={`Best: ${dow.best.day} (${plural(dow.best.sessions, 'session')})`}
-                    value={fmtMoney(dow.best.avgNet)}
-                    valueColor={COLORS.success}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Worst: ${dow.worst.day} (${plural(dow.worst.sessions, 'session')})`}
-                    value={fmtMoney(dow.worst.avgNet)}
-                    valueColor={COLORS.danger}
-                    locked={isLocked}
-                  />
+                  <Text style={styles.cardLabel}>CURRENT STREAK</Text>
+                  {isLocked ? (
+                    <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
+                  ) : (
+                    <Text style={[styles.streakValue, { color: streakColor }]}>
+                      {streaks.currentStreakType
+                        ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'win' ? 'Win' : 'Loss'}${streaks.currentStreakLength !== 1 ? (streaks.currentStreakType === 'win' ? 's' : 'es') : ''}`
+                        : 'None'}
+                    </Text>
+                  )}
                 </View>
-              )}
 
-              {/* Session Length Performance */}
-              {lenPerf && (
-                <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
-                  <StatLine
-                    label={`Short: ≤10 ${unit}s (n=${lenPerf.short.sample})`}
-                    value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/${unit}` : '—'}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Medium: 11–25 ${unit}s (n=${lenPerf.medium.sample})`}
-                    value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/${unit}` : '—'}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Long: 25+ ${unit}s (n=${lenPerf.long.sample})`}
-                    value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/${unit}` : '—'}
-                    locked={isLocked}
-                  />
+                <View style={styles.rowCards}>
+                  <View style={[styles.halfCard, SHADOWS.card]}>
+                    <Text style={styles.cardLabel}>LONGEST WIN STREAK</Text>
+                    {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
+                  </View>
+                  <View style={[styles.halfCard, SHADOWS.card]}>
+                    <Text style={styles.cardLabel}>LONGEST LOSS STREAK</Text>
+                    {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
+                  </View>
                 </View>
-              )}
+              </ExpandableSection>
+
+              <ExpandableSection title="Advanced Stats" defaultExpanded={false}>
+                {/* Risk & Volatility */}
+                <View style={[styles.card, SHADOWS.card]}>
+                  <View style={styles.riskHeaderRow}>
+                    <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
+                    {isLocked ? (
+                      <SkeletonBar width={56} height={18} />
+                    ) : (
+                      vol.riskLabel && (
+                        <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
+                          <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
+                        </View>
+                      )
+                    )}
+                  </View>
+                  <Text style={styles.cardHint}>
+                    {isLocked
+                      ? 'See how hard your results swing from one bet to the next.'
+                      : vol.riskLabel
+                      ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average bet, ${unit} to ${unit}. ${isRoulette ? 'Inside bets' : 'Tie bets'} swing hard by design, so this measures risk, not a mistake.`
+                      : 'Not enough variation yet to score this.'}
+                  </Text>
+                </View>
+
+                {/* Day of Week */}
+                {dow && (
+                  <View style={[styles.card, SHADOWS.card]}>
+                    <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
+                    <StatLine
+                      label={`Best: ${dow.best.day}`}
+                      value={fmtMoney(dow.best.avgNet)}
+                      valueColor={COLORS.success}
+                      locked={isLocked}
+                    />
+                    <StatLine
+                      label={`Worst: ${dow.worst.day}`}
+                      value={fmtMoney(dow.worst.avgNet)}
+                      valueColor={COLORS.danger}
+                      locked={isLocked}
+                    />
+                  </View>
+                )}
+
+                {/* Session Length Performance */}
+                {lenPerf && (
+                  <View style={[styles.card, SHADOWS.card]}>
+                    <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
+                    <StatLine
+                      label={`Short: ≤10 ${unit}s`}
+                      value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/${unit}` : '—'}
+                      locked={isLocked}
+                    />
+                    <StatLine
+                      label={`Medium: 11–25 ${unit}s`}
+                      value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/${unit}` : '—'}
+                      locked={isLocked}
+                    />
+                    <StatLine
+                      label={`Long: 25+ ${unit}s`}
+                      value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/${unit}` : '—'}
+                      locked={isLocked}
+                    />
+                  </View>
+                )}
+              </ExpandableSection>
 
               {/* Copy Report */}
               <TouchableOpacity
@@ -657,7 +628,8 @@ export default function TableGameInsightsScreen({ route, navigation }) {
               </Text>
             </>
           )}
-        </ScrollView>
+
+          </ScrollView>
         {isLocked && (
           <InsightsUnlockCta
             subtitle={

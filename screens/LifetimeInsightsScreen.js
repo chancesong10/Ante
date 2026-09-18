@@ -15,6 +15,7 @@ import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 import { NavBar } from '../components/ui';
+import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers — same split
@@ -244,203 +245,189 @@ export default function LifetimeInsightsScreen({ navigation }) {
               </View>
             )}
 
-            {/* Overview */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>OVERVIEW</Text>
-              <Text style={styles.cardHint}>Across every game you've ever logged</Text>
-              <View style={styles.compareRow}>
-                <CompareStat
-                  label="Lifetime Net"
-                  value={fmtMoney(stats.netProfit)}
-                  valueColor={stats.netProfit > 0 ? COLORS.success : stats.netProfit < 0 ? COLORS.danger : COLORS.textPrimary}
-                  locked={isLocked}
-                />
-                <CompareStat label="Win Rate" value={fmtPct(stats.winRate)} locked={isLocked} />
-                <CompareStat label="Sessions" value={String(stats.totalSessions)} locked={isLocked} />
-              </View>
-              {timePlayed && (
+            {/* The Basics */}
+            <ExpandableSection title="The Basics" defaultExpanded={true}>
+              {isLocked ? (
+                <View style={styles.compareRow}>
+                  <CompareStat label="Lifetime Net" value={fmtMoney(stats.netProfit)} locked={true} />
+                  <CompareStat label="Win Rate" value={fmtPct(stats.winRate)} locked={true} />
+                  <CompareStat label="Sessions" value={String(stats.totalSessions)} locked={true} />
+                </View>
+              ) : (
                 <>
-                  <View style={styles.overviewDivider} />
+                  <TrendArrow
+                    trend={stats.netProfit}
+                    label="Total Profit"
+                    valueText={fmtMoney(stats.netProfit)}
+                    goodIsUp={true}
+                  />
+                  <ProgressBar
+                    label="Win Rate"
+                    valueText={fmtPct(stats.winRate)}
+                    percent={stats.winRate}
+                    color={COLORS.primary}
+                  />
                   <View style={styles.compareRow}>
-                    <CompareStat label="Time Played" value={fmtDuration(timePlayed.totalMinutes)} locked={isLocked} />
-                    <CompareStat label="Avg / Session" value={fmtDuration(timePlayed.avgMinutesPerSession)} locked={isLocked} />
+                    <CompareStat label="Sessions" value={String(stats.totalSessions)} locked={false} />
+                    {timePlayed && (
+                      <>
+                        <CompareStat label="Time Played" value={fmtDuration(timePlayed.totalMinutes)} locked={false} />
+                        <CompareStat label="Avg / Session" value={fmtDuration(timePlayed.avgMinutesPerSession)} locked={false} />
+                      </>
+                    )}
                   </View>
                 </>
               )}
-            </View>
+            </ExpandableSection>
 
-            {/* Performance by Game */}
-            {games.all.length > 0 && (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY GAME</Text>
-                <Text style={styles.cardHint}>Average net per session — which game is actually working for you</Text>
-                {games.all.map((g) => (
-                  <View key={g.gameType} style={styles.gameRow}>
-                    <View style={styles.gameRowLeft}>
-                      <Ionicons name={GAME_ICONS[g.gameType] || 'ellipse-outline'} size={16} color={COLORS.textSecondary} />
-                      <View style={{ marginLeft: 8 }}>
-                        <Text style={styles.gameRowTitle}>{g.gameType}</Text>
-                        <Text style={styles.gameRowSub}>{g.sessions} session{g.sessions !== 1 ? 's' : ''}</Text>
-                      </View>
-                    </View>
-                    {isLocked ? (
-                      <SkeletonBar width={70} height={13} />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.gameRowValue,
-                          { color: g.avgNetPerSession > 0 ? COLORS.success : g.avgNetPerSession < 0 ? COLORS.danger : COLORS.textPrimary },
-                        ]}
-                      >
-                        {fmtMoney(g.avgNetPerSession)}/session
-                      </Text>
-                    )}
-                  </View>
-                ))}
-                {!isLocked && games.best && games.worst && games.best.gameType !== games.worst.gameType && (
-                  <Text style={styles.cardFootnote}>
-                    Best: {games.best.gameType} · Worst: {games.worst.gameType} (minimum 3 sessions to qualify)
+            {/* Your Habits */}
+            <ExpandableSection title="Your Habits" defaultExpanded={true}>
+              {/* Session Streaks */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={styles.cardLabel}>CURRENT SESSION STREAK</Text>
+                {isLocked ? (
+                  <SkeletonBar width={120} height={26} style={{ marginTop: 4 }} />
+                ) : (
+                  <Text style={[styles.streakValue, { color: streakColor }]}>
+                    {streaks.currentStreakType
+                      ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'win' ? 'Winning' : 'Losing'}`
+                      : 'None'}
                   </Text>
                 )}
               </View>
-            )}
 
-            {/* Session Streaks */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.cardLabel}>CURRENT SESSION STREAK</Text>
-              {isLocked ? (
-                <SkeletonBar width={120} height={26} style={{ marginTop: 4 }} />
-              ) : (
-                <Text style={[styles.streakValue, { color: streakColor }]}>
-                  {streaks.currentStreakType
-                    ? `${streaks.currentStreakLength} ${streaks.currentStreakType === 'win' ? 'Winning' : 'Losing'}`
-                    : 'None'}
-                </Text>
+              <View style={styles.rowCards}>
+                <View style={[styles.halfCard, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>LONGEST WINNING STREAK</Text>
+                  {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
+                  <Text style={styles.cardFootnote}>sessions in a row</Text>
+                </View>
+                <View style={[styles.halfCard, SHADOWS.card]}>
+                  <Text style={styles.cardLabel}>LONGEST LOSING STREAK</Text>
+                  {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
+                  <Text style={styles.cardFootnote}>sessions in a row</Text>
+                </View>
+              </View>
+
+              {/* Performance by Game */}
+              {games.all.length > 0 && (
+                <View style={{ marginBottom: 16, marginTop: 16 }}>
+                  <Text style={styles.cardLabel}>PERFORMANCE BY GAME</Text>
+                  <Text style={styles.cardHint}>Average net per session</Text>
+                  {games.all.map((g) => (
+                    <View key={g.gameType} style={styles.gameRow}>
+                      <View style={styles.gameRowLeft}>
+                        <Ionicons name={GAME_ICONS[g.gameType] || 'ellipse-outline'} size={16} color={COLORS.textSecondary} />
+                        <View style={{ marginLeft: 8 }}>
+                          <Text style={styles.gameRowTitle}>{g.gameType}</Text>
+                          <Text style={styles.gameRowSub}>{g.sessions} session{g.sessions !== 1 ? 's' : ''}</Text>
+                        </View>
+                      </View>
+                      {isLocked ? (
+                        <SkeletonBar width={70} height={13} />
+                      ) : (
+                        <Text
+                          style={[
+                            styles.gameRowValue,
+                            { color: g.avgNetPerSession > 0 ? COLORS.success : g.avgNetPerSession < 0 ? COLORS.danger : COLORS.textPrimary },
+                          ]}
+                        >
+                          {fmtMoney(g.avgNetPerSession)}/session
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
               )}
-            </View>
 
-            <View style={styles.rowCards}>
-              <View style={[styles.halfCard, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LONGEST WINNING STREAK</Text>
-                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
-                <Text style={styles.cardFootnote}>sessions in a row</Text>
-              </View>
-              <View style={[styles.halfCard, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>LONGEST LOSING STREAK</Text>
-                {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
-                <Text style={styles.cardFootnote}>sessions in a row</Text>
-              </View>
-            </View>
-
-            {/* Day of Week */}
-            {dow ? (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                <Text style={styles.cardHint}>Across every game combined</Text>
-                <StatLine
-                  label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
-                  value={fmtMoney(dow.best.avgNet)}
-                  valueColor={COLORS.success}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
-                  value={fmtMoney(dow.worst.avgNet)}
-                  valueColor={COLORS.danger}
-                  locked={isLocked}
-                />
-              </View>
-            ) : (
-              <View style={[styles.card, SHADOWS.card, styles.unlockCard]}>
-                <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                <Text style={styles.unlockText}>
-                  All your sessions so far landed on the same day of the week — log sessions on at least one more day to unlock a best-vs-worst comparison.
-                </Text>
-              </View>
-            )}
-
-            {/* Time of Day — when you start matters as much as which day */}
-            {tod ? (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY TIME OF DAY</Text>
-                <Text style={styles.cardHint}>By the hour a session started</Text>
-                {tod.withData.map((block) => (
+              {/* Day of Week */}
+              {dow ? (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
                   <StatLine
-                    key={block.id}
-                    label={`${block.label} · ${block.range} (${block.sessions})`}
-                    value={fmtMoney(block.avgNet)}
-                    valueColor={
-                      block.avgNet > 0
-                        ? COLORS.success
-                        : block.avgNet < 0
-                        ? COLORS.danger
-                        : COLORS.textPrimary
-                    }
+                    label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
+                    value={fmtMoney(dow.best.avgNet)}
+                    valueColor={COLORS.success}
                     locked={isLocked}
                   />
-                ))}
-              </View>
-            ) : (
-              <View style={[styles.card, SHADOWS.card, styles.unlockCard]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY TIME OF DAY</Text>
-                <Text style={styles.unlockText}>
-                  Every session so far started in the same part of the day — play at another time to compare
-                  mornings, afternoons, evenings and late nights.
+                  <StatLine
+                    label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
+                    value={fmtMoney(dow.worst.avgNet)}
+                    valueColor={COLORS.danger}
+                    locked={isLocked}
+                  />
+                </View>
+              ) : null}
+
+              {/* Time of Day */}
+              {tod ? (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={styles.cardLabel}>PERFORMANCE BY TIME OF DAY</Text>
+                  {tod.withData.map((block) => (
+                    <StatLine
+                      key={block.id}
+                      label={`${block.label} · ${block.range} (${block.sessions} sessions)`}
+                      value={fmtMoney(block.avgNet)}
+                      valueColor={
+                        block.avgNet > 0
+                          ? COLORS.success
+                          : block.avgNet < 0
+                          ? COLORS.danger
+                          : COLORS.textPrimary
+                      }
+                      locked={isLocked}
+                    />
+                  ))}
+                </View>
+              ) : null}
+
+              {/* Session Length Performance */}
+              {lenPerf ? (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
+                  <StatLine
+                    label={`Short: ≤10 hands (${lenPerf.short.sample} sessions)`}
+                    value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Medium: 11–25 hands (${lenPerf.medium.sample} sessions)`}
+                    value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                  <StatLine
+                    label={`Large: 25+ hands (${lenPerf.long.sample} sessions)`}
+                    value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
+                    locked={isLocked}
+                  />
+                </View>
+              ) : null}
+            </ExpandableSection>
+
+            {/* Advanced Stats */}
+            <ExpandableSection title="Advanced Stats" defaultExpanded={false}>
+              <View style={{ marginBottom: 8 }}>
+                <View style={styles.riskHeaderRow}>
+                  <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
+                  {isLocked ? (
+                    <SkeletonBar width={56} height={18} />
+                  ) : (
+                    vol.riskLabel && (
+                      <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
+                        <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
+                      </View>
+                    )
+                  )}
+                </View>
+                <Text style={styles.cardHint}>
+                  {isLocked
+                    ? 'See how consistent your bankroll really is, session to session.'
+                    : vol.riskLabel
+                    ? `Your session results typically swing about ${vol.volatilityRatio.toFixed(1)}x their own typical size.`
+                    : 'Not enough session variation yet to score this.'}
                 </Text>
               </View>
-            )}
-
-            {/* Session Length Performance */}
-            {lenPerf ? (
-              <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
-                <Text style={styles.cardHint}>Across every game combined</Text>
-                <StatLine
-                  label={`Short: ≤10 hands (n=${lenPerf.short.sample})`}
-                  value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Medium: 11–25 hands (n=${lenPerf.medium.sample})`}
-                  value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <StatLine
-                  label={`Large: 25+ hands (n=${lenPerf.long.sample})`}
-                  value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
-                  locked={isLocked}
-                />
-                <Text style={styles.cardFootnote}>If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.</Text>
-              </View>
-            ) : (
-              <View style={[styles.card, SHADOWS.card, styles.unlockCard]}>
-                <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
-                <Text style={styles.unlockText}>Log at least 3 sessions total to unlock this breakdown.</Text>
-              </View>
-            )}
-
-            {/* Risk & Volatility */}
-            <View style={[styles.card, SHADOWS.card]}>
-              <View style={styles.riskHeaderRow}>
-                <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
-                {isLocked ? (
-                  <SkeletonBar width={56} height={18} />
-                ) : (
-                  vol.riskLabel && (
-                    <View style={[styles.riskBadge, { backgroundColor: `${riskLabelColor}22`, borderColor: riskLabelColor }]}>
-                      <Text style={[styles.riskBadgeText, { color: riskLabelColor }]}>{vol.riskLabel}</Text>
-                    </View>
-                  )
-                )}
-              </View>
-              <Text style={styles.cardHint}>
-                {isLocked
-                  ? 'See how consistent your bankroll really is, session to session.'
-                  : vol.riskLabel
-                  ? `Your session results typically swing about ${vol.volatilityRatio.toFixed(1)}x their own typical size.`
-                  : 'Not enough session variation yet to score this.'}
-              </Text>
-            </View>
+            </ExpandableSection>
 
             {/* Copy Report */}
             <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]} activeOpacity={0.85} onPress={handleCopyReport}>

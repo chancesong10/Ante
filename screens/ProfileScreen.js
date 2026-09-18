@@ -583,6 +583,77 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* Section 0: Ante+ */}
+        <Text style={styles.sectionTitle}>{PLUS_NAME.toUpperCase()}</Text>
+        <View style={[styles.menuCard, styles.proMenuCard, SHADOWS.card]}>
+          <View style={styles.menuRow}>
+            <View style={styles.proIconCircle}>
+              <Ionicons
+                name={isPro ? 'checkmark-circle' : 'sparkles'}
+                size={moderateScale(18)}
+                color={COLORS.primary}
+              />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>
+                {isPro ? `${PLUS_NAME} Active` : `Unlock ${PLUS_NAME}`}
+              </Text>
+              <Text style={styles.menuSubtitle}>
+                {isPro
+                  ? proPlanLabel || 'Every behavioral insights page is unlocked'
+                  : `Leak detection, streaks, and every insights page — unlocked with ${PLUS_NAME}`}
+              </Text>
+            </View>
+            {purchasesLoading && <ActivityIndicator size="small" color={COLORS.primary} />}
+          </View>
+
+          {isPro ? (
+            <TouchableOpacity
+              style={styles.proActionBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('ManageSubscription')}
+            >
+              <Ionicons name="settings-outline" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
+              <Text style={styles.proActionBtnText}>Manage Subscription</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.proActionBtn}
+              activeOpacity={0.85}
+              onPress={handleUpgradePress}
+            >
+              <Ionicons name="sparkles" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
+              <Text style={styles.proActionBtnText}>See Plans</Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.menuDivider} />
+
+          {/* Required by Apple for any app selling subscriptions, and the only
+              way back for someone reinstalling or on a new device. */}
+          <TouchableOpacity
+            style={styles.menuRow}
+            activeOpacity={0.7}
+            onPress={handleRestore}
+            disabled={restoring}
+          >
+            <View style={styles.menuIconCircle}>
+              <Ionicons name="refresh-outline" size={moderateScale(18)} color={COLORS.icon} />
+            </View>
+            <View style={styles.menuTextGroup}>
+              <Text style={styles.menuTitle}>Restore Purchases</Text>
+              <Text style={styles.menuSubtitle}>
+                Already subscribed? Bring it back on this device
+              </Text>
+            </View>
+            {restoring ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+            )}
+          </TouchableOpacity>
+        </View>
+
         {/* Section: Account (signed-in only) */}
         {!!user && (
           <>
@@ -743,77 +814,6 @@ export default function ProfileScreen({ navigation }) {
             </Text>
             <Text style={styles.gridCardFoot}>Hands & tickets</Text>
           </View>
-        </View>
-
-        {/* Section 0: Ante+ */}
-        <Text style={styles.sectionTitle}>{PLUS_NAME.toUpperCase()}</Text>
-        <View style={[styles.menuCard, styles.proMenuCard, SHADOWS.card]}>
-          <View style={styles.menuRow}>
-            <View style={styles.proIconCircle}>
-              <Ionicons
-                name={isPro ? 'checkmark-circle' : 'sparkles'}
-                size={moderateScale(18)}
-                color={COLORS.primary}
-              />
-            </View>
-            <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>
-                {isPro ? `${PLUS_NAME} Active` : `Unlock ${PLUS_NAME}`}
-              </Text>
-              <Text style={styles.menuSubtitle}>
-                {isPro
-                  ? proPlanLabel || 'Every behavioral insights page is unlocked'
-                  : `Leak detection, streaks, and every insights page — unlocked with ${PLUS_NAME}`}
-              </Text>
-            </View>
-            {purchasesLoading && <ActivityIndicator size="small" color={COLORS.primary} />}
-          </View>
-
-          {isPro ? (
-            <TouchableOpacity
-              style={styles.proActionBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('ManageSubscription')}
-            >
-              <Ionicons name="settings-outline" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
-              <Text style={styles.proActionBtnText}>Manage Subscription</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.proActionBtn}
-              activeOpacity={0.85}
-              onPress={handleUpgradePress}
-            >
-              <Ionicons name="sparkles" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
-              <Text style={styles.proActionBtnText}>See Plans</Text>
-            </TouchableOpacity>
-          )}
-
-          <View style={styles.menuDivider} />
-
-          {/* Required by Apple for any app selling subscriptions, and the only
-              way back for someone reinstalling or on a new device. */}
-          <TouchableOpacity
-            style={styles.menuRow}
-            activeOpacity={0.7}
-            onPress={handleRestore}
-            disabled={restoring}
-          >
-            <View style={styles.menuIconCircle}>
-              <Ionicons name="refresh-outline" size={moderateScale(18)} color={COLORS.icon} />
-            </View>
-            <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Restore Purchases</Text>
-              <Text style={styles.menuSubtitle}>
-                Already subscribed? Bring it back on this device
-              </Text>
-            </View>
-            {restoring ? (
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            ) : (
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
-            )}
-          </TouchableOpacity>
         </View>
 
         {/* Section 1: Gameplay Preferences */}
