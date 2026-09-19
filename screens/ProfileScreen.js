@@ -32,6 +32,7 @@ import { usePurchases } from '../context/PurchasesContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { formatAmount, formatMoney, relativeTime, netTone } from '../utils/format';
+import { tallyHands, winRateOf } from '../utils/sessionTally';
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
 // the common four stay at the top of a long list. Dollar-family currencies
@@ -247,37 +248,36 @@ export default function ProfileScreen({ navigation }) {
 
   // --- Dynamic Financial & Volume Calculations ---
   const stats = useMemo(() => {
-    const totalSessions = sessionHistory.length;
-    const totalNet = sessionHistory.reduce((sum, s) => sum + (s.netProfit || 0), 0);
-    const totalWins = sessionHistory.reduce((sum, s) => sum + (s.wins || 0), 0);
-    const totalLosses = sessionHistory.reduce((sum, s) => sum + (s.losses || 0), 0);
-
+    let totalNet = 0;
+    let totalWins = 0;
+    let totalLosses = 0;
     let totalWagered = 0;
     let totalBetsCount = 0;
 
     sessionHistory.forEach((session) => {
+      totalNet += session.netProfit || 0;
+      totalWins += session.wins || 0;
+      totalLosses += session.losses || 0;
+
       if (session.mode === 'hands' && Array.isArray(session.hands)) {
-        const hands = session.hands.flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]));
-        const handBets = hands.reduce((sum, h) => sum + (h.bet || 0) * (h.doubled ? 2 : 1), 0);
-        totalWagered += handBets;
-        totalBetsCount += hands.length;
+        // One pass for both figures — tallyHands already sums the money at
+        // risk, doubles included, while it counts the hands.
+        const tally = tallyHands(session.hands);
+        totalWagered += tally.wagered;
+        totalBetsCount += tally.count;
       } else {
-        const stake = session.buyIn || Math.abs(session.netProfit || 0);
-        totalWagered += stake;
+        // A buy-in/cash-out session has no per-hand stakes, so the buy-in is
+        // the amount at risk — or, absent one, the size of the result.
+        totalWagered += session.buyIn || Math.abs(session.netProfit || 0);
         totalBetsCount += 1;
       }
     });
 
-    const winRate =
-      totalWins + totalLosses > 0
-        ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
-        : '0.0';
-
     return {
-      totalSessions,
+      totalSessions: sessionHistory.length,
       totalNet,
       totalWagered,
-      winRate,
+      winRate: winRateOf(totalWins, totalLosses).toFixed(1),
       totalHands: totalBetsCount,
     };
   }, [sessionHistory]);

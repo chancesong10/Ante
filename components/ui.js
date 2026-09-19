@@ -2,7 +2,7 @@
 // StatusBar + ScrollView shell, the same card style, the same uppercase
 // eyebrow labels, and plain TouchableOpacity with no press feedback. This is
 // the one place those live now.
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useSyncExternalStore } from 'react';
 import {
   View,
   Text,
@@ -22,20 +22,51 @@ import { moderateScale, fluidFont, SPACING, RADIUS, TYPE, LAYOUT, TOUCH_TARGET }
 /* ------------------------------------------------------------------ motion */
 
 // Reports the OS "reduce motion" setting and keeps it live.
+//
+// One subscription for the whole app rather than one per component. This is a
+// single device-wide boolean that in practice never changes while the app is
+// open, and it's read by Rise, LiveDot, CountUp, the bankroll chart, the
+// session-end wash, Home and the start-session sheet — so a screen with three
+// headline figures used to fire three async isReduceMotionEnabled() calls and
+// register three native listeners to learn the same thing. The value is cached
+// here, queried once, and every consumer subscribes to that one copy.
+let reduceMotion = false;
+let reduceMotionQueried = false;
+let nativeReduceMotionSub = null;
+const reduceMotionListeners = new Set();
+
+function publishReduceMotion(value) {
+  const next = !!value;
+  if (next === reduceMotion) return;
+  reduceMotion = next;
+  reduceMotionListeners.forEach((listener) => listener());
+}
+
+function subscribeReduceMotion(listener) {
+  reduceMotionListeners.add(listener);
+
+  if (!nativeReduceMotionSub) {
+    nativeReduceMotionSub = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      publishReduceMotion
+    );
+  }
+  if (!reduceMotionQueried) {
+    reduceMotionQueried = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(publishReduceMotion).catch(() => {});
+  }
+
+  return () => {
+    reduceMotionListeners.delete(listener);
+    // The native listener is deliberately left in place. Something animated is
+    // mounted for as long as the app is on screen, so tearing it down between
+    // screens would only be churn — and the cached value has to keep up with
+    // the setting either way, or the next mount reads a stale one.
+  };
+}
+
 export function useReduceMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
-      if (mounted) setReduced(value);
-    });
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
-    return () => {
-      mounted = false;
-      sub?.remove?.();
-    };
-  }, []);
-  return reduced;
+  return useSyncExternalStore(subscribeReduceMotion, () => reduceMotion);
 }
 
 // One authored entrance: fade + 10px rise, once on mount, staggered by `index`.

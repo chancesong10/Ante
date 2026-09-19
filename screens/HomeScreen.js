@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -25,11 +25,12 @@ import LivePulseDot from '../components/LivePulseDot';
 import { GameIconTile } from '../components/GameIcon';
 import ActiveSessionsModal from '../components/ActiveSessionsModal';
 import ConfirmModal from '../components/ConfirmModal';
-import { liveNetOf, liveCountOf } from '../components/ActiveSessionSlip';
 import { useCommitPress } from '../components/CommitAnimation';
 import { useReduceMotion } from '../components/ui';
 import { hapticLight } from '../utils/haptics';
 import { formatMoney, netTone } from '../utils/format';
+import { routeForGame, needsTrackerToEnd } from '../constants/games';
+import { winRateOf, liveTallyOf, liveNetOf, liveCountOf } from '../utils/sessionTally';
 
 // One recent-session row. Plays the same commit beat as the start-session
 // sheet's game cards — press-in, the tile flooding with the game's colour, a
@@ -156,35 +157,43 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 
   const firstName = user ? (profile?.username || user?.email?.split('@')[0] || 'Player') : 'Guest';
 
-  // Dynamic calculations from real session history
-  const totalSessions = sessionHistory.length;
-  const totalNet = sessionHistory.reduce((sum, s) => sum + (s.netProfit || 0), 0);
-  const totalWins = sessionHistory.reduce((sum, s) => sum + (s.wins || 0), 0);
-  const totalLosses = sessionHistory.reduce((sum, s) => sum + (s.losses || 0), 0);
-  const winRate =
-    totalWins + totalLosses > 0
-      ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
-      : '0.0';
+  // Lifetime figures, in one pass and only when history actually changes.
+  // Home re-renders on every hand logged in a live session elsewhere in the
+  // app, and rescanning the whole of history for three sums it already had is
+  // the kind of work that shows up as input lag on the tracker screens.
+  const { totalSessions, totalNet, winRate } = useMemo(() => {
+    let net = 0;
+    let wins = 0;
+    let losses = 0;
+    sessionHistory.forEach((s) => {
+      net += s.netProfit || 0;
+      wins += s.wins || 0;
+      losses += s.losses || 0;
+    });
+    return {
+      totalSessions: sessionHistory.length,
+      totalNet: net,
+      winRate: winRateOf(wins, losses).toFixed(1),
+    };
+  }, [sessionHistory]);
 
-  // Combined live figures across everything running.
-  const activeNet = activeSessionList.reduce((sum, s) => sum + liveNetOf(s), 0);
-  const activeBetCount = activeSessionList.reduce((sum, s) => sum + liveCountOf(s), 0);
+  // Combined live figures across everything running. One tally per session
+  // rather than two — liveNetOf and liveCountOf each expanded that session's
+  // splits into a fresh array to answer half the question.
+  const { activeNet, activeBetCount } = useMemo(() => {
+    let net = 0;
+    let count = 0;
+    activeSessionList.forEach((s) => {
+      const live = liveTallyOf(s);
+      net += live.net;
+      count += live.count;
+    });
+    return { activeNet: net, activeBetCount: count };
+  }, [activeSessionList]);
 
   const resumeSession = (session) => {
     setSessionsModalVisible(false);
-    const screen =
-      session.gameType === 'Poker'
-        ? 'Poker'
-        : session.gameType === 'Sports Betting'
-        ? 'SportsBetting'
-        : session.gameType === 'Roulette'
-        ? 'Roulette'
-        : session.gameType === 'Baccarat'
-        ? 'Baccarat'
-        : session.gameType === 'General'
-        ? 'GeneralTracker'
-        : 'Blackjack';
-    navigation.navigate(screen);
+    navigation.navigate(routeForGame(session.gameType));
   };
 
   // General needs a buy-in and cash-out typed in before it has anything to
@@ -192,7 +201,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
   // those two the stop button opens the tracker rather than ending blind.
   const endSessionFromList = (session) => {
     setSessionsModalVisible(false);
-    if (session.gameType === 'General' || session.gameType === 'Sports Betting') {
+    if (needsTrackerToEnd(session.gameType)) {
       resumeSession(session);
       return;
     }
@@ -222,8 +231,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
   // net until a cash-out is typed, and Sports Betting has its own pending-bet
   // confirmation to run first. Same carve-out the sessions list already makes
   // for its stop button.
-  const staleNeedsTracker =
-    !!stale && (stale.gameType === 'General' || stale.gameType === 'Sports Betting');
+  const staleNeedsTracker = !!stale && needsTrackerToEnd(stale.gameType);
 
   const staleMessage = stale
     ? `Your ${stale.gameType} session was still running when Ante last closed, about ${formatDuration(

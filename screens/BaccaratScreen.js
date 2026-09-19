@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -33,6 +33,7 @@ import {
 } from '../utils/tableGameOdds';
 import { calcSessionSummary } from '../utils/tableGameStatsEngine';
 import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
+import { tallyHands, handsOf } from '../utils/sessionTally';
 import TrackerGuide from '../components/TrackerGuide';
 
 const BET_ON = ['Player', 'Banker', 'Tie'];
@@ -113,12 +114,13 @@ export default function BaccaratScreen({ navigation }) {
     setBet('');
   };
 
-  const hands = activeSession?.hands || [];
-  const totalNet = hands.reduce((sum, h) => sum + (h.netChange || 0), 0);
-  const wins = hands.filter((h) => h.outcome === 'win').length;
-  const losses = hands.filter((h) => h.outcome === 'loss').length;
-  const pushes = hands.filter((h) => h.outcome === 'push').length;
-  const summary = calcSessionSummary(hands, 'Baccarat');
+  // One pass over the hands, memoised, rather than four scans per keystroke.
+  const hands = handsOf(activeSession);
+  const { tally, summary } = useMemo(
+    () => ({ tally: tallyHands(hands), summary: calcSessionSummary(hands, 'Baccarat') }),
+    [hands]
+  );
+  const { net: totalNet, wins, losses, pushes } = tally;
 
   const handleEndSessionPress = () => {
     hapticSuccess();

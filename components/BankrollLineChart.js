@@ -5,6 +5,7 @@ import { COLORS } from '../constants/theme';
 import { fluidFont } from '../constants/layout';
 import { useReduceMotion } from './ui';
 import { formatNumber, formatMoney } from '../utils/format';
+import { extent } from '../utils/sessionTally';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
@@ -74,8 +75,9 @@ function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false
 
     const width = containerWidth;
     const plotHeight = CHART_HEIGHT - TOP_PADDING - BOTTOM_PADDING;
-    const minVal = Math.min(...series);
-    const maxVal = Math.max(...series);
+    // A loop, not `Math.min(...series)`: the spread passes one argument per
+    // session ever logged, which throws a RangeError on a long enough history.
+    const { min: minVal, max: maxVal } = extent(series);
     const range = maxVal - minVal || 1;
 
     const xFor = (i) => (i / (series.length - 1)) * width;

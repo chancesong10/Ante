@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -36,6 +36,7 @@ import {
 import { judgeRecord, calcStrategyAccuracy, hasCardDetail } from '../utils/blackjackDetailEngine';
 import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
 import { buildSplitRecord } from '../utils/blackjackHand';
+import { tallyHands, handsOf } from '../utils/sessionTally';
 import TrackerGuide from '../components/TrackerGuide';
 
 // Laid out like the table: dealer on top, you below, then your bet, your play
@@ -424,17 +425,23 @@ export default function BlackjackScreen({ navigation }) {
     resetForm();
   };
 
-  const sessionHands = activeSession?.hands || [];
-  const allHands = sessionHands.flatMap((r) => (r.type === 'split' ? r.hands : [r]));
-  const totalNet = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
-  const wins = allHands.filter((h) => h.outcome === 'win').length;
-  const losses = allHands.filter((h) => h.outcome === 'loss').length;
-  const pushes = allHands.filter((h) => h.outcome === 'push').length;
-  const strategy = calcStrategyAccuracy(sessionHands.filter(hasCardDetail));
+  // The session's running totals. Memoised on the hand list because this
+  // screen re-renders on every keystroke in the bet field, and re-scanning
+  // every hand played tonight to redraw four unchanged stat pills is work
+  // that lands directly on the JS thread the keyboard is using.
+  const sessionHands = handsOf(activeSession);
+  const { tally, strategy } = useMemo(
+    () => ({
+      tally: tallyHands(sessionHands),
+      strategy: calcStrategyAccuracy(sessionHands.filter(hasCardDetail)),
+    }),
+    [sessionHands]
+  );
+  const { count: handCount, net: totalNet, wins, losses, pushes } = tally;
 
   const handleEndSessionPress = () => {
     hapticSuccess();
-    if (allHands.length === 0) {
+    if (handCount === 0) {
       discardActiveSession();
       navigation.navigate('MainTabs', { screen: 'Home' });
       return;
@@ -665,7 +672,7 @@ export default function BlackjackScreen({ navigation }) {
             </View>
             <View style={styles.statPill}>
               <Text style={styles.statPillLabel}>Hands</Text>
-              <Text style={styles.statPillValue}>{allHands.length}</Text>
+              <Text style={styles.statPillValue}>{handCount}</Text>
             </View>
           </View>
 

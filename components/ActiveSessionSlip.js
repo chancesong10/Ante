@@ -6,27 +6,7 @@ import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../cons
 import { GameIconTile } from './GameIcon';
 import LivePulseDot from './LivePulseDot';
 import { formatMoney, netTone } from '../utils/format';
-
-// Computes what a running session is worth right now. Mirrors the tracker
-// screens' own live totals: hand-based games sum netChange, buy-in games use
-// the pair once both halves are entered.
-export function liveNetOf(session) {
-  const hands = Array.isArray(session?.hands) ? session.hands : [];
-  if (hands.length > 0) {
-    return hands
-      .flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]))
-      .reduce((sum, h) => sum + (h.netChange || 0), 0);
-  }
-  if (session?.buyIn != null && session?.cashOut != null) {
-    return session.cashOut - session.buyIn;
-  }
-  return 0;
-}
-
-export function liveCountOf(session) {
-  const hands = Array.isArray(session?.hands) ? session.hands : [];
-  return hands.flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r])).length;
-}
+import { liveTallyOf } from '../utils/sessionTally';
 
 const UNIT = {
   Poker: 'hands',
@@ -40,8 +20,9 @@ const UNIT = {
 // anywhere opens that tracker — and the stop button on the right is the only
 // other affordance, so there's one obvious action and one deliberate one.
 export default function ActiveSessionSlip({ session, currencySymbol = '$', privacyMode = false, onResume, onEnd }) {
-  const net = liveNetOf(session);
-  const count = liveCountOf(session);
+  // Both figures from one tally — asking separately expanded this session's
+  // splits twice to answer half the question each time.
+  const { net, count } = liveTallyOf(session);
   const unit = UNIT[session.gameType] || 'hands';
   const tone = netTone(net, privacyMode);
 

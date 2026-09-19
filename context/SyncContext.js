@@ -286,17 +286,48 @@ export function useCloudRefresh() {
 // Screens that render session history for the user (as opposed to
 // useSyncEngine's own bookkeeping) should use this instead of
 // useSessionHistory directly.
+//
+// The filtered list is cached per (history array, signed-in user) rather than
+// recomputed per calling screen. Ten screens call this hook, and each one's
+// own useMemo used to produce its own array — identical contents, ten
+// different identities. That cost more than the ten filter passes: the
+// insights engines memoise their per-game slices on the identity of the array
+// they're handed, so every screen was also priming its own private copy of
+// that cache. One array for one set of data means they all share it.
+//
+// The map is weak on the raw history array, which SessionContext replaces
+// wholesale on every change, so an entry becomes collectable as soon as its
+// history is superseded. Frozen on the way out rather than just documented as
+// read-only: ten screens share the one array, so an in-place sort or splice on
+// it would reorder what all of them render. A screen that wants its own order
+// copies first.
+const visibleByHistory = new WeakMap();
+
+function visibleSessionsFor(sessionHistory, userId) {
+  let byUser = visibleByHistory.get(sessionHistory);
+  if (!byUser) {
+    byUser = new Map();
+    visibleByHistory.set(sessionHistory, byUser);
+  }
+  const cached = byUser.get(userId);
+  if (cached) return cached;
+
+  const visible = sessionHistory.filter((s) => {
+    const owner = s.syncedUserId ?? null;
+    return !owner || owner === userId;
+  });
+  Object.freeze(visible);
+  byUser.set(userId, visible);
+  return visible;
+}
+
 export function useVisibleSessionHistory() {
   const { user } = useAuth();
   const { sessionHistory, ...rest } = useSessionHistory();
   const userId = user?.id ?? null;
 
   const visibleSessionHistory = useMemo(
-    () =>
-      sessionHistory.filter((s) => {
-        const owner = s.syncedUserId ?? null;
-        return !owner || owner === userId;
-      }),
+    () => visibleSessionsFor(sessionHistory, userId),
     [sessionHistory, userId]
   );
 

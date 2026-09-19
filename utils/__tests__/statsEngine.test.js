@@ -1,4 +1,5 @@
 import {
+  getSessionsForGameType,
   getChronologicalHands,
   calcOutcomeBreakdown,
   calcReturnStats,
@@ -535,5 +536,72 @@ describe('15. Leak Detector', () => {
     expect(stats.topLeak).not.toBeNull();
     expect(stats.topLeak.id).toBe('loss_chasing');
     expect(stats.topLeak).toBe(stats.leaks[0]);
+  });
+});
+
+// getSessionsForGameType memoises its per-game slice on the identity of the
+// history array it is handed, because every compute*Insights entry point asks
+// for the same slice three or four times over. These pin the two ways that
+// cache could be wrong: serving one game's sessions for another, and serving
+// stale data after history changes.
+describe('16. Per-game session cache', () => {
+  const bjHands = [hand({ bet: 10, outcome: 'win' }), hand({ bet: 10, outcome: 'loss' })];
+  const pokerHands = [
+    { gameType: 'Poker', outcome: 'win', netChange: 40, heroInvestment: 10, pot: 50 },
+  ];
+
+  test('keeps games apart on the same history array', () => {
+    const history = historyFromSessions([
+      makeSession({ hands: bjHands, id: 'bj' }),
+      makeSession({ hands: pokerHands, gameType: 'Poker', id: 'pk' }),
+    ]);
+
+    expect(getChronologicalHands(history, 'Blackjack')).toHaveLength(2);
+    expect(getChronologicalHands(history, 'Poker')).toHaveLength(1);
+    // Asked again, now that both are cached, each still gets its own.
+    expect(getChronologicalHands(history, 'Blackjack')).toHaveLength(2);
+    expect(getChronologicalHands(history, 'Poker')).toHaveLength(1);
+    expect(getChronologicalHands(history, 'Roulette')).toHaveLength(0);
+  });
+
+  test('a new history array is new data, not a cache hit', () => {
+    const first = historyFromSessions([makeSession({ hands: bjHands, id: 'one' })]);
+    expect(getChronologicalHands(first, 'Blackjack')).toHaveLength(2);
+
+    // What SessionContext does on every change: replace the array wholesale.
+    const second = [...first, makeSession({ hands: bjHands, id: 'two' })];
+    expect(getChronologicalHands(second, 'Blackjack')).toHaveLength(4);
+    // And the original array still answers for itself.
+    expect(getChronologicalHands(first, 'Blackjack')).toHaveLength(2);
+  });
+
+  // The cached slice is shared with every other caller, so the read-only
+  // contract is enforced rather than documented. This pins that: a caller that
+  // sorts it in place should fail loudly at its own line instead of quietly
+  // reordering what the day-of-week and session-length scans go on to read.
+  test('the cached slice is frozen, so an in-place sort throws', () => {
+    // Two sessions, deliberately: sorting a one-element array writes nothing,
+    // so it cannot throw. Freezing catches the mutations that actually would
+    // have reordered the shared copy, which is exactly the harmful case.
+    const history = historyFromSessions([
+      makeSession({ hands: bjHands, id: 'frozen-a', startTime: 1 }),
+      makeSession({ hands: bjHands, id: 'frozen-b', startTime: 2 }),
+    ]);
+    const sessions = getSessionsForGameType(history, 'Blackjack');
+    expect(sessions).toHaveLength(2);
+    expect(Object.isFrozen(sessions)).toBe(true);
+    expect(() => sessions.sort((a, b) => a.id.localeCompare(b.id) * -1)).toThrow();
+    expect(() => sessions.push({})).toThrow();
+    // Only the list is frozen. The session records inside are the same objects
+    // the rest of the app holds, and freezing those would be a far wider claim.
+    expect(Object.isFrozen(sessions[0])).toBe(false);
+  });
+
+  test('computeInsights agrees with itself across repeated calls', () => {
+    const history = historyFromSessions([makeSession({ hands: bjHands })]);
+    const a = computeInsights(history, 'Blackjack');
+    const b = computeInsights(history, 'Blackjack');
+    expect(b.totalHands).toBe(a.totalHands);
+    expect(b.returnStats.netProfit).toBe(a.returnStats.netProfit);
   });
 });
