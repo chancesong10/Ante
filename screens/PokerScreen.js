@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Text,
   View,
@@ -27,6 +27,7 @@ import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
+import { tallyHands, winRateOf, handsOf } from '../utils/sessionTally';
 import {
   heroInvestment,
   derivePot,
@@ -712,7 +713,7 @@ export default function PokerScreen({ navigation }) {
   // --- Handlers: Session Discard & End ---
   const handleEndSessionPress = () => {
     hapticSuccess();
-    const hands = activeSession?.hands || [];
+    const hands = handsOf(activeSession);
     if (hands.length === 0) {
       discardActiveSession();
       navigation.navigate('MainTabs', { screen: 'Home' });
@@ -777,18 +778,25 @@ export default function PokerScreen({ navigation }) {
   );
 
   // --- Session Stats Computation ---
-  const sessionHands = activeSession?.hands || [];
-  const totalHandsCount = sessionHands.length;
-  const winsCount = sessionHands.filter((h) => h.outcome === 'win').length;
-  const lossesCount = sessionHands.filter((h) => h.outcome === 'loss').length;
-  const foldsCount = sessionHands.filter((h) => h.outcome === 'fold').length;
-  const bluffsCount = sessionHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'bluffed').length;
-  const goodFoldsCount = sessionHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'good_fold').length;
-  const sessionTotalNet = sessionHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
-  const winRatePercent =
-    winsCount + lossesCount + foldsCount > 0
-      ? ((winsCount / (winsCount + lossesCount + foldsCount)) * 100).toFixed(1)
-      : '0.0';
+  //
+  // Memoised on the hand list, not recomputed per render: this screen
+  // re-renders on every keystroke and every chip tap at the table, and the
+  // six separate scans this replaces all ran again each time to redraw stat
+  // pills that only change when a hand is actually logged.
+  const sessionHands = handsOf(activeSession);
+  const tally = useMemo(() => tallyHands(sessionHands), [sessionHands]);
+  const {
+    count: totalHandsCount,
+    wins: winsCount,
+    losses: lossesCount,
+    folds: foldsCount,
+    bluffedFolds: bluffsCount,
+    goodFolds: goodFoldsCount,
+    net: sessionTotalNet,
+  } = tally;
+  // A fold is a decided hand here, unlike everywhere else in the app: at
+  // poker, folding is a choice you made, so it belongs in the denominator.
+  const winRatePercent = winRateOf(winsCount, lossesCount + foldsCount).toFixed(1);
 
   // ==========================================
   // VIEW 1: INITIAL SESSION SETUP

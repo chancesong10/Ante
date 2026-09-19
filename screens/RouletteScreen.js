@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -35,6 +35,7 @@ import {
 } from '../utils/tableGameOdds';
 import { calcSessionSummary } from '../utils/tableGameStatsEngine';
 import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
+import { tallyHands, handsOf } from '../utils/sessionTally';
 import TrackerGuide from '../components/TrackerGuide';
 
 const BET_TYPES = ROULETTE_BET_TYPES;
@@ -119,11 +120,13 @@ export default function RouletteScreen({ navigation }) {
     setBet('');
   };
 
-  const spins = activeSession?.hands || [];
-  const totalNet = spins.reduce((sum, s) => sum + (s.netChange || 0), 0);
-  const wins = spins.filter((s) => s.outcome === 'win').length;
-  const losses = spins.filter((s) => s.outcome === 'loss').length;
-  const summary = calcSessionSummary(spins, 'Roulette');
+  // One pass over the spins, memoised, rather than three scans per keystroke.
+  const spins = handsOf(activeSession);
+  const { tally, summary } = useMemo(
+    () => ({ tally: tallyHands(spins), summary: calcSessionSummary(spins, 'Roulette') }),
+    [spins]
+  );
+  const { net: totalNet, wins, losses } = tally;
 
   const handleEndSessionPress = () => {
     hapticSuccess();

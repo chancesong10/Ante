@@ -30,7 +30,20 @@ const subHands = (r) => (r.type === 'split' && Array.isArray(r.hands) ? r.hands 
 const recordNet = (r) => subHands(r).reduce((s, h) => s + (Number.isFinite(h.netChange) ? h.netChange : 0), 0);
 const recordStake = (r) => subHands(r).reduce((s, h) => s + (h.bet || 0) * (h.doubled ? 2 : 1), 0);
 
+// Memoised on the history array for the same reason getSessionsForGameType is,
+// and sound for the same reason — see its note in statsEngine.js.
+// computeBlackjackDetailInsights needs this list twice (once for the card-level
+// records, once for the table-rules scan), and calcTableRules is exported and
+// tested against a raw history, so threading the list through by hand would
+// change its signature for the sake of an internal saving.
+//
+// Frozen on the way out: it is shared between those callers, so an in-place
+// sort or splice would reorder what the other one sees.
+const recordsByHistory = new WeakMap();
+
 function blackjackRecords(sessionHistory) {
+  const cached = recordsByHistory.get(sessionHistory);
+  if (cached) return cached;
   const out = [];
   getSessionsForGameType(sessionHistory, 'Blackjack').forEach((session) => {
     // Stored newest-first; walk them in the order they were played.
@@ -41,6 +54,10 @@ function blackjackRecords(sessionHistory) {
         if (r && typeof r === 'object') out.push(r);
       });
   });
+  Object.freeze(out);
+  if (sessionHistory && typeof sessionHistory === 'object') {
+    recordsByHistory.set(sessionHistory, out);
+  }
   return out;
 }
 

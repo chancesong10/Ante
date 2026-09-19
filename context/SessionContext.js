@@ -7,6 +7,7 @@ import {
   saveActiveSessions,
   clearLegacyActiveSession,
 } from '../services/storageService';
+import { tallyHands, winRateOf } from '../utils/sessionTally';
 
 // Split into two contexts by update frequency:
 // - ActiveSessionContext changes on every hand/bet logged during live play
@@ -123,22 +124,12 @@ export function finalizeSession(
     };
   } else {
     const hands = activeSession.hands;
-    const allHands = hands.flatMap((r) => (r.type === 'split' ? r.hands : [r]));
-    const totalHands = allHands.length;
-    const wins = allHands.filter((h) => h.outcome === 'win').length;
-    const losses = allHands.filter((h) => h.outcome === 'loss' || h.outcome === 'fold').length;
-    const pushes = allHands.filter((h) => h.outcome === 'push' || h.outcome === 'split').length;
-    const folds = allHands.filter((h) => h.outcome === 'fold').length;
-    const bluffedFolds = allHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'bluffed').length;
-    const goodFolds = allHands.filter((h) => h.outcome === 'fold' && h.foldReason === 'good_fold').length;
-    const netProfit = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
-
-    let grossWins = 0;
-    let grossLosses = 0;
-    allHands.forEach((h) => {
-      if (h.netChange > 0) grossWins += h.netChange;
-      if (h.netChange < 0) grossLosses += Math.abs(h.netChange);
-    });
+    // A completed record groups folds in with losses, and a split outcome in
+    // with pushes. The live trackers show those apart, so tallyHands keeps
+    // every outcome separate and the combining happens here.
+    const tally = tallyHands(hands);
+    const wins = tally.wins;
+    const losses = tally.losses + tally.folds;
 
     completedRecord = {
       id: activeSession.id,
@@ -149,17 +140,17 @@ export function finalizeSession(
       durationFormatted,
       mode: 'hands',
       hands,
-      totalHands,
+      totalHands: tally.count,
       wins,
       losses,
-      pushes,
-      folds,
-      bluffedFolds,
-      goodFolds,
-      netProfit,
-      grossWins,
-      grossLosses,
-      winRate: (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0,
+      pushes: tally.pushes + tally.splits,
+      folds: tally.folds,
+      bluffedFolds: tally.bluffedFolds,
+      goodFolds: tally.goodFolds,
+      netProfit: tally.net,
+      grossWins: tally.grossWins,
+      grossLosses: tally.grossLosses,
+      winRate: winRateOf(wins, losses),
       smallBlind: activeSession.smallBlind,
       bigBlind: activeSession.bigBlind,
       chipDenominations: activeSession.chipDenominations,

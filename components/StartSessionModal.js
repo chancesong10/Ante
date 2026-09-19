@@ -9,7 +9,6 @@ import {
   ScrollView,
   Animated,
   Easing,
-  AccessibilityInfo,
   useWindowDimensions,
   PanResponder,
 } from 'react-native';
@@ -21,26 +20,10 @@ import { useActiveSession, sessionHasContent } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
-import { sanitizeGameOrder } from '../constants/games';
+import { sanitizeGameOrder, needsTrackerToEnd } from '../constants/games';
+import { liveNetOf } from '../utils/sessionTally';
+import { useReduceMotion } from './ui';
 import ActiveSessionSlip from './ActiveSessionSlip';
-
-// Reports the OS "reduce motion" setting and keeps it live. Inlined rather
-// than shared so this modal stays self-contained.
-function useReduceMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
-      if (mounted) setReduced(v);
-    });
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
-    return () => {
-      mounted = false;
-      sub?.remove?.();
-    };
-  }, []);
-  return reduced;
-}
 
 // The six live trackers, in their default display order — overridden per
 // user by the `gameOrder` preference (Profile → Game Order), which
@@ -49,42 +32,36 @@ function useReduceMotion() {
 const GAME_CARDS = [
   {
     key: 'Blackjack',
-    nav: 'onNavigateToBlackjack',
     title: 'Blackjack Live Tracker',
     description: 'Track bets, doubles, splits, and calculate real-time net profit',
     renderIcon: (c) => <MaterialCommunityIcons name="cards-outline" size={24} color={c} />,
   },
   {
     key: 'Poker',
-    nav: 'onNavigateToPoker',
     title: 'Poker Session Tracker',
     description: 'Log your buy-in and cash-out to track your net result',
     renderIcon: (c) => <Ionicons name="cash-outline" size={24} color={c} />,
   },
   {
     key: 'Sports Betting',
-    nav: 'onNavigateToSportsBetting',
     title: 'Sports Betting Tracker',
     description: 'Log stake, odds, and outcome — payout calculated automatically',
     renderIcon: (c) => <Ionicons name="basketball-outline" size={24} color={c} />,
   },
   {
     key: 'Roulette',
-    nav: 'onNavigateToRoulette',
     title: 'Roulette Tracker',
     description: 'Pick a bet type — straight up, red/black, dozens — odds calculated automatically',
     renderIcon: (c) => <Ionicons name="disc-outline" size={24} color={c} />,
   },
   {
     key: 'Baccarat',
-    nav: 'onNavigateToBaccarat',
     title: 'Baccarat Tracker',
     description: 'Bet Player, Banker, or Tie — commission and odds calculated automatically',
     renderIcon: (c) => <MaterialCommunityIcons name="cards-diamond-outline" size={24} color={c} />,
   },
   {
     key: 'General',
-    nav: 'onNavigateToGeneral',
     title: 'General Tracker',
     description: 'Simple buy-in / cash-out for anything else',
     renderIcon: (c) => <Ionicons name="dice-outline" size={24} color={c} />,
@@ -234,16 +211,11 @@ function GameOptionCard({
   );
 }
 
-export default function StartSessionModal({
-  visible,
-  onClose,
-  onNavigateToBlackjack,
-  onNavigateToPoker,
-  onNavigateToSportsBetting,
-  onNavigateToRoulette,
-  onNavigateToBaccarat,
-  onNavigateToGeneral,
-}) {
+// `onNavigateToGame` takes the gameType and is expected to open that game's
+// tracker — App.js resolves it against constants/games' GAME_ROUTES. It used
+// to be six separate props, which meant every game card carried the name of
+// its own callback and the sheet had a ternary chain to pick one.
+export default function StartSessionModal({ visible, onClose, onNavigateToGame }) {
   const { activeSessionList, activeSessionCount, startSession, endActiveSession } =
     useActiveSession();
   const { endSessionWithFx } = useSessionEndFx();
@@ -338,43 +310,21 @@ export default function StartSessionModal({
     if (!visible) setCommittingGame(null);
   }, [visible]);
 
-  const navByKey = {
-    onNavigateToBlackjack,
-    onNavigateToPoker,
-    onNavigateToSportsBetting,
-    onNavigateToRoulette,
-    onNavigateToBaccarat,
-    onNavigateToGeneral,
-  };
-
   // Start, close, navigate. `startSession` is a no-op when that game already
   // has a live session, so tapping a running game's card just reopens it.
   const commitAndStart = useCallback(
-    (gameKey, navFn) => {
+    (gameKey) => {
       startSession(gameKey);
       onClose();
-      if (navFn) navFn();
+      onNavigateToGame?.(gameKey);
     },
-    [startSession, onClose]
+    [startSession, onClose, onNavigateToGame]
   );
-
-  const navFor = (gameType) =>
-    gameType === 'Poker'
-      ? onNavigateToPoker
-      : gameType === 'Sports Betting'
-      ? onNavigateToSportsBetting
-      : gameType === 'Roulette'
-      ? onNavigateToRoulette
-      : gameType === 'Baccarat'
-      ? onNavigateToBaccarat
-      : gameType === 'General'
-      ? onNavigateToGeneral
-      : onNavigateToBlackjack;
 
   const resumeSession = (session) => {
     hapticLight();
     onClose();
-    navFor(session.gameType)?.();
+    onNavigateToGame?.(session.gameType);
   };
 
   // General needs both amounts typed in before it has anything to save, and
@@ -383,15 +333,12 @@ export default function StartSessionModal({
   const endSessionFromList = (session) => {
     hapticSuccess();
     onClose();
-    if (session.gameType === 'General' || session.gameType === 'Sports Betting') {
-      navFor(session.gameType)?.();
+    if (needsTrackerToEnd(session.gameType)) {
+      onNavigateToGame?.(session.gameType);
       return;
     }
-    const net = (session.hands || [])
-      .flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]))
-      .reduce((sum, h) => sum + (h.netChange || 0), 0);
     endSessionWithFx({
-      net,
+      net: liveNetOf(session),
       gameType: session.gameType,
       saved: sessionHasContent(session),
       onCommit: () => endActiveSession(session.gameType),
@@ -497,7 +444,7 @@ export default function StartSessionModal({
                       committing={committingGame === card.key}
                       otherCommitting={!!committingGame && committingGame !== card.key}
                       onSelect={() => setCommittingGame(card.key)}
-                      onCommit={() => commitAndStart(card.key, navByKey[card.nav])}
+                      onCommit={() => commitAndStart(card.key)}
                     />
                   ))}
                 </View>

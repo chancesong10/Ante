@@ -20,6 +20,7 @@ import { GameIconTile } from '../components/GameIcon';
 import CountUp from '../components/CountUp';
 import usePullToRefresh from '../components/usePullToRefresh';
 import { formatNumber, formatMoney, netTone } from '../utils/format';
+import { expandHands, winRateOf, extent } from '../utils/sessionTally';
 
 // Trajectory chart geometry. Each half is a fixed band; inside it a strip is
 // reserved for the value label so a full-height bar can never push its own
@@ -68,20 +69,96 @@ export default function AnalyticsScreen({ navigation }) {
     monthLabel,
     lastMonthLabel,
   } = useMemo(() => {
+    // --- One pass for every lifetime total.
+    //
+    // This was a dozen separate `.reduce()` calls, two `.filter()`s and two
+    // `Math.max(...map)` spreads, each walking the same list. The spreads were
+    // also a ceiling rather than just waste: they pass one argument per
+    // session, so a long enough history throws a RangeError — and Analytics is
+    // precisely the screen someone with that much history opens.
     const totalSessions = sessionHistory.length;
-    const totalHands = sessionHistory.reduce((sum, s) => sum + (s.totalHands || 0), 0);
-    const totalNetProfit = sessionHistory.reduce((sum, s) => sum + (s.netProfit || 0), 0);
-    const totalWins = sessionHistory.reduce((sum, s) => sum + (s.wins || 0), 0);
-    const totalLosses = sessionHistory.reduce((sum, s) => sum + (s.losses || 0), 0);
-    const totalPushes = sessionHistory.reduce((sum, s) => sum + (s.pushes || 0), 0);
+    let totalHands = 0;
+    let totalNetProfit = 0;
+    let totalWins = 0;
+    let totalLosses = 0;
+    let totalPushes = 0;
+    let totalGrossWins = 0;
+    let totalGrossLosses = 0;
+    let bestSession = 0;
+    let worstSession = 0;
 
-    const winRate =
-      totalWins + totalLosses > 0
-        ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
-        : '0.0';
+    // Hours played, and the net over only those sessions with a sane
+    // start/end pair. Sessions missing one are excluded rather than counted as
+    // zero-length, which would push the hourly rate toward infinity.
+    let timedMs = 0;
+    let timedNet = 0;
 
-    const totalGrossWins = sessionHistory.reduce((sum, s) => sum + (s.grossWins || 0), 0);
-    const totalGrossLosses = sessionHistory.reduce((sum, s) => sum + (s.grossLosses || 0), 0);
+    // This calendar month vs last. Calendar months rather than rolling 30-day
+    // windows because that's the unit people actually think in when they ask
+    // "how did I do this month".
+    const now = new Date();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+    const thisMonthAcc = { sessions: 0, net: 0, wins: 0, losses: 0 };
+    const lastMonthAcc = { sessions: 0, net: 0, wins: 0, losses: 0 };
+
+    // Per-game portfolio breakdown
+    const games = {
+      Blackjack: { sessions: 0, net: 0, totalBets: 0 },
+      Poker: { sessions: 0, net: 0, totalBets: 0 },
+      'Sports Betting': { sessions: 0, net: 0, totalBets: 0 },
+      Roulette: { sessions: 0, net: 0, totalBets: 0 },
+      Baccarat: { sessions: 0, net: 0, totalBets: 0 },
+      General: { sessions: 0, net: 0, totalBets: 0 },
+    };
+
+    sessionHistory.forEach((session, i) => {
+      const net = session.netProfit || 0;
+      totalHands += session.totalHands || 0;
+      totalNetProfit += net;
+      totalWins += session.wins || 0;
+      totalLosses += session.losses || 0;
+      totalPushes += session.pushes || 0;
+      totalGrossWins += session.grossWins || 0;
+      totalGrossLosses += session.grossLosses || 0;
+
+      if (i === 0 || net > bestSession) bestSession = net;
+      if (i === 0 || net < worstSession) worstSession = net;
+
+      if (
+        session.startTime != null &&
+        session.endTime != null &&
+        session.endTime > session.startTime
+      ) {
+        timedMs += session.endTime - session.startTime;
+        timedNet += net;
+      }
+
+      const period =
+        session.startTime >= thisMonthStart
+          ? thisMonthAcc
+          : session.startTime >= lastMonthStart
+          ? lastMonthAcc
+          : null;
+      if (period) {
+        period.sessions += 1;
+        period.net += net;
+        period.wins += session.wins || 0;
+        period.losses += session.losses || 0;
+      }
+
+      const game = games[session.gameType] || games.General;
+      game.sessions += 1;
+      game.net += net;
+      // A buy-in/cash-out session is one bet by definition; a hand-mode one
+      // counts its hands, with splits expanded into the two they really are.
+      game.totalBets +=
+        session.mode === 'hands' && Array.isArray(session.hands)
+          ? expandHands(session.hands).length
+          : 1;
+    });
+
+    const winRate = winRateOf(totalWins, totalLosses).toFixed(1);
 
     const profitFactor =
       totalGrossLosses > 0
@@ -90,18 +167,13 @@ export default function AnalyticsScreen({ navigation }) {
         ? '∞'
         : '0.00';
 
-    const bestSession =
-      totalSessions > 0 ? Math.max(...sessionHistory.map((s) => s.netProfit)) : 0;
-    const worstSession =
-      totalSessions > 0 ? Math.min(...sessionHistory.map((s) => s.netProfit)) : 0;
-    const avgSessionNet =
-      totalSessions > 0 ? totalNetProfit / totalSessions : 0;
+    const avgSessionNet = totalSessions > 0 ? totalNetProfit / totalSessions : 0;
 
     // Real session-by-session data for charts (reversed to chronological order)
     const allChronologicalSessions = [...sessionHistory].reverse();
     const chronologicalSessions = allChronologicalSessions.slice(-7);
     const maxAbsNet = Math.max(
-      ...chronologicalSessions.map((s) => Math.abs(s.netProfit)),
+      extent(chronologicalSessions.map((s) => Math.abs(s.netProfit))).max,
       50
     );
 
@@ -120,65 +192,23 @@ export default function AnalyticsScreen({ navigation }) {
 
     // --- Hourly rate. The one figure that turns "down $400" into something
     // comparable to a wage, which is usually the more uncomfortable number.
-    // Sessions missing a sane start/end pair are excluded rather than counted
-    // as zero-length, which would inflate the rate toward infinity.
-    const timed = sessionHistory.filter(
-      (s) => s.startTime != null && s.endTime != null && s.endTime > s.startTime
-    );
-    const totalMs = timed.reduce((sum, s) => sum + (s.endTime - s.startTime), 0);
-    const totalHours = totalMs / 3600000;
-    const timedNet = timed.reduce((sum, s) => sum + (s.netProfit || 0), 0);
+    const totalHours = timedMs / 3600000;
     // Below a few minutes the divisor is noise, so report nothing rather than
     // "+$4,182/hr" off one lucky two-minute session.
     const hourlyRate = totalHours >= 0.25 ? timedNet / totalHours : null;
 
-    // --- This calendar month vs last. Calendar months rather than rolling
-    // 30-day windows because that's the unit people actually think in when
-    // they ask "how did I do this month".
-    const now = new Date();
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
-
-    const summarisePeriod = (from, to) => {
-      const inPeriod = sessionHistory.filter((s) => s.startTime >= from && s.startTime < to);
-      const net = inPeriod.reduce((sum, s) => sum + (s.netProfit || 0), 0);
-      const wins = inPeriod.reduce((sum, s) => sum + (s.wins || 0), 0);
-      const losses = inPeriod.reduce((sum, s) => sum + (s.losses || 0), 0);
-      return {
-        sessions: inPeriod.length,
-        net,
-        winRate: wins + losses > 0 ? (wins / (wins + losses)) * 100 : null,
-      };
-    };
-
-    const thisMonth = summarisePeriod(thisMonthStart, Infinity);
-    const lastMonth = summarisePeriod(lastMonthStart, thisMonthStart);
+    // A period with no decided hands reports no win rate at all rather than
+    // 0%, which would read as having lost every hand.
+    const finishPeriod = (acc) => ({
+      sessions: acc.sessions,
+      net: acc.net,
+      winRate: acc.wins + acc.losses > 0 ? winRateOf(acc.wins, acc.losses) : null,
+    });
+    const thisMonth = finishPeriod(thisMonthAcc);
+    const lastMonth = finishPeriod(lastMonthAcc);
     const monthLabel = now.toLocaleDateString(undefined, { month: 'long' });
     const lastMonthLabel = new Date(lastMonthStart).toLocaleDateString(undefined, {
       month: 'long',
-    });
-
-    // Per-game portfolio breakdown
-    const games = {
-      Blackjack: { sessions: 0, net: 0, totalBets: 0 },
-      Poker: { sessions: 0, net: 0, totalBets: 0 },
-      'Sports Betting': { sessions: 0, net: 0, totalBets: 0 },
-      Roulette: { sessions: 0, net: 0, totalBets: 0 },
-      Baccarat: { sessions: 0, net: 0, totalBets: 0 },
-      General: { sessions: 0, net: 0, totalBets: 0 },
-    };
-
-    sessionHistory.forEach((session) => {
-      const gameType = games[session.gameType] ? session.gameType : 'General';
-      games[gameType].sessions += 1;
-      games[gameType].net += session.netProfit || 0;
-
-      if (session.mode === 'hands' && Array.isArray(session.hands)) {
-        const hands = session.hands.flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]));
-        games[gameType].totalBets += hands.length;
-      } else {
-        games[gameType].totalBets += 1;
-      }
     });
 
     return {

@@ -14,6 +14,39 @@ export const DEFAULT_GAME_ORDER = [
   'General',
 ];
 
+// The stack screen each game's tracker is registered under in App.js.
+//
+// Three places used to know this mapping — App.js (as six separate
+// onNavigateToX props), the Start Session sheet (as a ternary chain plus a
+// `nav` field on every game card), and Home (as its own ternary chain) — and
+// only the names differ from the game keys at all, for Sports Betting and
+// General. One map means adding a seventh tracker is a line here rather than
+// a prop threaded through the sheet.
+export const GAME_ROUTES = {
+  Blackjack: 'Blackjack',
+  Poker: 'Poker',
+  'Sports Betting': 'SportsBetting',
+  Roulette: 'Roulette',
+  Baccarat: 'Baccarat',
+  General: 'GeneralTracker',
+};
+
+// Falls back to Blackjack for an unrecognised game, which is what the
+// ternary chains this replaces did — a session whose gameType predates a
+// rename still lands somewhere real rather than crashing the navigator.
+export function routeForGame(gameType) {
+  return GAME_ROUTES[gameType] || GAME_ROUTES.Blackjack;
+}
+
+// The two games whose stop button has to open the tracker rather than end the
+// session where it stands: General has no net until a cash-out is typed, and
+// Sports Betting has its own pending-bet confirmation to run first. Home and
+// the Start Session sheet both offer that button, and both had the carve-out
+// spelled out inline.
+export function needsTrackerToEnd(gameType) {
+  return gameType === 'General' || gameType === 'Sports Betting';
+}
+
 // Reconciles a stored order against the current game list: drops any key
 // that no longer corresponds to a real game (one was removed since the
 // preference was saved) or repeats one already kept, then appends any

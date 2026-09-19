@@ -44,6 +44,8 @@ import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useActiveSession, useSessionHistory } from './context/SessionContext';
 import { hapticLight } from './utils/haptics';
 import { shouldRaiseStopLossAlert, acknowledgedTier } from './utils/stopLoss';
+import { tallyHands } from './utils/sessionTally';
+import { routeForGame } from './constants/games';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -272,9 +274,9 @@ function AppContent({ navigationRef }) {
       let totalBets = 0;
 
       if (hands.length > 0) {
-        const allHands = hands.flatMap((r) => (r.type === 'split' && r.hands ? r.hands : [r]));
-        totalBets = allHands.length;
-        netOutcome = allHands.reduce((sum, h) => sum + (h.netChange || 0), 0);
+        const tally = tallyHands(hands);
+        totalBets = tally.count;
+        netOutcome = tally.net;
       } else if (s.buyIn !== null && s.cashOut !== null) {
         // Until cash-out is entered there's no known live balance for a
         // buy-in/cash-out session, so leave netOutcome at 0 rather than
@@ -331,6 +333,13 @@ function AppContent({ navigationRef }) {
     });
   };
 
+  // Opens a game's tracker by game type. The sheet and the alert both just
+  // name the game; which screen that is lives in constants/games.
+  const openTracker = useCallback(
+    (gameType) => navigationRef.navigate(routeForGame(gameType)),
+    [navigationRef]
+  );
+
   const handleAcknowledge = () => {
     const session = alertSession;
     setAlertSessionId(null);
@@ -384,16 +393,7 @@ function AppContent({ navigationRef }) {
       <StartSessionModal
         visible={addModalVisible}
         onClose={() => setAddModalVisible(false)}
-        onNavigateToBlackjack={() => {
-          navigationRef.navigate('Blackjack');
-        }}
-        onNavigateToPoker={() => {
-          navigationRef.navigate('Poker');
-        }}
-        onNavigateToSportsBetting={() => navigationRef.navigate('SportsBetting')}
-        onNavigateToRoulette={() => navigationRef.navigate('Roulette')}
-        onNavigateToBaccarat={() => navigationRef.navigate('Baccarat')}
-        onNavigateToGeneral={() => navigationRef.navigate('GeneralTracker')}
+        onNavigateToGame={openTracker}
       />
 
       {/* Responsible Gaming Limits In-App Safety Alert Modal */}

@@ -1,4 +1,10 @@
-import { DEFAULT_GAME_ORDER, sanitizeGameOrder } from '../games';
+import {
+  DEFAULT_GAME_ORDER,
+  sanitizeGameOrder,
+  GAME_ROUTES,
+  routeForGame,
+  needsTrackerToEnd,
+} from '../games';
 
 describe('sanitizeGameOrder', () => {
   test('returns the default order for nothing stored', () => {
@@ -35,5 +41,43 @@ describe('sanitizeGameOrder', () => {
     const result = sanitizeGameOrder(stored);
     expect(result).toHaveLength(DEFAULT_GAME_ORDER.length);
     expect(new Set(result)).toEqual(new Set(DEFAULT_GAME_ORDER));
+  });
+});
+
+// App.js registers one stack screen per tracker and resolves these names
+// against it. A game missing from the map, or pointing at a name App.js does
+// not register, is a dead tap on the Start Session sheet.
+describe('routeForGame', () => {
+  test('covers every game in the default order', () => {
+    DEFAULT_GAME_ORDER.forEach((game) => {
+      expect(typeof GAME_ROUTES[game]).toBe('string');
+      expect(routeForGame(game)).toBe(GAME_ROUTES[game]);
+    });
+  });
+
+  // The two that differ from their game key, and so are the two worth pinning.
+  test('maps the games whose screen name is not their key', () => {
+    expect(routeForGame('Sports Betting')).toBe('SportsBetting');
+    expect(routeForGame('General')).toBe('GeneralTracker');
+  });
+
+  // What the ternary chains this replaced did: an unknown gameType — a record
+  // from a build before a rename — lands somewhere real rather than handing
+  // the navigator an undefined screen.
+  test('falls back to Blackjack for a game it does not know', () => {
+    expect(routeForGame('Craps')).toBe('Blackjack');
+    expect(routeForGame(undefined)).toBe('Blackjack');
+  });
+});
+
+describe('needsTrackerToEnd', () => {
+  // General has no net until a cash-out is typed and Sports Betting has its
+  // own pending-bet confirmation, so neither can be stopped from a list.
+  test('is true only for the two games that cannot end from a list', () => {
+    expect(needsTrackerToEnd('General')).toBe(true);
+    expect(needsTrackerToEnd('Sports Betting')).toBe(true);
+    ['Blackjack', 'Poker', 'Roulette', 'Baccarat'].forEach((game) => {
+      expect(needsTrackerToEnd(game)).toBe(false);
+    });
   });
 });

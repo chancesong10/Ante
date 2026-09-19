@@ -1,24 +1,68 @@
-// Pure calculation functions — no React, no UI.
+// Calculation functions for the blackjack/shared insights — no React, no UI.
+//
+// Every exported calc* function here is pure: same inputs, same output, no
+// state of its own. The one exception is getSessionsForGameType immediately
+// below, which keeps a module-level cache. Read its note before adding
+// anything else that remembers something between calls — a stats engine that
+// quietly depends on call order is a hard bug to find, and the cache is only
+// safe because of a property of the data it is handed.
+import { appendHand } from './sessionTally';
+
+// One game's completed hand-mode sessions, oldest first.
+//
+// Memoised per (history array, game type). Every compute*Insights entry point
+// asks for the same slice three or four times over — once for the hand list,
+// again for the day-of-week pattern, again for session length, and for the
+// table games again for the progression scan — and each ask was a full filter
+// plus a copy of the entire history.
+//
+// The cache is a WeakMap keyed on the history array itself, and that is the
+// whole reason it is sound: SessionContext replaces sessionHistory wholesale
+// on every change and never mutates it in place, so a different array means
+// genuinely different data and there is no such thing as a stale hit. An entry
+// becomes collectable as soon as its history is superseded. If session history
+// ever becomes mutable, this cache turns into a correctness bug, not a
+// slowdown.
+//
+// The returned array is frozen rather than merely documented as read-only,
+// because it is shared with every other caller: sorting or splicing it in
+// place would silently reorder what they all see. Freezing turns that into an
+// immediate throw at the offending line. The session objects inside are not
+// frozen — only the list. A caller that needs its own order copies first
+// (`[...sessions].sort(...)`).
+const sessionsByGame = new WeakMap();
 
 export function getSessionsForGameType(sessionHistory, gameType) {
-  return sessionHistory
-    .filter((s) => s.gameType === gameType && s.mode === 'hands')
-    .slice()
-    .reverse(); // oldest first
+  if (!Array.isArray(sessionHistory)) return [];
+  let byGame = sessionsByGame.get(sessionHistory);
+  if (!byGame) {
+    byGame = new Map();
+    sessionsByGame.set(sessionHistory, byGame);
+  }
+  const cached = byGame.get(gameType);
+  if (cached) return cached;
+
+  const sessions = [];
+  // Walked backwards rather than filter().reverse(), which built two arrays to
+  // produce one. Stored newest-first, wanted oldest-first.
+  for (let i = sessionHistory.length - 1; i >= 0; i--) {
+    const s = sessionHistory[i];
+    if (s && s.gameType === gameType && s.mode === 'hands') sessions.push(s);
+  }
+  Object.freeze(sessions);
+  byGame.set(gameType, sessions);
+  return sessions;
 }
 
 export function getChronologicalHands(sessionHistory, gameType) {
   const sessions = getSessionsForGameType(sessionHistory, gameType);
   const allHands = [];
   sessions.forEach((session) => {
-    const chronological = session.hands.slice().reverse();
-    chronological.forEach((r) => {
-      if (r.type === 'split') {
-        allHands.push(...r.hands);
-      } else {
-        allHands.push(r);
-      }
-    });
+    const records = Array.isArray(session.hands) ? session.hands : [];
+    // Hands are stored newest-first, and every engine reads them oldest-first.
+    // Walked backwards rather than `.slice().reverse()`, which allocated two
+    // throwaway arrays per session to produce the same order.
+    for (let i = records.length - 1; i >= 0; i--) appendHand(allHands, records[i]);
   });
   return allHands;
 }

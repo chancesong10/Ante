@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -24,6 +24,7 @@ import GuestModeBanner from '../components/GuestModeBanner';
 import LivePulseDot from '../components/LivePulseDot';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 import { formatAmount, formatMoney, formatNumber, netTone } from '../utils/format';
+import { tallyHands, handsOf } from '../utils/sessionTally';
 import TrackerGuide from '../components/TrackerGuide';
 
 const COMMON_ODDS = ['-200', '-150', '-110', '+100', '+150', '+200'];
@@ -147,11 +148,12 @@ export default function SportsBettingScreen({ navigation }) {
     updateHandInActiveSession(betId, { outcome, netChange });
   };
 
-  const sessionBets = activeSession?.hands || [];
-  const totalNet = sessionBets.reduce((sum, b) => sum + (b.netChange || 0), 0);
-  const wins = sessionBets.filter((b) => b.outcome === 'win').length;
-  const losses = sessionBets.filter((b) => b.outcome === 'loss').length;
-  const pushes = sessionBets.filter((b) => b.outcome === 'push').length;
+  // One pass over the slip, memoised, rather than four scans per keystroke.
+  const sessionBets = handsOf(activeSession);
+  const { net: totalNet, wins, losses, pushes } = useMemo(
+    () => tallyHands(sessionBets),
+    [sessionBets]
+  );
 
   const handleEndSessionPress = () => {
     hapticSuccess();
