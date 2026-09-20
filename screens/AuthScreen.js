@@ -18,6 +18,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { screenStyles } from '../constants/screenStyles';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useAuth } from '../context/AuthContext';
+import { MINIMUM_AGE } from '../constants/legal';
 
 export default function AuthScreen({ navigation }) {
   const { user, signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, updateUsername } = useAuth();
@@ -301,6 +302,32 @@ export default function AuthScreen({ navigation }) {
             )}
           </TouchableOpacity>
 
+          {/* Sign-in-wrap notice. The first-launch consent gate is what
+              actually binds the user to the Terms; this restates it at the
+              moment an account — and with it a server-side copy of their data
+              — comes into existence, so the assent covers that act too and is
+              conspicuous at the point of the transaction rather than only at
+              install. Links open the same documents the gate shows. */}
+          <Text style={styles.legalNotice}>
+            By continuing you confirm you are at least {MINIMUM_AGE} years old and agree to Ante’s{' '}
+            <Text
+              style={styles.legalNoticeLink}
+              onPress={() => navigation.navigate('Legal', { doc: 'terms' })}
+              accessibilityRole="link"
+            >
+              Terms of Service
+            </Text>{' '}
+            and{' '}
+            <Text
+              style={styles.legalNoticeLink}
+              onPress={() => navigation.navigate('Legal', { doc: 'privacy' })}
+              accessibilityRole="link"
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+
           <View style={styles.switchModeButton}>
             <Text style={styles.switchModeText}>
               {mode === 'signUp' ? 'Already have an account? ' : "Don't have an account? "}
@@ -435,6 +462,18 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     fontWeight: '700',
     fontSize: fluidFont(15),
+  },
+  legalNotice: {
+    fontSize: fluidFont(11),
+    color: COLORS.textMuted,
+    lineHeight: fluidFont(16),
+    textAlign: 'center',
+    marginTop: SPACING.md,
+  },
+  legalNoticeLink: {
+    color: COLORS.accentCyan,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   switchModeButton: {
     alignItems: 'center',

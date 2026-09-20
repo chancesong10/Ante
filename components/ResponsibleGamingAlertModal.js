@@ -6,11 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   TouchableWithoutFeedback,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { formatAmount, formatNumber } from '../utils/format';
+import { HELPLINE } from '../constants/legal';
 
 export default function ResponsibleGamingAlertModal({
   visible,
@@ -98,13 +100,34 @@ export default function ResponsibleGamingAlertModal({
               </View>
             </View>
 
-            {/* Helpline Notice */}
-            <View style={styles.supportBox}>
+            {/* Helpline Notice.
+
+                Dials rather than just displaying: a number someone has to
+                memorise and re-type is a number they don't call. `canOpenURL`
+                is skipped deliberately — it returns false on a tablet with no
+                dialler, and the catch below already covers that, whereas the
+                check would silently make the row inert on devices that could
+                have handed off to a paired phone.
+
+                The second line exists because the number is US-only and the
+                app is not. Showing an unreachable number to someone in
+                Manchester or Melbourne, with no hint that theirs exists, is
+                worse than showing nothing. */}
+            <TouchableOpacity
+              style={styles.supportBox}
+              activeOpacity={0.7}
+              onPress={() => Linking.openURL(`tel:${HELPLINE.tel}`).catch(() => {})}
+              accessibilityRole="button"
+              accessibilityLabel={`Call the ${HELPLINE.name} helpline on ${HELPLINE.display}`}
+            >
               <Ionicons name="heart-circle-outline" size={16} color={COLORS.success} />
               <Text style={styles.supportText}>
-                Need support? Call 24/7 Helpline: <Text style={styles.supportPhone}>1-800-522-4700</Text>
+                Need support? Call the 24/7 helpline:{' '}
+                <Text style={styles.supportPhone}>{HELPLINE.display}</Text> ({HELPLINE.region})
               </Text>
-            </View>
+            </TouchableOpacity>
+
+            <Text style={styles.supportIntl}>{HELPLINE.international}</Text>
 
             {/* Action Buttons */}
             <View style={styles.buttonGroup}>
@@ -223,9 +246,10 @@ const styles = StyleSheet.create({
     paddingVertical: moderateScale(6),
     gap: 6,
     width: '100%',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.xs,
     borderWidth: 1,
     borderColor: 'rgba(16, 185, 129, 0.2)',
+    minHeight: TOUCH_TARGET.minSize,
   },
   supportText: {
     fontSize: fluidFont(11),
@@ -235,6 +259,17 @@ const styles = StyleSheet.create({
   supportPhone: {
     color: COLORS.success,
     fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  supportIntl: {
+    fontSize: fluidFont(10),
+    color: COLORS.textMuted,
+    lineHeight: fluidFont(14),
+    textAlign: 'center',
+    width: '100%',
+    marginTop: -SPACING.xs,
+    marginBottom: SPACING.md,
+    paddingHorizontal: 4,
   },
   buttonGroup: {
     width: '100%',

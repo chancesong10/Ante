@@ -39,6 +39,7 @@ import StartSessionModal from './components/StartSessionModal';
 import ResponsibleGamingAlertModal from './components/ResponsibleGamingAlertModal';
 import AnimatedLoadingScreen from './components/AnimatedLoadingScreen';
 import AppErrorBoundary from './components/AppErrorBoundary';
+import LegalConsentGate from './components/LegalConsentGate';
 import { COLORS } from './constants/theme';
 import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useActiveSession, useSessionHistory } from './context/SessionContext';
@@ -430,19 +431,25 @@ export default function App() {
             most likely cause of a crash here, and a boundary underneath it
             would miss exactly that. */}
         <AppErrorBoundary>
-          <AuthProvider>
-            <PurchasesProvider>
-              <PreferencesProvider>
-                <SessionProvider>
-                  {/* Above AppShell, which is where useSyncEngine runs, so the
-                      engine can publish status and Profile can read it. */}
-                  <SyncStatusProvider>
-                    <AppShell />
-                  </SyncStatusProvider>
-                </SessionProvider>
-              </PreferencesProvider>
-            </PurchasesProvider>
-          </AuthProvider>
+          {/* Above every provider on purpose. Nothing that talks to a third
+              party — Supabase auth, the RevenueCat SDK — should initialise
+              before the user has accepted the Privacy Policy that describes
+              it, and mounting the gate here means none of it does. */}
+          <LegalConsentGate>
+            <AuthProvider>
+              <PurchasesProvider>
+                <PreferencesProvider>
+                  <SessionProvider>
+                    {/* Above AppShell, which is where useSyncEngine runs, so
+                        the engine can publish status and Profile can read it. */}
+                    <SyncStatusProvider>
+                      <AppShell />
+                    </SyncStatusProvider>
+                  </SessionProvider>
+                </PreferencesProvider>
+              </PurchasesProvider>
+            </AuthProvider>
+          </LegalConsentGate>
         </AppErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>

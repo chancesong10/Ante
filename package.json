@@ -42,6 +42,8 @@
     "web": "expo start --web",
     "test": "jest",
     "env:sync": "node scripts/sync-eas-env.js",
+    "legal:build": "node scripts/build-legal.js",
+    "legal:notices": "node scripts/build-third-party-notices.js",
     "lint": "eslint ."
   },
   "private": true,

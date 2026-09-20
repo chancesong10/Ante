@@ -13,12 +13,19 @@ const KEYS = {
   PREFERENCES: 'ante:preferences',
   DEVICE_ID: 'ante:deviceId',
   SCHEMA_VERSION: 'ante:schemaVersion',
+  // Which version of the Terms/Privacy Policy this device accepted, and when.
+  LEGAL_CONSENT: 'ante:legalConsent',
 };
 
 // The only keys a "clear my data" leaves behind. The device seed is anonymous
 // and is what lets local data map onto an account later, so wiping it would
 // make a reset install look brand new rather than like the same device.
-const PRESERVED_KEYS = [KEYS.DEVICE_ID];
+//
+// The consent record is preserved for a second reason: it is the evidence that
+// this device was shown the Terms and accepted them. Erasing session data is
+// not a withdrawal of that acceptance, and dropping the record would destroy
+// the only proof we have that the gate was ever answered.
+const PRESERVED_KEYS = [KEYS.DEVICE_ID, KEYS.LEGAL_CONSENT];
 
 // --- Device identity (anonymous, stable per-install) ---
 // This lets today's local-only data map cleanly onto a real user account later.
@@ -33,6 +40,39 @@ export async function getOrCreateDeviceId() {
   } catch (err) {
     console.error('storageService: failed to get/create device ID', err);
     return null;
+  }
+}
+
+// --- Legal consent ---
+//
+// Written once by the consent gate and read on every launch. Kept in its own
+// key rather than inside preferences, because resetPreferences() exists and
+// would otherwise silently revoke a recorded acceptance.
+
+export async function loadLegalConsent() {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.LEGAL_CONSENT);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // A blob that isn't an object — an array, a bare null, a string written by
+    // some older build — can't carry a version, so treat it as no consent at
+    // all and re-prompt, rather than letting an undefined version slip past
+    // the equality check in the gate.
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed;
+  } catch (err) {
+    console.error('storageService: failed to load legal consent', err);
+    return null;
+  }
+}
+
+export async function saveLegalConsent(record) {
+  try {
+    await AsyncStorage.setItem(KEYS.LEGAL_CONSENT, JSON.stringify(record));
+    return true;
+  } catch (err) {
+    console.error('storageService: failed to save legal consent', err);
+    return false;
   }
 }
 
