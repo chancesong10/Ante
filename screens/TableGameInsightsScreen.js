@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, BackHandler } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -18,6 +18,8 @@ import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 import { NavBar } from '../components/ui';
 import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
+import useHardwareBack from '../components/useHardwareBack';
+import useFlash from '../components/useFlash';
 
 // Insights for Roulette and Baccarat, one screen for both (route param
 // `gameType`). The two games measure the same thing — the house edge, and
@@ -98,19 +100,9 @@ export default function TableGameInsightsScreen({ route, navigation }) {
   const { isPro } = usePurchases();
   const isLocked = !isPro;
   const insets = useSafeAreaInsets();
-  const [copied, setCopied] = useState(false);
+  const [copied, flashCopied] = useFlash(false);
 
-  // Without this, Android hardware back on this screen falls through to
-  // whatever BackHandler listener is still registered on a screen mounted
-  // underneath it in the stack (e.g. an in-progress game session) — see the
-  // same fix on AuthScreen.js.
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      navigation.goBack();
-      return true;
-    });
-    return () => sub.remove();
-  }, [navigation]);
+  useHardwareBack(navigation);
 
   const stats = useMemo(() => computeTableGameInsights(sessionHistory, gameType), [sessionHistory, gameType]);
   const hasEnoughData = stats.totalHands >= 5;
@@ -279,8 +271,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
       return;
     }
     await Clipboard.setStringAsync(buildReportText());
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    flashCopied(true);
   };
 
   if (!user) {

@@ -164,6 +164,15 @@ const OpponentCard = React.memo(function OpponentCard({
   onCall,
   onToggleFold,
 }) {
+  // Bound to this player's id once, rather than re-created inline in the JSX
+  // below. BetChips is memoised, and a fresh closure on every render defeated
+  // that entirely — the chip grid re-rendered whenever anything on this card
+  // changed, including a keystroke in its own bet field. The hero's copy of
+  // BetChips already passed stable handlers and so already got the benefit.
+  const oppId = opp.id;
+  const handleChipPress = useCallback((val) => onChipPress(oppId, val), [onChipPress, oppId]);
+  const handleCall = useCallback(() => onCall(oppId), [onCall, oppId]);
+
   const oppBet = opp.streetBets[currentStreetKey] || 0;
   const oppTotalContributed =
     (opp.streetBets.preflop || 0) +
@@ -214,8 +223,8 @@ const OpponentCard = React.memo(function OpponentCard({
           <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
           <BetChips
             currentBet={oppBet}
-            onChipPress={(val) => onChipPress(opp.id, val)}
-            onCall={() => onCall(opp.id)}
+            onChipPress={handleChipPress}
+            onCall={handleCall}
             who={`${label}'s`}
             currentStreetMaxBet={currentStreetMaxBet}
             sbVal={sbVal}

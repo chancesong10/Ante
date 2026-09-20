@@ -33,6 +33,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { formatAmount, formatMoney, relativeTime, netTone } from '../utils/format';
 import { tallyHands, winRateOf } from '../utils/sessionTally';
+import useFlash from '../components/useFlash';
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
 // the common four stay at the top of a long list. Dollar-family currencies
@@ -165,12 +166,7 @@ export default function ProfileScreen({ navigation }) {
   // For this screen's own flows only — restore, sign-out, feedback. The
   // account and data dialogs went with their screens.
   const [profileModal, setProfileModal] = useState(null);
-  const [notice, setNotice] = useState(null);
-
-  const flashNotice = (text) => {
-    setNotice(text);
-    setTimeout(() => setNotice(null), 2600);
-  };
+  const [notice, flashNotice] = useFlash(null, 2600);
 
 
 

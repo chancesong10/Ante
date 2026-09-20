@@ -82,6 +82,8 @@ export function judgeRecord(record) {
 export function calcStrategyAccuracy(records) {
   let judged = 0;
   let correct = 0;
+  let correctNet = 0;
+  let mistakeNet = 0;
   const mistakes = {};
 
   records.forEach((r) => {
@@ -90,8 +92,10 @@ export function calcStrategyAccuracy(records) {
     judged += 1;
     if (verdict.correct) {
       correct += 1;
+      correctNet += recordNet(r);
       return;
     }
+    mistakeNet += recordNet(r);
     const key = `${verdict.situation}|${r.action}`;
     if (!mistakes[key]) {
       mistakes[key] = {
@@ -112,6 +116,11 @@ export function calcStrategyAccuracy(records) {
     correct,
     mistakeCount: judged - correct,
     rate: (correct / judged) * 100,
+    // Net on the hands played to basic strategy, and net on the ones that
+    // weren't. Following strategy can still lose money over a small sample —
+    // these are results, not a verdict on the decisions.
+    correctNet,
+    mistakeNet,
     // Most frequent first; ties go to whichever cost more.
     topMistakes: Object.values(mistakes).sort((a, b) => b.count - a.count || a.net - b.net),
   };

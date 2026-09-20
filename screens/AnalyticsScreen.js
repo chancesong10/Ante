@@ -21,6 +21,7 @@ import CountUp from '../components/CountUp';
 import usePullToRefresh from '../components/usePullToRefresh';
 import { formatNumber, formatMoney, netTone } from '../utils/format';
 import { expandHands, winRateOf, extent } from '../utils/sessionTally';
+import { calcHourlyRate } from '../utils/sessionPatterns';
 
 // Trajectory chart geometry. Each half is a fixed band; inside it a strip is
 // reserved for the value label so a full-height bar can never push its own
@@ -87,12 +88,6 @@ export default function AnalyticsScreen({ navigation }) {
     let bestSession = 0;
     let worstSession = 0;
 
-    // Hours played, and the net over only those sessions with a sane
-    // start/end pair. Sessions missing one are excluded rather than counted as
-    // zero-length, which would push the hourly rate toward infinity.
-    let timedMs = 0;
-    let timedNet = 0;
-
     // This calendar month vs last. Calendar months rather than rolling 30-day
     // windows because that's the unit people actually think in when they ask
     // "how did I do this month".
@@ -124,15 +119,6 @@ export default function AnalyticsScreen({ navigation }) {
 
       if (i === 0 || net > bestSession) bestSession = net;
       if (i === 0 || net < worstSession) worstSession = net;
-
-      if (
-        session.startTime != null &&
-        session.endTime != null &&
-        session.endTime > session.startTime
-      ) {
-        timedMs += session.endTime - session.startTime;
-        timedNet += net;
-      }
 
       const period =
         session.startTime >= thisMonthStart
@@ -192,10 +178,9 @@ export default function AnalyticsScreen({ navigation }) {
 
     // --- Hourly rate. The one figure that turns "down $400" into something
     // comparable to a wage, which is usually the more uncomfortable number.
-    const totalHours = timedMs / 3600000;
-    // Below a few minutes the divisor is noise, so report nothing rather than
-    // "+$4,182/hr" off one lucky two-minute session.
-    const hourlyRate = totalHours >= 0.25 ? timedNet / totalHours : null;
+    // Every game counts here, which is what makes it the lifetime rate — the
+    // per-game screens pass their own game's sessions to the same helper.
+    const { totalHours, hourlyRate } = calcHourlyRate(sessionHistory);
 
     // A period with no decided hands reports no win rate at all rather than
     // 0%, which would read as having lost every hand.

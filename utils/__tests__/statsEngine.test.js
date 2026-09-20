@@ -1,5 +1,6 @@
 import {
   getSessionsForGameType,
+  calcHourlyRateForGame,
   getChronologicalHands,
   calcOutcomeBreakdown,
   calcReturnStats,
@@ -16,6 +17,7 @@ import {
   buildLeakReport,
   computeInsights,
 } from '../statsEngine';
+import { calcHourlyRate } from '../sessionPatterns';
 
 // ---------------------------------------------------------------------
 // These tests deliberately construct hand sequences where the "correct"
@@ -603,5 +605,77 @@ describe('16. Per-game session cache', () => {
     const b = computeInsights(history, 'Blackjack');
     expect(b.totalHands).toBe(a.totalHands);
     expect(b.returnStats.netProfit).toBe(a.returnStats.netProfit);
+  });
+});
+
+// The poker insights screen used to compute its hourly figures over the whole
+// of sessionHistory, so "BB/Hour" divided poker big blinds by hours spent at
+// every game. These pin the scoping, since a wrong scope produces a plausible
+// number rather than an obvious failure.
+describe('17. Hourly rate scoping', () => {
+  const HOUR = 3600000;
+
+  // Two hours of blackjack at -$100, one hour of poker at +$60.
+  const mixedHistory = () =>
+    historyFromSessions([
+      {
+        ...makeSession({ hands: [hand({ bet: 50, outcome: 'loss' })], id: 'bj' }),
+        startTime: 0,
+        endTime: 2 * HOUR,
+        netProfit: -100,
+      },
+      {
+        ...makeSession({ hands: [hand({ bet: 30, outcome: 'win' })], gameType: 'Poker', id: 'pk' }),
+        startTime: 10 * HOUR,
+        endTime: 11 * HOUR,
+        netProfit: 60,
+      },
+    ]);
+
+  test('per-game rate counts only that game’s hours and net', () => {
+    const poker = calcHourlyRateForGame(mixedHistory(), 'Poker');
+    expect(poker.totalHours).toBe(1);
+    expect(poker.hourlyRate).toBe(60);
+
+    const blackjack = calcHourlyRateForGame(mixedHistory(), 'Blackjack');
+    expect(blackjack.totalHours).toBe(2);
+    expect(blackjack.hourlyRate).toBe(-50);
+  });
+
+  test('the lifetime rate counts every game', () => {
+    const all = calcHourlyRate(mixedHistory());
+    expect(all.totalHours).toBe(3);
+    // -100 + 60 over 3 hours.
+    expect(all.hourlyRate).toBeCloseTo(-40 / 3, 10);
+  });
+
+  // Below a few minutes the divisor is noise, so no rate is reported at all
+  // rather than "+$4,182/hr" off one lucky two-minute session.
+  test('too little time played reports no rate, but still reports the hours', () => {
+    const brief = historyFromSessions([
+      {
+        ...makeSession({ hands: [hand({ bet: 10, outcome: 'win' })], id: 'brief' }),
+        startTime: 0,
+        endTime: 60000,
+        netProfit: 10,
+      },
+    ]);
+    const r = calcHourlyRateForGame(brief, 'Blackjack');
+    expect(r.hourlyRate).toBeNull();
+    expect(r.totalHours).toBeCloseTo(1 / 60, 10);
+  });
+
+  // A session with no end, or an end at or before its start, would make the
+  // divisor lie in either direction.
+  test('sessions without a sane duration are excluded, not counted as zero', () => {
+    const broken = historyFromSessions([
+      { ...makeSession({ hands: [hand({ bet: 10, outcome: 'win' })], id: 'a' }), startTime: 0, endTime: null, netProfit: 500 },
+      { ...makeSession({ hands: [hand({ bet: 10, outcome: 'win' })], id: 'b' }), startTime: 5 * HOUR, endTime: 5 * HOUR, netProfit: 500 },
+      { ...makeSession({ hands: [hand({ bet: 10, outcome: 'win' })], id: 'c' }), startTime: 0, endTime: HOUR, netProfit: 20 },
+    ]);
+    const r = calcHourlyRateForGame(broken, 'Blackjack');
+    expect(r.sample).toBe(1);
+    expect(r.totalHours).toBe(1);
+    expect(r.hourlyRate).toBe(20);
   });
 });

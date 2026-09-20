@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, BackHandler } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -17,6 +17,8 @@ import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 import { NavBar } from '../components/ui';
 import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
+import useHardwareBack from '../components/useHardwareBack';
+import useFlash from '../components/useFlash';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers — same split
@@ -76,17 +78,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
   const isLocked = !isPro;
   const insets = useSafeAreaInsets();
 
-  // Without this, Android hardware back on this screen falls through to
-  // whatever BackHandler listener is still registered on a screen mounted
-  // underneath it in the stack (e.g. an in-progress game session) — see the
-  // same fix on AuthScreen.js.
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      navigation.goBack();
-      return true;
-    });
-    return () => sub.remove();
-  }, [navigation]);
+  useHardwareBack(navigation);
 
   // Multi-pass scan (game breakdown, streaks, day-of-week, volatility, leak
   // report) over the full session history — memoized so it only recomputes
@@ -118,7 +110,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
   const riskLabelColor =
     vol.riskLabel === 'Low' ? COLORS.success : vol.riskLabel === 'High' ? COLORS.danger : COLORS.warning;
 
-  const [copied, setCopied] = useState(false);
+  const [copied, flashCopied] = useFlash(false);
 
   const buildReportText = () => {
     // A shared report is an explicit export, like the CSV — it always carries
@@ -197,8 +189,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
       return;
     }
     await Clipboard.setStringAsync(buildReportText());
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    flashCopied(true);
   };
 
   if (!user) {

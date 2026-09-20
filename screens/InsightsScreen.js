@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, BackHandler } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -19,6 +19,8 @@ import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
+import useHardwareBack from '../components/useHardwareBack';
+import useFlash from '../components/useFlash';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers — same split
@@ -92,17 +94,7 @@ export default function InsightsScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const isLocked = !isPro;
 
-  // Without this, Android hardware back on this screen falls through to
-  // whatever BackHandler listener is still registered on a screen mounted
-  // underneath it in the stack (e.g. an in-progress game session) — see the
-  // same fix on AuthScreen.js.
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      navigation.goBack();
-      return true;
-    });
-    return () => sub.remove();
-  }, [navigation]);
+  useHardwareBack(navigation);
 
   const stats = useMemo(() => computeInsights(sessionHistory, gameType), [sessionHistory, gameType]);
   const hasEnoughData = stats.totalHands >= 5;
@@ -159,7 +151,7 @@ export default function InsightsScreen({ route, navigation }) {
   }, [stats, detail]);
   const topLeak = leaks[0] || null;
 
-  const [copied, setCopied] = useState(false);
+  const [copied, flashCopied] = useFlash(false);
 
   const buildReportText = () => {
     // A shared report is an explicit export, like the CSV — it always carries
@@ -298,8 +290,7 @@ export default function InsightsScreen({ route, navigation }) {
       return;
     }
     await Clipboard.setStringAsync(buildReportText());
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    flashCopied(true);
   };
 
   if (!user) {
@@ -500,7 +491,10 @@ export default function InsightsScreen({ route, navigation }) {
               </ExpandableSection>
 
               {/* Expandable Sections */}
-              {isBlackjack && detail && (
+              {/* detail is non-null for any blackjack session, but accuracy is
+                  null until some hands are logged with cards — same guard as
+                  the mistakes breakdown below. */}
+              {isBlackjack && detail && detail.accuracy && (
                 <>
                   <ExpandableSection title="The Details">
                     <View style={styles.card}>

@@ -3,9 +3,9 @@
 // The per-hand money math already lived in blackjackStrategy (calcBlackjackNet,
 // calcInsuranceNet) and was tested. What sat untested in BlackjackScreen was
 // the assembly around it: turning two form-state hands into the one `type:
-// 'split'` record that finalizeSession later flattens with
-//
-//   hands.flatMap((r) => (r.type === 'split' ? r.hands : [r]))
+// 'split'` record that utils/sessionTally's expandHands later flattens back
+// into the two hands it stands for — which is what finalizeSession, every
+// tracker's running totals, and every stats engine count.
 //
 // A malformed split record therefore doesn't throw — it silently changes
 // every hand-level stat in the app, which is exactly the failure a test

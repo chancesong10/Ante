@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, BackHandler } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -11,12 +11,16 @@ import { formatMoney } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases } from '../context/PurchasesContext';
 import { computePokerInsights } from '../utils/pokerStatsEngine';
+import { calcHourlyRateForGame } from '../utils/statsEngine';
+import { MIN_HOURS_FOR_RATE } from '../utils/sessionPatterns';
 import { SkeletonBar, LockedLeakTeaser, InsightsUnlockCta } from '../components/InsightsPaywall';
 import AuthGateScreen from '../components/AuthGateScreen';
 import StatLine from '../components/InsightStatLine';
 import CompareStat from '../components/InsightCompareStat';
 import { NavBar } from '../components/ui';
 import { ExpandableSection, ProgressBar, TrendArrow } from '../components/InsightVisuals';
+import useHardwareBack from '../components/useHardwareBack';
+import useFlash from '../components/useFlash';
 
 // Turns a scored leak object from buildLeakReport into copy. Kept in the
 // screen (not the engine) so the engine stays pure numbers, same split
@@ -68,17 +72,7 @@ export default function PokerInsightsScreen({ navigation }) {
   const isLocked = !isPro;
   const insets = useSafeAreaInsets();
 
-  // Without this, Android hardware back on this screen falls through to
-  // whatever BackHandler listener is still registered on a screen mounted
-  // underneath it in the stack (e.g. an in-progress game session) — see the
-  // same fix on AuthScreen.js.
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      navigation.goBack();
-      return true;
-    });
-    return () => sub.remove();
-  }, [navigation]);
+  useHardwareBack(navigation);
 
   const stats = useMemo(() => computePokerInsights(sessionHistory), [sessionHistory]);
   const hasEnoughData = stats.totalHands >= 5;
@@ -114,14 +108,18 @@ export default function PokerInsightsScreen({ navigation }) {
   const riskLabelColor =
     vol.riskLabel === 'Low' ? COLORS.success : vol.riskLabel === 'High' ? COLORS.danger : COLORS.warning;
 
-  const [copied, setCopied] = useState(false);
+  const [copied, flashCopied] = useFlash(false);
 
-  const timed = sessionHistory.filter((s) => s.startTime != null && s.endTime != null && s.endTime > s.startTime);
-  const totalMs = timed.reduce((sum, s) => sum + (s.endTime - s.startTime), 0);
-  const totalHours = totalMs / 3600000;
-  const timedNet = timed.reduce((sum, s) => sum + (s.netProfit || 0), 0);
-  const hourlyRate = totalHours >= 0.25 ? timedNet / totalHours : null;
-  const bbPerHour = bb && totalHours >= 0.25 ? bb.netBB / totalHours : null;
+  // Poker sessions only. This used to scan the whole of sessionHistory, so
+  // both figures below were measured against hours spent at every game —
+  // which made "BB/Hour" divide poker big blinds by blackjack time, and put
+  // the lifetime all-games rate under a heading reading "Hourly Rate" on a
+  // screen where every other number is poker.
+  const { totalHours, hourlyRate } = useMemo(
+    () => calcHourlyRateForGame(sessionHistory, 'Poker'),
+    [sessionHistory]
+  );
+  const bbPerHour = bb && totalHours >= MIN_HOURS_FOR_RATE ? bb.netBB / totalHours : null;
 
   const buildReportText = () => {
     // A shared report is an explicit export, like the CSV — it always carries
@@ -239,8 +237,7 @@ export default function PokerInsightsScreen({ navigation }) {
       return;
     }
     await Clipboard.setStringAsync(buildReportText());
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    flashCopied(true);
   };
 
   if (!user) {

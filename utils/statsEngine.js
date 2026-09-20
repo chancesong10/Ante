@@ -7,6 +7,12 @@
 // quietly depends on call order is a hard bug to find, and the cache is only
 // safe because of a property of the data it is handed.
 import { appendHand } from './sessionTally';
+import {
+  stdDev,
+  calcHourlyRate,
+  calcDayOfWeekPerformance as dayOfWeekPerformanceOf,
+  calcSessionLengthPerformance as sessionLengthPerformanceOf,
+} from './sessionPatterns';
 
 // One game's completed hand-mode sessions, oldest first.
 //
@@ -291,13 +297,6 @@ export function calcBetTierWinRates(hands) {
 }
 
 // --- NEW: Risk / volatility scoring ---
-function stdDev(values) {
-  if (values.length < 2) return 0;
-  const mean = values.reduce((s, v) => s + v, 0) / values.length;
-  const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / (values.length - 1);
-  return Math.sqrt(variance);
-}
-
 export function calcVolatility(hands) {
   const netChanges = hands.map((h) => h.netChange || 0);
   const betSizes = hands.map((h) => h.bet || 0);
@@ -323,58 +322,26 @@ export function calcVolatility(hands) {
   };
 }
 
-// --- NEW: Session-level patterns (day of week, session length) ---
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
+// --- Session-level patterns (day of week, session length) ---
+//
+// The arithmetic lives in utils/sessionPatterns, which the lifetime engine
+// reads too. These are the per-game doorway into it: they pick the sessions,
+// it does the maths. Keeping them as wrappers preserves the
+// (sessionHistory, gameType) signature every caller and test already uses.
 export function calcDayOfWeekPerformance(sessionHistory, gameType) {
-  const sessions = getSessionsForGameType(sessionHistory, gameType);
-  const byDay = {};
-  DAY_NAMES.forEach((d) => (byDay[d] = { netProfit: 0, sessions: 0 }));
-
-  sessions.forEach((s) => {
-    const day = DAY_NAMES[new Date(s.startTime).getDay()];
-    byDay[day].netProfit += s.netProfit;
-    byDay[day].sessions += 1;
-  });
-
-  const withData = Object.entries(byDay)
-    .filter(([, v]) => v.sessions > 0)
-    .map(([day, v]) => ({ day, avgNet: v.netProfit / v.sessions, sessions: v.sessions }));
-
-  // Need at least 2 distinct days with data — otherwise "best" and "worst"
-  // would just be the same single day, which is confusing, not insightful.
-  if (withData.length < 2) return null;
-
-  const best = withData.reduce((a, b) => (b.avgNet > a.avgNet ? b : a));
-  const worst = withData.reduce((a, b) => (b.avgNet < a.avgNet ? b : a));
-
-  return { best, worst, allDays: withData };
+  return dayOfWeekPerformanceOf(getSessionsForGameType(sessionHistory, gameType));
 }
 
 export function calcSessionLengthPerformance(sessionHistory, gameType) {
-  const sessions = getSessionsForGameType(sessionHistory, gameType);
-  if (sessions.length < 3) return null;
+  return sessionLengthPerformanceOf(getSessionsForGameType(sessionHistory, gameType));
+}
 
-  const tiers = { short: [], medium: [], long: [] };
-  sessions.forEach((s) => {
-    if (s.totalHands <= 10) tiers.short.push(s);
-    else if (s.totalHands <= 25) tiers.medium.push(s);
-    else tiers.long.push(s);
-  });
-
-  const summarize = (arr) => ({
-    sample: arr.length,
-    avgNetPerHand:
-      arr.length > 0
-        ? arr.reduce((sum, s) => sum + s.netProfit / (s.totalHands || 1), 0) / arr.length
-        : null,
-  });
-
-  return {
-    short: summarize(tiers.short),
-    medium: summarize(tiers.medium),
-    long: summarize(tiers.long),
-  };
+// One game's hours played and result per hour. Takes the game type rather
+// than a session list for the same reason as the two above — and because the
+// alternative is what the poker insights screen used to do, which was to pass
+// its whole history and quietly report an all-games figure on a poker screen.
+export function calcHourlyRateForGame(sessionHistory, gameType) {
+  return calcHourlyRate(getSessionsForGameType(sessionHistory, gameType));
 }
 
 // --- Leak detector, same shape as the poker/sports-betting engines: scans
