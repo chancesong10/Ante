@@ -491,7 +491,10 @@ export default function InsightsScreen({ route, navigation }) {
               </ExpandableSection>
 
               {/* Expandable Sections */}
-              {isBlackjack && detail && (
+              {/* detail is non-null for any blackjack session, but accuracy is
+                  null until some hands are logged with cards — same guard as
+                  the mistakes breakdown below. */}
+              {isBlackjack && detail && detail.accuracy && (
                 <>
                   <ExpandableSection title="The Details">
                     <View style={styles.card}>

@@ -148,6 +148,24 @@ describe('calcStrategyAccuracy', () => {
     expect(acc.topMistakes).toEqual([
       { situation: 'Hard 12 vs 4', action: 'hit', recommended: 'stand', count: 2, net: -20 },
     ]);
+    // Split by verdict: the won double (+20) and the lost-but-correct hit
+    // (-10) on one side, the two misplayed 12s (-10 each) on the other. The
+    // unjudged record contributes to neither.
+    expect(acc.correctNet).toBe(10);
+    expect(acc.mistakeNet).toBe(-20);
+  });
+
+  test('net splits only over judged hands, and follows the play not the result', () => {
+    // Both hands are played correctly and both lose, so a correct-play total
+    // is allowed to be negative — it reports results, not a verdict.
+    const acc = calcStrategyAccuracy([
+      rec({ cards: ['10', '6'], up: '10', action: 'hit' }),
+      rec({ cards: ['10', '2'], up: '2', action: 'hit' }),
+      rec({ cards: ['10', '6'], up: '10' }), // no play logged — not judged
+    ]);
+    expect(acc).toMatchObject({ judged: 2, correct: 2, mistakeCount: 0 });
+    expect(acc.correctNet).toBe(-20);
+    expect(acc.mistakeNet).toBe(0);
   });
 
   test('null when nothing can be judged', () => {
