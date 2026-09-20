@@ -30,6 +30,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import Toggle from '../components/Toggle';
 import { PLUS_NAME } from '../constants/brand';
 import { styles } from './profileScreenStyles';
+import useFlash from '../components/useFlash';
 
 export default function DataPrivacyScreen({ navigation }) {
   const { privacyMode = false, updatePreferences } = usePreferences();
@@ -37,10 +38,10 @@ export default function DataPrivacyScreen({ navigation }) {
   const { sessionHistory, clearAllSessions } = useVisibleSessionHistory();
 
   const [deviceId, setDeviceId] = useState('ante_vault_seed');
-  const [copiedSeed, setCopiedSeed] = useState(false);
+  const [copiedSeed, flashCopiedSeed] = useFlash(false, 2500);
   const [exporting, setExporting] = useState(false);
   const [dataModal, setDataModal] = useState(null);
-  const [notice, setNotice] = useState(null);
+  const [notice, flashNotice] = useFlash(null, 2600);
 
   useEffect(() => {
     (async () => {
@@ -49,15 +50,9 @@ export default function DataPrivacyScreen({ navigation }) {
     })();
   }, []);
 
-  const flashNotice = (text) => {
-    setNotice(text);
-    setTimeout(() => setNotice(null), 2600);
-  };
-
   const handleCopySeed = async () => {
     await Clipboard.setStringAsync(deviceId);
-    setCopiedSeed(true);
-    setTimeout(() => setCopiedSeed(false), 2500);
+    flashCopiedSeed(true);
   };
 
   const handleExport = async () => {

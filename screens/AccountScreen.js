@@ -32,6 +32,7 @@ import { useSessionHistory } from '../context/SessionContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { PLUS_NAME } from '../constants/brand';
 import { styles } from './profileScreenStyles';
+import useFlash from '../components/useFlash';
 
 export default function AccountScreen({ navigation }) {
   const {
@@ -56,7 +57,7 @@ export default function AccountScreen({ navigation }) {
   const [verifyCode, setVerifyCode] = useState('');
   const [accountBusy, setAccountBusy] = useState(false);
   const [accountError, setAccountError] = useState(null);
-  const [accountNotice, setAccountNotice] = useState(null);
+  const [accountNotice, flashNotice] = useFlash(null, 2600);
   // Result dialog after a delete. Named for what it is rather than inherited
   // from Profile's shared `dataModal`, which now lives on Data & Privacy.
   const [resultModal, setResultModal] = useState(null);
@@ -151,10 +152,7 @@ export default function AccountScreen({ navigation }) {
     setAccountError(null);
   };
 
-  const flashNotice = (text) => {
-    setAccountNotice(text);
-    setTimeout(() => setAccountNotice(null), 2600);
-  };
+
 
   const handleSaveUsername = async () => {
     const name = tempUsername.trim();

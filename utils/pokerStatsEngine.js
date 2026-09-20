@@ -9,6 +9,7 @@ import {
   calcDayOfWeekPerformance,
   calcSessionLengthPerformance,
 } from './statsEngine';
+import { stdDev } from './sessionPatterns';
 
 export { calcDayOfWeekPerformance, calcSessionLengthPerformance };
 
@@ -275,13 +276,6 @@ export function calcStreaks(hands) {
 
 // --- Volatility, same formula and thresholds validated for blackjack's
 // calcVolatility, applied to heroInvestment instead of bet. ---
-function stdDev(values) {
-  if (values.length < 2) return 0;
-  const mean = values.reduce((s, v) => s + v, 0) / values.length;
-  const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / (values.length - 1);
-  return Math.sqrt(variance);
-}
-
 export function calcVolatility(hands) {
   const netChanges = hands.map((h) => h.netChange || 0);
   const investments = hands.map((h) => h.heroInvestment || 0);

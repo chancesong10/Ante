@@ -6,8 +6,21 @@
 // "net profit" is the one currency that's uniformly meaningful across
 // every game type Ante tracks (including General's simple buy-in/cash-out
 // sessions, which have no hand-level detail at all).
+//
+// The two patterns that are genuinely the same calculation as the per-game
+// engines' — day of week and session length — come from utils/sessionPatterns
+// rather than being restated here. They used to be a near-verbatim copy, and
+// the copies had already drifted.
+import {
+  stdDev,
+  hasSaneDuration,
+  calcDayOfWeekPerformance,
+  calcSessionLengthPerformance,
+} from './sessionPatterns';
+
+export { calcDayOfWeekPerformance, calcSessionLengthPerformance };
+
 const GAME_KEYS = ['Blackjack', 'Poker', 'Sports Betting', 'Roulette', 'Baccarat', 'General'];
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // sessionHistory is stored newest-first; every stat below wants oldest-first.
 export function getAllSessionsChronological(sessionHistory) {
@@ -94,28 +107,9 @@ export function calcSessionStreaks(sessions) {
   return { currentStreakType: lastType, currentStreakLength, longestWinStreak, longestLossStreak };
 }
 
-// --- Best/worst day of week, across every game combined. ---
-export function calcDayOfWeekPerformance(sessions) {
-  const byDay = {};
-  DAY_NAMES.forEach((d) => (byDay[d] = { netProfit: 0, sessions: 0 }));
-
-  sessions.forEach((s) => {
-    const day = DAY_NAMES[new Date(s.startTime).getDay()];
-    byDay[day].netProfit += s.netProfit || 0;
-    byDay[day].sessions += 1;
-  });
-
-  const withData = Object.entries(byDay)
-    .filter(([, v]) => v.sessions > 0)
-    .map(([day, v]) => ({ day, avgNet: v.netProfit / v.sessions, sessions: v.sessions }));
-
-  if (withData.length < 2) return null;
-
-  const best = withData.reduce((a, b) => (b.avgNet > a.avgNet ? b : a));
-  const worst = withData.reduce((a, b) => (b.avgNet < a.avgNet ? b : a));
-
-  return { best, worst, allDays: withData };
-}
+// --- Best/worst day of week, across every game combined: the shared
+// calcDayOfWeekPerformance, re-exported at the top of this file. The only
+// difference from the per-game engines' use of it is which sessions go in. ---
 
 // --- When you play, not just what day. Day-of-week already exists above,
 // but the hour a session *starts* is the sharper signal: late-night play is
@@ -167,41 +161,14 @@ export function calcTimeOfDayPerformance(sessions) {
   return { all, withData, best, worst, lateNight };
 }
 
-// --- Performance by session length, across every game combined. ---
-export function calcSessionLengthPerformance(sessions) {
-  if (sessions.length < 3) return null;
-
-  const tiers = { short: [], medium: [], long: [] };
-  sessions.forEach((s) => {
-    const totalHands = s.totalHands || 0;
-    if (totalHands <= 10) tiers.short.push(s);
-    else if (totalHands <= 25) tiers.medium.push(s);
-    else tiers.long.push(s);
-  });
-
-  const summarize = (arr) => ({
-    sample: arr.length,
-    avgNetPerHand:
-      arr.length > 0
-        ? arr.reduce((sum, s) => sum + (s.netProfit || 0) / (s.totalHands || 1), 0) / arr.length
-        : null,
-  });
-
-  return { short: summarize(tiers.short), medium: summarize(tiers.medium), long: summarize(tiers.long) };
-}
+// --- Performance by session length, across every game combined: the shared
+// calcSessionLengthPerformance, re-exported at the top of this file. ---
 
 // --- Session-to-session consistency. There's no honest cross-game "average
 // bet" to normalize against here, so this uses each session's own typical
 // magnitude (mean absolute net profit) as the yardstick instead — a
 // coefficient-of-variation read on how consistent your session results
 // are, not a bet-relative one like the per-game engines use. ---
-function stdDev(values) {
-  if (values.length < 2) return 0;
-  const mean = values.reduce((s, v) => s + v, 0) / values.length;
-  const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / (values.length - 1);
-  return Math.sqrt(variance);
-}
-
 export function calcVolatility(sessions) {
   const netProfits = sessions.map((s) => s.netProfit || 0);
   const avgMagnitude =
@@ -225,9 +192,7 @@ export function calcVolatility(sessions) {
 // start/end pair (shouldn't happen in practice, but defensively) are
 // excluded rather than treated as zero-length. ---
 export function calcTimePlayed(sessions) {
-  const withDuration = sessions.filter(
-    (s) => s.startTime != null && s.endTime != null && s.endTime > s.startTime
-  );
+  const withDuration = sessions.filter(hasSaneDuration);
   if (withDuration.length === 0) return null;
   const totalMinutes = withDuration.reduce((sum, s) => sum + (s.endTime - s.startTime), 0) / 60000;
   return {
