@@ -713,13 +713,13 @@ export default function InsightsScreen({ route, navigation }) {
                     <CompareStat
                       label="Hands at 6:5 tables"
                       value={fmtPct(detail.tableRules.sixFiveShare)}
-                      sub={`n=${detail.tableRules.sixFiveHands}`}
+                      sub={`${detail.tableRules.sixFiveHands} hands`}
                       locked={isLocked}
                     />
                     <CompareStat
                       label="Dealer hits soft 17"
                       value={fmtPct(detail.tableRules.h17Share)}
-                      sub={`n=${detail.tableRules.h17Hands}`}
+                      sub={`${detail.tableRules.h17Hands} hands`}
                       locked={isLocked}
                     />
                   </View>
@@ -744,17 +744,20 @@ export default function InsightsScreen({ route, navigation }) {
                   <Text style={styles.cardLabel}>Win rate by bet size</Text>
                   <Text style={styles.cardHint}>Based on your own small / medium / large bet ranges</Text>
                   <StatLine
-                    label={`Small (avg ${currencySymbol}${formatNumber(tiers.small.avgBet, 0)}, n=${tiers.small.sample})`}
+                    label={`Small (avg ${currencySymbol}${formatNumber(tiers.small.avgBet, 0)})`}
+                    subLabel={`${tiers.small.sample} hands`}
                     value={fmtPct(tiers.small.winRate)}
                     locked={isLocked}
                   />
                   <StatLine
-                    label={`Medium (avg ${currencySymbol}${formatNumber(tiers.medium.avgBet, 0)}, n=${tiers.medium.sample})`}
+                    label={`Medium (avg ${currencySymbol}${formatNumber(tiers.medium.avgBet, 0)})`}
+                    subLabel={`${tiers.medium.sample} hands`}
                     value={fmtPct(tiers.medium.winRate)}
                     locked={isLocked}
                   />
                   <StatLine
-                    label={`Large (avg ${currencySymbol}${formatNumber(tiers.large.avgBet, 0)}, n=${tiers.large.sample})`}
+                    label={`Large (avg ${currencySymbol}${formatNumber(tiers.large.avgBet, 0)})`}
+                    subLabel={`${tiers.large.sample} hands`}
                     value={fmtPct(tiers.large.winRate)}
                     locked={isLocked}
                   />
@@ -804,8 +807,18 @@ export default function InsightsScreen({ route, navigation }) {
               {/* Bet size after outcome */}
               <View style={styles.card}>
                 <Text style={styles.cardLabel}>Bet size after outcome</Text>
-                <StatLine label="After a win" value={fmtDollar(stats.avgBetAfterWin)} locked={isLocked} />
-                <StatLine label="After a loss" value={fmtDollar(stats.avgBetAfterLoss)} locked={isLocked} />
+                <View style={styles.compareRow}>
+                  <CompareStat
+                    label="After a win"
+                    value={fmtDollar(stats.avgBetAfterWin)}
+                    locked={isLocked}
+                  />
+                  <CompareStat
+                    label="After a loss"
+                    value={fmtDollar(stats.avgBetAfterLoss)}
+                    locked={isLocked}
+                  />
+                </View>
                 {!isLocked && chasesLosses && (
                   <View style={styles.insightNote}>
                     <Ionicons name="alert-circle-outline" size={moderateScale(16)} color={COLORS.warning} />
@@ -827,20 +840,28 @@ export default function InsightsScreen({ route, navigation }) {
 
               {/* Day of week */}
               {dow && (
-                <View style={styles.card}>
+                <View style={{ marginBottom: 16 }}>
                   <Text style={styles.cardLabel}>Best &amp; worst days</Text>
-                  <StatLine
-                    label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
-                    value={fmtMoney(dow.best.avgNet)}
-                    valueColor={COLORS.success}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
-                    value={fmtMoney(dow.worst.avgNet)}
-                    valueColor={COLORS.danger}
-                    locked={isLocked}
-                  />
+                  <View style={styles.rowCards}>
+                    <View style={[styles.halfCard, { borderColor: COLORS.cardBorder }]}>
+                      <Text style={styles.cardLabel}>BEST DAY</Text>
+                      {isLocked ? (
+                        <SkeletonBar width={50} height={20} style={{ marginTop: 8 }} />
+                      ) : (
+                        <Text style={[styles.halfValue, { color: COLORS.success }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{dow.best.day}</Text>
+                      )}
+                      <Text style={styles.cardFootnote}>{dow.best.sessions} session{dow.best.sessions !== 1 ? 's' : ''} · {fmtMoney(dow.best.avgNet)} avg</Text>
+                    </View>
+                    <View style={[styles.halfCard, { borderColor: COLORS.cardBorder }]}>
+                      <Text style={styles.cardLabel}>WORST DAY</Text>
+                      {isLocked ? (
+                        <SkeletonBar width={50} height={20} style={{ marginTop: 8 }} />
+                      ) : (
+                        <Text style={[styles.halfValue, { color: COLORS.danger }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{dow.worst.day}</Text>
+                      )}
+                      <Text style={styles.cardFootnote}>{dow.worst.sessions} session{dow.worst.sessions !== 1 ? 's' : ''} · {fmtMoney(dow.worst.avgNet)} avg</Text>
+                    </View>
+                  </View>
                   <Text style={styles.cardFootnote}>
                     {dow.best.sessions < 3 || dow.worst.sessions < 3
                       ? 'Average net profit per session on each day — based on very few sessions per day so far, so treat this as a first read, not a rule.'
@@ -853,21 +874,23 @@ export default function InsightsScreen({ route, navigation }) {
               {lenPerf && (
                 <View style={styles.card}>
                   <Text style={styles.cardLabel}>Performance by session length</Text>
-                  <StatLine
-                    label={`Short: ≤10 hands`}
-                    value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Medium: 11–25 hands`}
-                    value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Large: 25+ hands`}
-                    value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
-                    locked={isLocked}
-                  />
+                  <View style={styles.compareRow}>
+                    <CompareStat
+                      label="≤ 10 hands"
+                      value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
+                      locked={isLocked}
+                    />
+                    <CompareStat
+                      label="11–25 hands"
+                      value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
+                      locked={isLocked}
+                    />
+                    <CompareStat
+                      label="25+ hands"
+                      value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
+                      locked={isLocked}
+                    />
+                  </View>
                   <Text style={styles.cardFootnote}>
                     If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.
                   </Text>

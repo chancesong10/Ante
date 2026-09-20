@@ -381,20 +381,32 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               {/* Stake Size After Outcome */}
               <View style={[styles.card, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>STAKE SIZE AFTER OUTCOME</Text>
-                <StatLine label="After a Win" value={formatMoney(betSizeAfterOutcome.avgBetAfterWin, currencySymbol, privacyMode, { signed: false })} locked={isLocked} />
-                <StatLine label="After a Loss" value={formatMoney(betSizeAfterOutcome.avgBetAfterLoss, currencySymbol, privacyMode, { signed: false })} locked={isLocked} />
+                <View style={styles.compareRow}>
+                  <CompareStat
+                    label="After a Win"
+                    value={formatMoney(betSizeAfterOutcome.avgBetAfterWin, currencySymbol, privacyMode, { signed: false })}
+                    locked={isLocked}
+                  />
+                  <CompareStat
+                    label="After a Loss"
+                    value={formatMoney(betSizeAfterOutcome.avgBetAfterLoss, currencySymbol, privacyMode, { signed: false })}
+                    locked={isLocked}
+                  />
+                </View>
                 {!isLocked && chasesLosses && (
                   <View style={styles.insightNote}>
                     <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
                     <Text style={styles.insightNoteText}>
-                      You stake {((betSizeDelta / (betSizeAfterOutcome.avgBetAfterWin || 1)) * 100).toFixed(0)}% more right after losing a bet than after winning one — a loss-chasing pattern worth watching.
+                      You bet {((betSizeDelta / (betSizeAfterOutcome.avgBetAfterWin || 1)) * 100).toFixed(0)}% more right after a loss than after a win — a loss-chasing pattern worth watching.
                     </Text>
                   </View>
                 )}
                 {!isLocked && disciplinedSizing && (
                   <View style={styles.insightNote}>
                     <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
-                    <Text style={styles.insightNoteText}>You don't bet bigger after a loss to try to win it back — that's disciplined staking.</Text>
+                    <Text style={styles.insightNoteText}>
+                      You don't bet bigger after losing to try to win it back — that's disciplined sizing.
+                    </Text>
                   </View>
                 )}
               </View>
@@ -417,7 +429,10 @@ export default function SportsBettingInsightsScreen({ navigation }) {
                   </View>
                 </View>
               )}
+            </ExpandableSection>
 
+            {/* Advanced Stats */}
+            <ExpandableSection title="Advanced Stats">
               {/* Day of Week */}
               {dow && (
                 <View style={[styles.card, SHADOWS.card]}>
@@ -466,10 +481,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
                   </View>
                 </View>
               )}
-            </ExpandableSection>
 
-            {/* Advanced Stats */}
-            <ExpandableSection title="Advanced Stats">
               {/* Risk & Volatility */}
               <View style={[styles.card, SHADOWS.card]}>
                 <View style={styles.riskHeaderRow}>

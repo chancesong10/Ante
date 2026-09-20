@@ -335,37 +335,48 @@ export default function LifetimeInsightsScreen({ navigation }) {
                 </View>
               )}
 
+            </ExpandableSection>
+
+            {/* Advanced Stats */}
+            <ExpandableSection title="Advanced Stats" defaultExpanded={false}>
               {/* Day of Week */}
               {dow ? (
                 <View style={{ marginBottom: 16 }}>
                   <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                  <StatLine
-                    label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
-                    value={fmtMoney(dow.best.avgNet)}
-                    valueColor={COLORS.success}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
-                    value={fmtMoney(dow.worst.avgNet)}
-                    valueColor={COLORS.danger}
-                    locked={isLocked}
-                  />
+                  <View style={styles.rowCards}>
+                    <View style={[styles.halfCard, SHADOWS.card]}>
+                      <Text style={styles.cardLabel}>BEST DAY</Text>
+                      {isLocked ? (
+                        <SkeletonBar width={50} height={20} style={{ marginTop: 8 }} />
+                      ) : (
+                        <Text style={[styles.halfValue, { color: COLORS.success }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{dow.best.day}</Text>
+                      )}
+                      <Text style={styles.cardFootnote}>{dow.best.sessions} session{dow.best.sessions !== 1 ? 's' : ''} · {fmtMoney(dow.best.avgNet)} avg</Text>
+                    </View>
+                    <View style={[styles.halfCard, SHADOWS.card]}>
+                      <Text style={styles.cardLabel}>WORST DAY</Text>
+                      {isLocked ? (
+                        <SkeletonBar width={50} height={20} style={{ marginTop: 8 }} />
+                      ) : (
+                        <Text style={[styles.halfValue, { color: COLORS.danger }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{dow.worst.day}</Text>
+                      )}
+                      <Text style={styles.cardFootnote}>{dow.worst.sessions} session{dow.worst.sessions !== 1 ? 's' : ''} · {fmtMoney(dow.worst.avgNet)} avg</Text>
+                    </View>
+                  </View>
                 </View>
               ) : null}
 
               {/* Time of Day */}
               {tod ? (
-                <View style={{ marginBottom: 16 }}>
+                <View style={[styles.card, SHADOWS.card, { marginBottom: 16 }]}>
                   <Text style={styles.cardLabel}>PERFORMANCE BY TIME OF DAY</Text>
                   {tod.withData.map((block) => (
                     <StatLine
                       key={block.id}
-                      label={`${block.label} · ${block.range} (${block.sessions} sessions)`}
+                      label={`${block.label} · ${block.range}`}
+                      subLabel={`${block.sessions} session${block.sessions !== 1 ? 's' : ''}`}
                       value={fmtMoney(block.avgNet)}
-                      valueColor={
-                        netTone(block.avgNet, privacyMode)
-                      }
+                      valueColor={netTone(block.avgNet, privacyMode)}
                       locked={isLocked}
                     />
                   ))}
@@ -374,29 +385,29 @@ export default function LifetimeInsightsScreen({ navigation }) {
 
               {/* Session Length Performance */}
               {lenPerf ? (
-                <View style={{ marginBottom: 16 }}>
+                <View style={[styles.card, SHADOWS.card, { marginBottom: 16 }]}>
                   <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
                   <StatLine
-                    label={`Short: ≤10 hands (${lenPerf.short.sample} sessions)`}
+                    label="Short: ≤10 hands"
+                    subLabel={`${lenPerf.short.sample} session${lenPerf.short.sample !== 1 ? 's' : ''}`}
                     value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
                     locked={isLocked}
                   />
                   <StatLine
-                    label={`Medium: 11–25 hands (${lenPerf.medium.sample} sessions)`}
+                    label="Medium: 11–25 hands"
+                    subLabel={`${lenPerf.medium.sample} session${lenPerf.medium.sample !== 1 ? 's' : ''}`}
                     value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
                     locked={isLocked}
                   />
                   <StatLine
-                    label={`Large: 25+ hands (${lenPerf.long.sample} sessions)`}
+                    label="Large: 25+ hands"
+                    subLabel={`${lenPerf.long.sample} session${lenPerf.long.sample !== 1 ? 's' : ''}`}
                     value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
                     locked={isLocked}
                   />
                 </View>
               ) : null}
-            </ExpandableSection>
 
-            {/* Advanced Stats */}
-            <ExpandableSection title="Advanced Stats" defaultExpanded={false}>
               <View style={[styles.card, SHADOWS.card, { marginBottom: 8 }]}>
                 <View style={styles.riskHeaderRow}>
                   <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>

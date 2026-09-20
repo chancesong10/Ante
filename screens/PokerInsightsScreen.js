@@ -399,23 +399,35 @@ export default function PokerInsightsScreen({ navigation }) {
                 <Text style={styles.cardHint}>Coming soon: see your win rate across different stakes.</Text>
               </View>
 
-              {/* Investment After Outcome (Chasing) */}
+              {/* Investment after outcome */}
               <View style={[styles.card, SHADOWS.card]}>
                 <Text style={styles.cardLabel}>INVESTMENT AFTER OUTCOME</Text>
-                <StatLine label="After a Winning Hand" value={fmtMoneyAbs(investAfter.avgInvestmentAfterWin)} locked={isLocked} />
-                <StatLine label="After a Losing Hand" value={fmtMoneyAbs(investAfter.avgInvestmentAfterLoss)} locked={isLocked} />
+                <View style={styles.compareRow}>
+                  <CompareStat
+                    label="After a Win"
+                    value={fmtMoneyAbs(investAfter.avgInvestmentAfterWin)}
+                    locked={isLocked}
+                  />
+                  <CompareStat
+                    label="After a Loss"
+                    value={fmtMoneyAbs(investAfter.avgInvestmentAfterLoss)}
+                    locked={isLocked}
+                  />
+                </View>
                 {!isLocked && chasesLosses && (
                   <View style={styles.insightNote}>
                     <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
                     <Text style={styles.insightNoteText}>
-                      You invest {((betSizeDelta / (investAfter.avgInvestmentAfterWin || 1)) * 100).toFixed(0)}% more right after losing a hand than after winning one — a loss-chasing pattern worth watching.
+                      You invest {((betSizeDelta / (investAfter.avgInvestmentAfterWin || 1)) * 100).toFixed(0)}% more into pots right after a loss than after a win — a tilt or loss-chasing signature.
                     </Text>
                   </View>
                 )}
                 {!isLocked && disciplinedSizing && (
                   <View style={styles.insightNote}>
                     <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
-                    <Text style={styles.insightNoteText}>You don't bet bigger after losing to try to win it back — that's disciplined sizing.</Text>
+                    <Text style={styles.insightNoteText}>
+                      You don't play bigger pots right after a loss to try to win it back.
+                    </Text>
                   </View>
                 )}
               </View>
@@ -463,7 +475,9 @@ export default function PokerInsightsScreen({ navigation }) {
                   )}
                 </View>
               )}
+            </ExpandableSection>
 
+            <ExpandableSection title="Advanced Stats">
               {/* Day of Week */}
               {dow && (
                 <View style={[styles.card, SHADOWS.card]}>
@@ -516,9 +530,7 @@ export default function PokerInsightsScreen({ navigation }) {
                   <Text style={styles.cardFootnote}>If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.</Text>
                 </View>
               )}
-            </ExpandableSection>
 
-            <ExpandableSection title="Advanced Stats">
               {/* Volatility */}
               <View style={[styles.card, SHADOWS.card]}>
                 <View style={styles.riskHeaderRow}>

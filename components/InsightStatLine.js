@@ -7,10 +7,13 @@ import { SkeletonBar } from './InsightsPaywall';
 // Shared across every insights screen. When `locked`, the real value is
 // never rendered at all — a redacted bar stands in for it instead — so
 // there's nothing sensitive underneath to recover.
-export default function InsightStatLine({ label, value, valueColor, locked }) {
+export default function InsightStatLine({ label, subLabel, value, valueColor, locked }) {
   return (
     <View style={styles.statRow}>
-      <Text style={styles.statRowLabel}>{label}</Text>
+      <View style={styles.labelCol}>
+        <Text style={styles.statRowLabel}>{label}</Text>
+        {!!subLabel && <Text style={styles.statRowSubLabel}>{subLabel}</Text>}
+      </View>
       {locked ? (
         <SkeletonBar width={64} height={13} />
       ) : (
@@ -34,12 +37,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: moderateScale(7),
   },
+  labelCol: {
+    flex: 1,
+    marginRight: moderateScale(8),
+    justifyContent: 'center',
+  },
   statRowLabel: {
     fontSize: fluidFont(13),
     color: COLORS.textSecondary,
     fontWeight: '500',
-    flex: 1,
-    marginRight: moderateScale(8),
+  },
+  statRowSubLabel: {
+    fontSize: fluidFont(11),
+    color: COLORS.textMuted,
+    marginTop: moderateScale(2),
   },
   statRowValue: {
     fontSize: fluidFont(13),

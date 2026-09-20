@@ -488,8 +488,18 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 {/* Bet size after outcome */}
                 <View style={[styles.card, SHADOWS.card]}>
                   <Text style={styles.cardLabel}>BET SIZE AFTER OUTCOME</Text>
-                  <StatLine label="After a Win" value={fmtDollar(sizing.avgBetAfterWin)} locked={isLocked} />
-                  <StatLine label="After a Loss" value={fmtDollar(sizing.avgBetAfterLoss)} locked={isLocked} />
+                  <View style={styles.compareRow}>
+                    <CompareStat
+                      label="After a Win"
+                      value={fmtDollar(sizing.avgBetAfterWin)}
+                      locked={isLocked}
+                    />
+                    <CompareStat
+                      label="After a Loss"
+                      value={fmtDollar(sizing.avgBetAfterLoss)}
+                      locked={isLocked}
+                    />
+                  </View>
                   {!isLocked && chasesLosses && (
                     <View style={styles.insightNote}>
                       <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
@@ -501,7 +511,9 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                   {!isLocked && disciplinedSizing && (
                     <View style={styles.insightNote}>
                       <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.success} />
-                      <Text style={styles.insightNoteText}>You don't bet bigger after a loss to try to win it back — that's disciplined sizing.</Text>
+                      <Text style={styles.insightNoteText}>
+                        You don't bet bigger after losing to try to win it back — that's disciplined sizing.
+                      </Text>
                     </View>
                   )}
                 </View>
