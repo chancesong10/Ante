@@ -127,7 +127,7 @@ export default function PokerInsightsScreen({ navigation }) {
     // shadow the masked helpers above for the whole report, getLeakCopy
     // included, since that takes its formatters as parameters.
     const fmtMoney = (v) => formatMoney(v, currencySymbol, false);
-    const fmtMoneyAbs = (v) => formatMoney(v, currencySymbol, false, { signed: false });
+    const fmtMoneyAbs = (v) => formatMoney(Math.abs(v), currencySymbol, false, { signed: false });
     const lines = [];
     lines.push('ANTE — POKER INSIGHTS REPORT');
     lines.push(`Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
@@ -468,18 +468,23 @@ export default function PokerInsightsScreen({ navigation }) {
               {dow && (
                 <View style={[styles.card, SHADOWS.card]}>
                   <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                  <StatLine
-                    label={`Best: ${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
-                    value={fmtMoney(dow.best.avgNet)}
-                    valueColor={COLORS.success}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Worst: ${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
-                    value={fmtMoney(dow.worst.avgNet)}
-                    valueColor={COLORS.danger}
-                    locked={isLocked}
-                  />
+                  <Text style={styles.cardHint}>Average net profit per session on your strongest and weakest days</Text>
+                  <View style={styles.compareRow}>
+                    <CompareStat
+                      label="Best Day"
+                      value={fmtMoney(dow.best.avgNet)}
+                      valueColor={COLORS.success}
+                      sub={`${dow.best.day} (${dow.best.sessions} session${dow.best.sessions !== 1 ? 's' : ''})`}
+                      locked={isLocked}
+                    />
+                    <CompareStat
+                      label="Worst Day"
+                      value={fmtMoney(dow.worst.avgNet)}
+                      valueColor={COLORS.danger}
+                      sub={`${dow.worst.day} (${dow.worst.sessions} session${dow.worst.sessions !== 1 ? 's' : ''})`}
+                      locked={isLocked}
+                    />
+                  </View>
                 </View>
               )}
 
@@ -487,21 +492,27 @@ export default function PokerInsightsScreen({ navigation }) {
               {lenPerf && (
                 <View style={[styles.card, SHADOWS.card]}>
                   <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
-                  <StatLine
-                    label={`Short: ≤10 hands (${lenPerf.short.sample} hands)`}
-                    value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/hand` : '—'}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Medium: 11–25 hands (${lenPerf.medium.sample} hands)`}
-                    value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/hand` : '—'}
-                    locked={isLocked}
-                  />
-                  <StatLine
-                    label={`Large: 25+ hands (${lenPerf.long.sample} hands)`}
-                    value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/hand` : '—'}
-                    locked={isLocked}
-                  />
+                  <Text style={styles.cardHint}>Average net profit per hand based on how long you play</Text>
+                  <View style={styles.compareRow}>
+                    <CompareStat
+                      label="≤ 10 hands"
+                      value={lenPerf.short.avgNetPerHand !== null ? fmtMoney(lenPerf.short.avgNetPerHand) : '—'}
+                      sub={`${lenPerf.short.sample} hands`}
+                      locked={isLocked}
+                    />
+                    <CompareStat
+                      label="11–25 hands"
+                      value={lenPerf.medium.avgNetPerHand !== null ? fmtMoney(lenPerf.medium.avgNetPerHand) : '—'}
+                      sub={`${lenPerf.medium.sample} hands`}
+                      locked={isLocked}
+                    />
+                    <CompareStat
+                      label="25+ hands"
+                      value={lenPerf.long.avgNetPerHand !== null ? fmtMoney(lenPerf.long.avgNetPerHand) : '—'}
+                      sub={`${lenPerf.long.sample} hands`}
+                      locked={isLocked}
+                    />
+                  </View>
                   <Text style={styles.cardFootnote}>If longer sessions trend worse, that can be a fatigue or tilt signal worth watching.</Text>
                 </View>
               )}
@@ -529,9 +540,11 @@ export default function PokerInsightsScreen({ navigation }) {
                     ? `Your results typically swing about ${vol.volatilityRatio.toFixed(1)}x your average investment, hand to hand.`
                     : 'Not enough investment variation yet to score this.'}
                 </Text>
-                <StatLine label="Net Result Std. Deviation" value={fmtMoneyAbs(vol.netResultStdDev)} locked={isLocked} />
-                <StatLine label="Investment Std. Deviation" value={fmtMoneyAbs(vol.investmentStdDev)} locked={isLocked} />
-                <StatLine label="Sizing Consistency" value={vol.investmentConsistency !== null ? `${vol.investmentConsistency.toFixed(0)}/100` : '—'} locked={isLocked} />
+                  <View style={styles.compareRow}>
+                    <CompareStat label="Net Std. Dev" value={fmtMoneyAbs(vol.netResultStdDev)} locked={isLocked} />
+                    <CompareStat label="Invest Std. Dev" value={fmtMoneyAbs(vol.investmentStdDev)} locked={isLocked} />
+                    <CompareStat label="Sizing Consistency" value={vol.investmentConsistency !== null ? `${vol.investmentConsistency.toFixed(0)}/100` : '—'} locked={isLocked} />
+                  </View>
               </View>
 
               {/* BB/Hour */}
@@ -626,7 +639,7 @@ export default function PokerInsightsScreen({ navigation }) {
                   {byStreet.map((s) => (
                     <StatLine
                       key={s.street}
-                      label={`{s.street} ({s.sample} hands)`}
+                      label={`${s.street} (${s.sample} hands)`}
                       value={s.bluffedRate !== null ? `${fmtPct(s.bluffedRate)} bluffed` : '—'}
                       valueColor={s.bluffedRate !== null && s.bluffedRate > 40 ? COLORS.danger : undefined}
                       locked={isLocked}

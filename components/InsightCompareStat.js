@@ -45,14 +45,15 @@ export default function InsightCompareStat({ label, value, valueColor, sub, lock
 }
 
 const styles = StyleSheet.create({
-  // Flattened: a hairline-bordered cell on the card ground, not a filled
-  // sub-card nested inside the parent card.
+  // Flattened: a cell with a subtle inset ground, to distinguish it
+  // from the parent card ground and create a "bento box" aesthetic.
   compareCol: {
     flex: 1,
+    backgroundColor: COLORS.background,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    borderRadius: RADIUS.sm,
-    paddingVertical: moderateScale(12),
+    borderRadius: RADIUS.md,
+    paddingVertical: moderateScale(14),
     paddingHorizontal: moderateScale(10),
     alignItems: 'center',
   },
