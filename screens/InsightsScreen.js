@@ -35,13 +35,13 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
       };
     case 'double_down_underuse':
       return {
-        title: "You're Leaving Profitable Doubles on the Table",
-        detail: `You double down on ${fmtPct(leak.rate)} of hands, well under the ~${leak.benchmarkRate}% basic strategy suggests. Underdoubling gives up known long-run value on strong hands.`,
+        title: "Double-Down Rate is Below Baseline",
+        detail: `You double down on ${fmtPct(leak.rate)} of hands, which is under the ~${leak.benchmarkRate}% that basic strategy models calculate.`,
       };
     case 'double_down_overuse':
       return {
-        title: "You're Doubling More Than Basic Strategy Suggests",
-        detail: `You double down on ${fmtPct(leak.rate)} of hands, well above the ~${leak.benchmarkRate}% basic strategy suggests. Worth checking you're only doubling hard 9–11 and strong soft hands.`,
+        title: "Double-Down Rate is Above Baseline",
+        detail: `You double down on ${fmtPct(leak.rate)} of hands, which is above the ~${leak.benchmarkRate}% that basic strategy models calculate.`,
       };
     case 'doubling_underperformance':
       return {
@@ -60,8 +60,8 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
       };
     case 'strategy_mistakes':
       return {
-        title: 'Basic Strategy Mistakes Are Costing You',
-        detail: `Your play matched basic strategy on ${fmtPct(leak.rate)} of ${leak.judged} hands logged with cards. Your most common miss: ${leak.topMistake.situation}, where you ${actionPastTense(leak.topMistake.action)} ${leak.topMistake.count} time${leak.topMistake.count === 1 ? '' : 's'} — basic strategy says ${actionLabel(leak.topMistake.recommended).toLowerCase()}.`,
+        title: 'Frequent Deviations from Basic Strategy',
+        detail: `Your play matched basic strategy on ${fmtPct(leak.rate)} of ${leak.judged} hands logged with cards. Your most common deviation: ${leak.topMistake.situation}, where you ${actionPastTense(leak.topMistake.action)} ${leak.topMistake.count} time${leak.topMistake.count === 1 ? '' : 's'} — basic strategy dictates ${actionLabel(leak.topMistake.recommended).toLowerCase()}.`,
       };
     case 'missed_doubles':
       return {
@@ -144,6 +144,7 @@ export default function InsightsScreen({ route, navigation }) {
   const fmtPct = (v) => (v === null || v === undefined ? '—' : `${v.toFixed(1)}%`);
   const fmtMoney = (v) => formatMoney(v, currencySymbol, privacyMode);
   const fmtDollar = (v) => formatMoney(v, currencySymbol, privacyMode, { signed: false });
+  const fmtMoneyAbs = (v) => formatMoney(Math.abs(v), currencySymbol, privacyMode, { signed: false });
 
   // Card-level leaks join the frequency-based ones. Once enough hands are
   // logged with cards to judge doubling hand by hand, that check replaces the
@@ -167,6 +168,7 @@ export default function InsightsScreen({ route, navigation }) {
     // included, since that takes its formatters as parameters.
     const fmtMoney = (v) => formatMoney(v, currencySymbol, false);
     const fmtDollar = (v) => formatMoney(v, currencySymbol, false, { signed: false });
+    const fmtMoneyAbs = (v) => formatMoney(Math.abs(v), currencySymbol, false, { signed: false });
     const lines = [];
     lines.push(`ANTE — ${gameType.toUpperCase()} INSIGHTS REPORT`);
     lines.push(`Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
@@ -226,7 +228,7 @@ export default function InsightsScreen({ route, navigation }) {
       if (detail.accuracy) {
         lines.push(`Basic strategy accuracy: ${fmtPct(detail.accuracy.rate)} (${detail.accuracy.correct} of ${detail.accuracy.judged} decisions)`);
         detail.accuracy.topMistakes.slice(0, 5).forEach((m) => {
-          lines.push(`Mistake — ${m.situation}: you ${actionPastTense(m.action)} ×${m.count}, basic strategy says ${actionLabel(m.recommended)} (net ${fmtMoney(m.net)})`);
+          lines.push(`Deviation — ${m.situation}: you ${actionPastTense(m.action)} ×${m.count}, basic strategy says ${actionLabel(m.recommended)} (net ${fmtMoney(m.net)})`);
         });
       }
       if (detail.doubling) {
@@ -339,12 +341,12 @@ export default function InsightsScreen({ route, navigation }) {
                     }
                   />
                   <CompareStat label="Correct plays" value={String(detail.accuracy.correct)} />
-                  <CompareStat label="Mistakes" value={String(detail.accuracy.mistakeCount)} />
+                  <CompareStat label="Deviations" value={String(detail.accuracy.mistakeCount)} />
                 </View>
                 <Text style={styles.cardFootnote}>
                   {isLocked
-                    ? 'Unlock Ante+ to see exactly which spots you misplay and what they cost.'
-                    : 'Your most common mistakes are broken down further down this page.'}
+                    ? 'Unlock Ante+ to see exactly which spots you deviate in and what they cost.'
+                    : 'Your most common deviations are broken down further down this page.'}
                 </Text>
               </View>
             ) : (
@@ -496,6 +498,35 @@ export default function InsightsScreen({ route, navigation }) {
               </View>
 
               </ExpandableSection>
+
+              {/* Expandable Sections */}
+              {isBlackjack && detail && (
+                <>
+                  <ExpandableSection title="The Details">
+                    <View style={styles.card}>
+                      <Text style={styles.cardLabel}>Basic strategy performance</Text>
+                      <Text style={styles.cardHint}>Your net result on the hands where you followed basic strategy vs. the ones where you deviated</Text>
+                      <View style={styles.compareRow}>
+                        <CompareStat
+                          label="Followed"
+                          value={fmtMoneyAbs(detail.accuracy.correctNet)}
+                          valueColor={netTone(detail.accuracy.correctNet)}
+                          sub={`${detail.accuracy.correct} hands`}
+                          locked={isLocked}
+                        />
+                        <CompareStat
+                          label="Deviated"
+                          value={fmtMoneyAbs(detail.accuracy.mistakeNet)}
+                          valueColor={netTone(detail.accuracy.mistakeNet)}
+                          sub={`${detail.accuracy.mistakeCount} hands`}
+                          locked={isLocked}
+                        />
+                      </View>
+                    </View>
+                  </ExpandableSection>
+                </>
+              )}
+
               {/* Advanced Stats */}
               <ExpandableSection title="Advanced Stats">
               {isBlackjack && (
@@ -528,7 +559,7 @@ export default function InsightsScreen({ route, navigation }) {
                     <View style={styles.card}>
                       <Text style={styles.cardLabel}>Double-down frequency</Text>
                       <Text style={styles.cardHint}>
-                        How often you double, vs. roughly how often basic strategy calls for it
+                        How often you double, vs. roughly how often basic strategy models expect
                       </Text>
                       <View style={styles.compareRow}>
                         <CompareStat label={`You`} value={`${ddr.rate.toFixed(1)}%`} locked={isLocked} />
@@ -538,10 +569,10 @@ export default function InsightsScreen({ route, navigation }) {
                         {isLocked
                           ? 'Unlock Ante+ to see how your doubling frequency compares to basic strategy.'
                           : ddr.rate < ddr.benchmarkRate - 2
-                          ? "You're doubling less often than basic strategy suggests — you may be leaving profitable doubles on the table."
+                          ? "You double down less often than what typical basic strategy models calculate."
                           : ddr.rate > ddr.benchmarkRate + 4
-                          ? "You're doubling noticeably more than basic strategy suggests — worth checking you're only doubling hard 9–11 and strong soft hands."
-                          : "That's roughly in the range basic strategy would suggest."}
+                          ? "You double down more often than what typical basic strategy models calculate."
+                          : "That's roughly in the range basic strategy models calculate."}
                       </Text>
                     </View>
                   )}
@@ -573,7 +604,7 @@ export default function InsightsScreen({ route, navigation }) {
                 <>
                   {detail.accuracy && detail.accuracy.topMistakes.length > 0 && (
                     <View style={styles.card}>
-                      <Text style={styles.cardLabel}>Most common strategy mistakes</Text>
+                      <Text style={styles.cardLabel}>Most common strategy deviations</Text>
                       <Text style={styles.cardHint}>Spots where your play didn't match basic strategy, most frequent first</Text>
                       {isLocked
                         ? [0, 1, 2].map((i) => (
@@ -589,7 +620,7 @@ export default function InsightsScreen({ route, navigation }) {
                                 <Text style={styles.mistakeCount}>×{m.count}</Text>
                               </View>
                               <Text style={styles.mistakeDetail}>
-                                You {actionPastTense(m.action)}; basic strategy says {actionLabel(m.recommended).toLowerCase()}. Net on
+                                You {actionPastTense(m.action)}; basic strategy dictates {actionLabel(m.recommended).toLowerCase()}. Net on
                                 these hands: {fmtMoney(m.net)}.
                               </Text>
                             </View>
@@ -877,7 +908,7 @@ export default function InsightsScreen({ route, navigation }) {
         </ScrollView>
         {isLocked && (
           <InsightsUnlockCta
-            subtitle="Your strategy mistakes, doubling decisions, and leak detection — unlocked with Ante+."
+            subtitle="Your strategy deviations, doubling decisions, and leak detection — unlocked with Ante+."
             onPress={() => navigation.navigate('AntePlus')}
           />
         )}

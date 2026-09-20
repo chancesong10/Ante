@@ -406,7 +406,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
 
             {/* Advanced Stats */}
             <ExpandableSection title="Advanced Stats" defaultExpanded={false}>
-              <View style={{ marginBottom: 8 }}>
+              <View style={[styles.card, SHADOWS.card, { marginBottom: 8 }]}>
                 <View style={styles.riskHeaderRow}>
                   <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
                   {isLocked ? (

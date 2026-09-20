@@ -569,18 +569,23 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 {dow && (
                   <View style={[styles.card, SHADOWS.card]}>
                     <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
-                    <StatLine
-                      label={`Best: ${dow.best.day}`}
-                      value={fmtMoney(dow.best.avgNet)}
-                      valueColor={COLORS.success}
-                      locked={isLocked}
-                    />
-                    <StatLine
-                      label={`Worst: ${dow.worst.day}`}
-                      value={fmtMoney(dow.worst.avgNet)}
-                      valueColor={COLORS.danger}
-                      locked={isLocked}
-                    />
+                    <Text style={styles.cardHint}>Average net profit per session on your strongest and weakest days</Text>
+                    <View style={styles.compareRow}>
+                      <CompareStat
+                        label="Best Day"
+                        value={fmtMoney(dow.best.avgNet)}
+                        valueColor={COLORS.success}
+                        sub={dow.best.day}
+                        locked={isLocked}
+                      />
+                      <CompareStat
+                        label="Worst Day"
+                        value={fmtMoney(dow.worst.avgNet)}
+                        valueColor={COLORS.danger}
+                        sub={dow.worst.day}
+                        locked={isLocked}
+                      />
+                    </View>
                   </View>
                 )}
 
@@ -588,21 +593,24 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 {lenPerf && (
                   <View style={[styles.card, SHADOWS.card]}>
                     <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
-                    <StatLine
-                      label={`Short: ≤10 ${unit}s`}
-                      value={lenPerf.short.avgNetPerHand !== null ? `${fmtMoney(lenPerf.short.avgNetPerHand)}/${unit}` : '—'}
-                      locked={isLocked}
-                    />
-                    <StatLine
-                      label={`Medium: 11–25 ${unit}s`}
-                      value={lenPerf.medium.avgNetPerHand !== null ? `${fmtMoney(lenPerf.medium.avgNetPerHand)}/${unit}` : '—'}
-                      locked={isLocked}
-                    />
-                    <StatLine
-                      label={`Long: 25+ ${unit}s`}
-                      value={lenPerf.long.avgNetPerHand !== null ? `${fmtMoney(lenPerf.long.avgNetPerHand)}/${unit}` : '—'}
-                      locked={isLocked}
-                    />
+                    <Text style={styles.cardHint}>Average net profit per {unit} based on how long you play</Text>
+                    <View style={styles.compareRow}>
+                      <CompareStat
+                        label={`≤10 ${unit}s`}
+                        value={lenPerf.short.avgNetPerHand !== null ? fmtMoney(lenPerf.short.avgNetPerHand) : '—'}
+                        locked={isLocked}
+                      />
+                      <CompareStat
+                        label={`11–25 ${unit}s`}
+                        value={lenPerf.medium.avgNetPerHand !== null ? fmtMoney(lenPerf.medium.avgNetPerHand) : '—'}
+                        locked={isLocked}
+                      />
+                      <CompareStat
+                        label={`25+ ${unit}s`}
+                        value={lenPerf.long.avgNetPerHand !== null ? fmtMoney(lenPerf.long.avgNetPerHand) : '—'}
+                        locked={isLocked}
+                      />
+                    </View>
                   </View>
                 )}
               </ExpandableSection>
