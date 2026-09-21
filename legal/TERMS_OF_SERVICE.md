@@ -4,7 +4,7 @@
 
 ## 1. Agreement to Terms
 
-These Terms of Service ("Terms") are between you and Tnc, Inc., and they govern your access to and use of the Ante mobile application ("Ante," "the app," "we," "us," or "our").
+These Terms of Service ("Terms") are between you and Chance Song, and they govern your access to and use of the Ante mobile application ("Ante," "the app," "we," "us," or "our").
 
 Ante asks you to accept these Terms and our Privacy Policy, and to confirm your age, before it will open. Tapping to accept is how you agree to be bound by them. If you do not agree, do not use the app. If we materially change these Terms, the app will ask you to accept the new version before you continue.
 
@@ -28,7 +28,7 @@ You are solely responsible for any decision you make, gambling or otherwise, bas
 
 Ante includes optional tools — a configurable stop-loss alert, and access to problem-gambling helpline resources — intended to support more mindful play. These tools are a convenience, not a safeguard. They do not prevent you from gambling, do not limit what you can wager, and are not a substitute for professional help. They may also fail to fire, for reasons ranging from a device restart to data you did not log, and you should not rely on them to tell you when to stop.
 
-If you are concerned about your own or someone else’s gambling, contact the National Council on Problem Gambling at 1-800-522-4700 in the United States, or the appropriate resource in your country. Tnc, Inc. is not a treatment provider, counselling service, or medical resource, and nothing in the app is a clinical assessment of anyone’s gambling.
+If you are concerned about your own or someone else’s gambling, contact the National Council on Problem Gambling at 1-800-522-4700 in the United States, or the appropriate resource in your country. Chance Song is not a treatment provider, counselling service, or medical resource, and nothing in the app is a clinical assessment of anyone’s gambling.
 
 ## 6. Your account and data
 
@@ -59,7 +59,7 @@ You agree not to:
 
 ## 9. Intellectual property
 
-Tnc, Inc. owns Ante, including its design, branding, source code, and the specific analytics methodology it uses. Subject to your compliance with these Terms, we grant you a limited, non-exclusive, non-transferable, revocable licence to use the app for your own personal, non-commercial purposes. All rights not expressly granted are reserved.
+Chance Song owns Ante, including its design, branding, source code, and the specific analytics methodology it uses. Subject to your compliance with these Terms, we grant you a limited, non-exclusive, non-transferable, revocable licence to use the app for your own personal, non-commercial purposes. All rights not expressly granted are reserved.
 
 The session records you enter remain yours. You grant us only the licence we need to store, process, and display them back to you in order to run the app — nothing broader, and it ends when you delete the data.
 
@@ -73,13 +73,13 @@ Some jurisdictions do not allow the exclusion of implied warranties, and nothing
 
 ## 11. Limitation of liability
 
-To the fullest extent permitted by law, Tnc, Inc. shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or for any loss of data, loss of profits, or gambling losses, arising out of or related to your use of the app, even if advised of the possibility of such damages. Our total liability for any claim arising from your use of the app shall not exceed the greater of the amount you paid us in the twelve months preceding the claim, or twenty US dollars.
+To the fullest extent permitted by law, Chance Song shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or for any loss of data, loss of profits, or gambling losses, arising out of or related to your use of the app, even if advised of the possibility of such damages. Our total liability for any claim arising from your use of the app shall not exceed the greater of the amount you paid us in the twelve months preceding the claim, or twenty US dollars.
 
 Nothing in these Terms excludes or limits our liability for death or personal injury caused by our negligence, for fraud or fraudulent misrepresentation, or for anything else that cannot lawfully be excluded or limited — including, for consumers in the EU, the UK, and other jurisdictions with mandatory consumer protections, your non-excludable statutory rights. Some jurisdictions do not allow the exclusion or limitation of certain damages, so parts of this section may not apply to you.
 
 ## 12. Indemnification
 
-To the extent permitted by law, you agree to indemnify and hold harmless Tnc, Inc. from any third-party claim, loss, or demand, including reasonable attorneys’ fees, arising out of your misuse of the app or your violation of these Terms or applicable law. This does not apply to anything caused by our own breach or negligence, and it does not apply where you are a consumer and the law of your country does not permit it.
+To the extent permitted by law, you agree to indemnify and hold harmless Chance Song from any third-party claim, loss, or demand, including reasonable attorneys’ fees, arising out of your misuse of the app or your violation of these Terms or applicable law. This does not apply to anything caused by our own breach or negligence, and it does not apply where you are a consumer and the law of your country does not permit it.
 
 ## 13. Apple and Google
 
@@ -105,7 +105,7 @@ You may stop using Ante at any time, and delete your account from Profile → Ac
 
 ## 16. Governing law and disputes
 
-These Terms are governed by the laws of the Province of British Columbia and the federal laws of Canada applicable therein, without regard to conflict-of-laws principles, and you and Tnc, Inc. submit to the jurisdiction of the courts located in British Columbia, Canada.
+These Terms are governed by the laws of the Province of British Columbia and the federal laws of Canada applicable therein, without regard to conflict-of-laws principles, and you and Chance Song submit to the jurisdiction of the courts located in British Columbia, Canada.
 
 If you are a consumer, this does not deprive you of the protection of the mandatory consumer law of the country where you live, or of any right that law gives you to bring proceedings in your local courts. Nothing here waives any right you have to bring a claim in a small-claims court.
 

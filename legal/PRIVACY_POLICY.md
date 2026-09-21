@@ -6,7 +6,7 @@
 
 Ante ("Ante," "the app," "we," "us," or "our") is a personal bankroll and session-tracking application for Blackjack, Poker, Sports Betting, and other wagering activities you engage in independently of the app. This Privacy Policy explains what information Ante interacts with, how it is stored, and what control you have over it.
 
-Ante is operated by Tnc, Inc., which is the data controller for the information described below. If you have questions about this policy, contact us at tncante1008@gmail.com.
+Ante is operated by Chance Song, the data controller for the information described below. If you have questions about this policy, contact us at tncante1008@gmail.com.
 
 ## The short version
 

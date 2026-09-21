@@ -14,7 +14,13 @@
 // Change anything here, then re-run that script and bump LEGAL_VERSION.
 
 export const CONTACT_EMAIL = 'tncante1008@gmail.com';
-export const OPERATOR = 'Tnc, Inc.';
+// The operator is a person, not a company. It said "Tnc, Inc." until
+// 2026-09-20, which was not an incorporated entity — so the liability cap and
+// indemnity in the Terms named a party that did not exist, and the corporate
+// designation itself is restricted under BC's Business Corporations Act.
+// Change this to a company name only once one actually exists; keep every
+// sentence below working for either, i.e. no "which is" after it.
+export const OPERATOR = 'Chance Song';
 
 // Bumping this re-prompts every existing user for consent on next launch, so
 // it moves only for a change a reasonable user would want to be told about —
@@ -44,7 +50,9 @@ export const PRIVACY_SECTIONS = [
     heading: 'Overview',
     body: [
       'Ante ("Ante," "the app," "we," "us," or "our") is a personal bankroll and session-tracking application for Blackjack, Poker, Sports Betting, and other wagering activities you engage in independently of the app. This Privacy Policy explains what information Ante interacts with, how it is stored, and what control you have over it.',
-      `Ante is operated by ${OPERATOR}, which is the data controller for the information described below. If you have questions about this policy, contact us at ${CONTACT_EMAIL}.`,
+      // Appositive rather than "who is"/"which is", so this reads correctly
+      // whether OPERATOR is a person or a company.
+      `Ante is operated by ${OPERATOR}, the data controller for the information described below. If you have questions about this policy, contact us at ${CONTACT_EMAIL}.`,
     ],
   },
   {
