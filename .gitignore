@@ -51,3 +51,6 @@ skills-lock.json
 
 # generated promo/video output (HyperFrames renders + bundled media assets)
 brag-output/
+
+# Personal project report (not for the repo)
+PROJECT_REPORT.md
