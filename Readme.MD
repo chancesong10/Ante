@@ -103,7 +103,7 @@ Ante is **local-first**. Everything works fully offline, and an account is optio
 - **No third-party analytics or ad tracking** is embedded in the app.
 - Subscription status is handled by RevenueCat; the payment itself is processed by Apple or Google, and card details never reach us.
 
-Full detail in the [Privacy Policy](https://chancesong10.github.io/Ante/privacy-policy.html) and [Terms of Service](https://chancesong10.github.io/Ante/terms-of-service.html).
+Full detail in the [Privacy Policy](https://anteapp.github.io/privacy-policy.html) and [Terms of Service](https://anteapp.github.io/terms-of-service.html).
 
 ## What's next
 

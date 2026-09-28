@@ -24,5 +24,5 @@ If gambling is causing you harm, call the National Council on Problem Gambling o
 
 Ante+ is an optional auto-renewing subscription. Price and billing period are shown in the app before purchase; it renews automatically unless cancelled at least 24 hours before the period ends, and can be managed or cancelled any time in your Google Play account settings.
 
-Terms: https://chancesong10.github.io/Ante/terms-of-service.html
-Privacy: https://chancesong10.github.io/Ante/privacy-policy.html
+Terms: https://anteapp.github.io/terms-of-service.html
+Privacy: https://anteapp.github.io/privacy-policy.html
