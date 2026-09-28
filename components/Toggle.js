@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { hapticSelection } from '../utils/haptics';
 
@@ -78,7 +78,7 @@ export default function Toggle({ value, onValueChange, disabled = false, accessi
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   track: {
     width: TRACK_W,
     height: TRACK_H,
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     width: THUMB,
     height: THUMB,
     borderRadius: THUMB / 2,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.switchThumb,
     // Lifts the knob off the track so the control reads as a physical switch.
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -107,4 +107,4 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.4,
   },
-});
+}));

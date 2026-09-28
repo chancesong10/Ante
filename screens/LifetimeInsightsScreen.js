@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -48,16 +48,16 @@ function getLeakCopy(leak, { fmtMoney, fmtPct }) {
       };
     case 'session_length_fatigue':
       return {
-        title: 'Your Longer Sessions Run Worse',
+        title: 'Your longer sessions run worse',
         detail: `Short sessions net ${fmtMoney(leak.shortAvgNetPerHand)}/hand (n=${leak.sampleShort}) vs. ${fmtMoney(leak.longAvgNetPerHand)}/hand (n=${leak.sampleLong}) once a session runs long. That's a classic fatigue signature.`,
       };
     case 'volatility':
       return {
-        title: 'Your Bankroll Swings Hard, Session to Session',
+        title: 'Your bankroll swings hard, session to session',
         detail: `Your session results vary about ${leak.volatilityRatio.toFixed(1)}x their own typical size. That's real variance risk sitting on top of whatever edge you have anywhere you play.`,
       };
     default:
-      return { title: 'Leak Detected', detail: '' };
+      return { title: 'Leak detected', detail: '' };
   }
 }
 
@@ -208,7 +208,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
         {!hasEnoughData && !isLocked ? (
           <View style={styles.emptyCard}>
             <Ionicons name="analytics-outline" size={28} color={COLORS.textMuted} />
-            <Text style={styles.emptyTitle}>Not Enough Data Yet</Text>
+            <Text style={styles.emptyTitle}>Not enough data yet</Text>
             <Text style={styles.emptyText}>
               Log at least 5 sessions across any games to unlock cross-game patterns. Right now you have {stats.totalSessions}.
             </Text>
@@ -233,7 +233,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
             ) : (
               <View style={[styles.card, SHADOWS.card, styles.noLeakCard]}>
                 <Ionicons name="shield-checkmark" size={20} color={COLORS.success} />
-                <Text style={styles.noLeakTitle}>No Major Leaks Detected</Text>
+                <Text style={styles.noLeakTitle}>No major leaks detected</Text>
                 <Text style={styles.noLeakText}>
                   Your game mix, timing, and volatility all look within a healthy range across {stats.totalSessions} sessions.
                 </Text>
@@ -241,23 +241,23 @@ export default function LifetimeInsightsScreen({ navigation }) {
             )}
 
             {/* The Basics */}
-            <ExpandableSection title="The Basics" defaultExpanded={true}>
+            <ExpandableSection title="The basics" defaultExpanded={true}>
               {isLocked ? (
                 <View style={styles.compareRow}>
-                  <CompareStat label="Lifetime Net" value={fmtMoney(stats.netProfit)} locked={true} />
-                  <CompareStat label="Win Rate" value={fmtPct(stats.winRate)} locked={true} />
+                  <CompareStat label="Lifetime net" value={fmtMoney(stats.netProfit)} locked={true} />
+                  <CompareStat label="Win rate" value={fmtPct(stats.winRate)} locked={true} />
                   <CompareStat label="Sessions" value={String(stats.totalSessions)} locked={true} />
                 </View>
               ) : (
                 <>
                   <TrendArrow
                     trend={stats.netProfit}
-                    label="Total Profit"
+                    label="Total profit"
                     valueText={fmtMoney(stats.netProfit)}
                     goodIsUp={true}
                   />
                   <ProgressBar
-                    label="Win Rate"
+                    label="Win rate"
                     valueText={fmtPct(stats.winRate)}
                     percent={stats.winRate}
                     color={COLORS.primary}
@@ -266,8 +266,8 @@ export default function LifetimeInsightsScreen({ navigation }) {
                     <CompareStat label="Sessions" value={String(stats.totalSessions)} locked={false} />
                     {timePlayed && (
                       <>
-                        <CompareStat label="Time Played" value={fmtDuration(timePlayed.totalMinutes)} locked={false} />
-                        <CompareStat label="Avg / Session" value={fmtDuration(timePlayed.avgMinutesPerSession)} locked={false} />
+                        <CompareStat label="Time played" value={fmtDuration(timePlayed.totalMinutes)} locked={false} />
+                        <CompareStat label="Avg / session" value={fmtDuration(timePlayed.avgMinutesPerSession)} locked={false} />
                       </>
                     )}
                   </View>
@@ -276,10 +276,10 @@ export default function LifetimeInsightsScreen({ navigation }) {
             </ExpandableSection>
 
             {/* Your Habits */}
-            <ExpandableSection title="Your Habits" defaultExpanded={true}>
+            <ExpandableSection title="Your habits" defaultExpanded={true}>
               {/* Session Streaks */}
               <View style={{ marginBottom: 16 }}>
-                <Text style={styles.cardLabel}>CURRENT SESSION STREAK</Text>
+                <Text style={styles.cardLabel}>Current session streak</Text>
                 {isLocked ? (
                   <SkeletonBar width={120} height={26} style={{ marginTop: 4 }} />
                 ) : (
@@ -293,12 +293,12 @@ export default function LifetimeInsightsScreen({ navigation }) {
 
               <View style={styles.rowCards}>
                 <View style={[styles.halfCard, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>LONGEST WINNING STREAK</Text>
+                  <Text style={styles.cardLabel}>Longest winning streak</Text>
                   {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
                   <Text style={styles.cardFootnote}>sessions in a row</Text>
                 </View>
                 <View style={[styles.halfCard, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>LONGEST LOSING STREAK</Text>
+                  <Text style={styles.cardLabel}>Longest losing streak</Text>
                   {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
                   <Text style={styles.cardFootnote}>sessions in a row</Text>
                 </View>
@@ -307,7 +307,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
               {/* Performance by Game */}
               {games.all.length > 0 && (
                 <View style={{ marginBottom: 16, marginTop: 16 }}>
-                  <Text style={styles.cardLabel}>PERFORMANCE BY GAME</Text>
+                  <Text style={styles.cardLabel}>Performance by game</Text>
                   <Text style={styles.cardHint}>Average net per session</Text>
                   {games.all.map((g) => (
                     <View key={g.gameType} style={styles.gameRow}>
@@ -338,14 +338,14 @@ export default function LifetimeInsightsScreen({ navigation }) {
             </ExpandableSection>
 
             {/* Advanced Stats */}
-            <ExpandableSection title="Advanced Stats" defaultExpanded={false}>
+            <ExpandableSection title="Advanced stats" defaultExpanded={false}>
               {/* Day of Week */}
               {dow ? (
                 <View style={{ marginBottom: 16 }}>
-                  <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
+                  <Text style={styles.cardLabel}>Best & worst days</Text>
                   <View style={styles.rowCards}>
                     <View style={[styles.halfCard, SHADOWS.card]}>
-                      <Text style={styles.cardLabel}>BEST DAY</Text>
+                      <Text style={styles.cardLabel}>Best day</Text>
                       {isLocked ? (
                         <SkeletonBar width={50} height={20} style={{ marginTop: 8 }} />
                       ) : (
@@ -354,7 +354,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
                       <Text style={styles.cardFootnote}>{dow.best.sessions} session{dow.best.sessions !== 1 ? 's' : ''} · {fmtMoney(dow.best.avgNet)} avg</Text>
                     </View>
                     <View style={[styles.halfCard, SHADOWS.card]}>
-                      <Text style={styles.cardLabel}>WORST DAY</Text>
+                      <Text style={styles.cardLabel}>Worst day</Text>
                       {isLocked ? (
                         <SkeletonBar width={50} height={20} style={{ marginTop: 8 }} />
                       ) : (
@@ -369,7 +369,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
               {/* Time of Day */}
               {tod ? (
                 <View style={[styles.card, SHADOWS.card, { marginBottom: 16 }]}>
-                  <Text style={styles.cardLabel}>PERFORMANCE BY TIME OF DAY</Text>
+                  <Text style={styles.cardLabel}>Performance by time of day</Text>
                   {tod.withData.map((block) => (
                     <StatLine
                       key={block.id}
@@ -386,7 +386,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
               {/* Session Length Performance */}
               {lenPerf ? (
                 <View style={[styles.card, SHADOWS.card, { marginBottom: 16 }]}>
-                  <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
+                  <Text style={styles.cardLabel}>Performance by session length</Text>
                   <StatLine
                     label="Short: ≤10 hands"
                     subLabel={`${lenPerf.short.sample} session${lenPerf.short.sample !== 1 ? 's' : ''}`}
@@ -410,7 +410,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
 
               <View style={[styles.card, SHADOWS.card, { marginBottom: 8 }]}>
                 <View style={styles.riskHeaderRow}>
-                  <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
+                  <Text style={styles.cardLabel}>Risk & volatility</Text>
                   {isLocked ? (
                     <SkeletonBar width={56} height={18} />
                   ) : (
@@ -434,7 +434,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
             {/* Copy Report */}
             <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]} activeOpacity={0.85} onPress={handleCopyReport}>
               <Ionicons name={isLocked ? 'lock-closed' : copied ? 'checkmark-circle' : 'clipboard-outline'} size={18} color={COLORS.textDark} style={{ marginRight: 8 }} />
-              <Text style={styles.copyReportBtnText}>{isLocked ? 'Unlock Ante+ to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}</Text>
+              <Text style={styles.copyReportBtnText}>{isLocked ? 'Unlock Ante+ to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy full report'}</Text>
             </TouchableOpacity>
             <Text style={styles.copyReportHint}>
               Paste this into a doc or an AI chat to dig into your numbers further. It's a plain-text summary of everything on this page — not gambling advice.
@@ -453,7 +453,7 @@ export default function LifetimeInsightsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   topNav: {
     flexDirection: 'row',
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   gameRowValue: { fontSize: 13, fontWeight: '700' },
   riskHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   riskBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
-  riskBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  riskBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   copyReportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -557,4 +557,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 8,
   },
-});
+}));

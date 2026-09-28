@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { COLORS, themed } from '../constants/theme';
 
 // A compact switch for a table condition that changes the math — which wheel,
 // what a Tie pays. It's set once per table rather than once per bet, so it
@@ -34,14 +34,13 @@ export default function SegmentedPicker({ label, options, value, onChange, style
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   label: {
     fontSize: 11,
     color: COLORS.textMuted,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
     marginRight: 10,
   },
   track: {
@@ -67,4 +66,4 @@ const styles = StyleSheet.create({
   segmentTextActive: { color: COLORS.textPrimary, fontWeight: '700' },
   segmentSub: { fontSize: 10, color: COLORS.textMuted, marginTop: 1, fontWeight: '600' },
   segmentSubActive: { color: COLORS.textSecondary },
-});
+}));

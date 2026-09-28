@@ -42,7 +42,7 @@ export function PokerSetupPlayers({
         <TrackerGuide gameType="Poker" navigation={navigation} />
         <View style={screenStyles.navTitleContainer}>
           <MaterialCommunityIcons name="cards-playing-outline" size={20} color={COLORS.primary} />
-          <Text style={screenStyles.navTitle}>Poker Setup</Text>
+          <Text style={screenStyles.navTitle}>Poker setup</Text>
         </View>
         <View style={{ width: 38 }} />
       </View>
@@ -55,17 +55,17 @@ export function PokerSetupPlayers({
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.card, SHADOWS.card]}>
-          <Text style={styles.sectionHeaderTitle}>How Many Players?</Text>
+          <Text style={styles.sectionHeaderTitle}>How many players?</Text>
           <Text style={styles.cardSubtitle}>
             Enter the total number of players at the table, including yourself.
           </Text>
 
-          <Text style={styles.label}>Players at the Table</Text>
+          <Text style={styles.label}>Players at the table</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
             placeholder="e.g. 6"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.placeholder}
             value={playerCount}
             onChangeText={setPlayerCount}
             autoFocus
@@ -84,7 +84,7 @@ export function PokerSetupPlayers({
           onPress={handleConfirmPlayerCount}
         >
           <Ionicons name="arrow-forward-circle" size={20} color={COLORS.textDark} style={{ marginRight: 8 }} />
-          <Text style={styles.submitText}>Continue to Blinds</Text>
+          <Text style={styles.submitText}>Continue to blinds</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -121,7 +121,7 @@ export function PokerSetupBlinds({
         </TouchableOpacity>
         <View style={screenStyles.navTitleContainer}>
           <MaterialCommunityIcons name="cards-playing-outline" size={20} color={COLORS.primary} />
-          <Text style={screenStyles.navTitle}>Poker Setup</Text>
+          <Text style={screenStyles.navTitle}>Poker setup</Text>
         </View>
         <View style={{ width: 38 }} />
       </View>
@@ -134,7 +134,7 @@ export function PokerSetupBlinds({
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.card, SHADOWS.card]}>
-          <Text style={styles.sectionHeaderTitle}>Table Blinds</Text>
+          <Text style={styles.sectionHeaderTitle}>Table blinds</Text>
           <Text style={styles.cardSubtitle}>
             Choose which blinds are in play, then type in your own stakes.
           </Text>
@@ -167,7 +167,7 @@ export function PokerSetupBlinds({
                     style={styles.input}
                     keyboardType="numeric"
                     placeholder="1"
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={COLORS.placeholder}
                     value={smallBlind}
                     onChangeText={setSmallBlind}
                   />
@@ -179,7 +179,7 @@ export function PokerSetupBlinds({
                   style={styles.input}
                   keyboardType="numeric"
                   placeholder="2"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={COLORS.placeholder}
                   value={bigBlind}
                   onChangeText={setBigBlind}
                 />
@@ -190,7 +190,7 @@ export function PokerSetupBlinds({
 
         {/* Quick-Chip Denominations */}
         <View style={[styles.card, SHADOWS.card]}>
-          <Text style={styles.sectionHeaderTitle}>Quick-Chip Denominations</Text>
+          <Text style={styles.sectionHeaderTitle}>Quick-chip denominations</Text>
           <Text style={styles.cardSubtitle}>
             These 6 chip increments will appear during your hand rounds. Tapping them will incrementally add to your bet.
           </Text>
@@ -223,7 +223,7 @@ export function PokerSetupBlinds({
           onPress={handleFinishSetup}
         >
           <Ionicons name="checkmark-circle" size={20} color={COLORS.textDark} style={{ marginRight: 8 }} />
-          <Text style={styles.submitText}>Start Poker Session</Text>
+          <Text style={styles.submitText}>Start Poker session</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -35,12 +35,12 @@ function getLeakCopy(leak, { fmtMoney, fmtPct }) {
       };
     case 'favorite_longshot_bias':
       return {
-        title: 'Underdog Bets Are Dragging You Down',
+        title: 'Underdog bets are dragging you down',
         detail: `Your underdog bets return ${fmtPct(leak.underdogRoi)} ROI${leak.favoriteRoi !== null ? ` vs. ${fmtPct(leak.favoriteRoi)} on favorites` : ''} (n=${leak.sample}). This is the classic "favorite-longshot bias" — longshots feel like good value but usually pay worse than their true odds.`,
       };
     case 'parlay_leak':
       return {
-        title: 'Parlays Are Costing You',
+        title: 'Parlays are costing you',
         detail: `Your parlays return ${fmtPct(leak.parlayRoi)} ROI (n=${leak.sample}), well behind your ${fmtPct(leak.overallRoi)} overall. Parlays multiply the vig on every leg — the entertainment is real, but so is the cost.`,
       };
     case 'worst_bet_type':
@@ -50,21 +50,21 @@ function getLeakCopy(leak, { fmtMoney, fmtPct }) {
       };
     case 'live_betting_leak':
       return {
-        title: 'Live Betting Is Underperforming Pregame',
+        title: 'Live betting is underperforming pregame',
         detail: `Live/in-play bets return ${fmtPct(leak.liveRoi)} ROI vs. ${fmtPct(leak.pregameRoi)} pregame (n=${leak.sample}). Live lines carry more vig and less time to think — a common leak spot.`,
       };
     case 'loss_chasing':
       return {
-        title: 'You Bet Bigger After Losing',
+        title: 'You bet bigger after losing',
         detail: `You stake ${fmtMoney(leak.avgBetAfterLoss)} on average right after a losing bet, vs. ${fmtMoney(leak.avgBetAfterWin)} after a winning one — ${leak.pctIncrease.toFixed(0)}% more. That's a classic loss-chasing pattern.`,
       };
     case 'volatility':
       return {
-        title: 'Your Results Are Highly Volatile',
+        title: 'Your results are highly volatile',
         detail: `Your net result per bet swings about ${leak.volatilityRatio.toFixed(1)}x your average stake. Big swings add variance risk on top of whatever edge you have.`,
       };
     default:
-      return { title: 'Leak Detected', detail: '' };
+      return { title: 'Leak detected', detail: '' };
   }
 }
 
@@ -235,7 +235,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <NavBar title="Sports betting insights" onBack={() => navigation.goBack()} />
+      <NavBar title="Sports Betting insights" onBack={() => navigation.goBack()} />
 
       <View style={styles.contentArea}>
       <ScrollView
@@ -245,7 +245,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
         {!hasEnoughData && !isLocked ? (
           <View style={styles.emptyCard}>
             <Ionicons name="analytics-outline" size={28} color={COLORS.textMuted} />
-            <Text style={styles.emptyTitle}>Not Enough Data Yet</Text>
+            <Text style={styles.emptyTitle}>Not enough data yet</Text>
             <Text style={styles.emptyText}>
               Log at least 5 bets to unlock odds-edge, favorite/underdog, and leak analytics. Right now you have {stats.totalHands}.
             </Text>
@@ -270,7 +270,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
             ) : (
               <View style={[styles.card, SHADOWS.card, styles.noLeakCard]}>
                 <Ionicons name="shield-checkmark" size={20} color={COLORS.success} />
-                <Text style={styles.noLeakTitle}>No Major Leaks Detected</Text>
+                <Text style={styles.noLeakTitle}>No major leaks detected</Text>
                 <Text style={styles.noLeakText}>
                   Your pricing, bet-type mix, and staking all look within a healthy range across {outcomes.sample} bets.
                 </Text>
@@ -278,7 +278,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
             )}
 
             {/* The Basics */}
-            <ExpandableSection title="The Basics" defaultExpanded={true}>
+            <ExpandableSection title="The basics" defaultExpanded={true}>
               {isLocked ? (
                 <>
                   <SkeletonBar width="100%" height={24} style={{ marginBottom: 12 }} />
@@ -287,9 +287,9 @@ export default function SportsBettingInsightsScreen({ navigation }) {
                 </>
               ) : (
                 <>
-                  <ProgressBar label="Win Rate" valueText={fmtPct(outcomes.winRate)} percent={outcomes.winRate} color={COLORS.success} />
-                  <ProgressBar label="Push Rate" valueText={fmtPct(outcomes.pushRate)} percent={outcomes.pushRate} color={COLORS.textMuted} />
-                  <ProgressBar label="Loss Rate" valueText={fmtPct(outcomes.lossRate)} percent={outcomes.lossRate} color={COLORS.danger} />
+                  <ProgressBar label="Win rate" valueText={fmtPct(outcomes.winRate)} percent={outcomes.winRate} color={COLORS.success} />
+                  <ProgressBar label="Push rate" valueText={fmtPct(outcomes.pushRate)} percent={outcomes.pushRate} color={COLORS.textMuted} />
+                  <ProgressBar label="Loss rate" valueText={fmtPct(outcomes.lossRate)} percent={outcomes.lossRate} color={COLORS.danger} />
                 </>
               )}
               
@@ -297,26 +297,26 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               
               <TrendArrow 
                 trend={returns.netProfit} 
-                label="Net Profit" 
+                label="Net profit" 
                 valueText={fmtMoney(returns.netProfit)} 
                 goodIsUp={true} 
               />
               <View style={styles.compareRow}>
                 <CompareStat
-                  label="Return on Staked"
+                  label="Return on staked"
                   value={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'}
                   valueColor={(returns.roi || 0) > 0 ? COLORS.success : (returns.roi || 0) < 0 ? COLORS.danger : COLORS.textPrimary}
                   locked={isLocked}
                 />
-                <CompareStat label="Avg / Bet" value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} locked={isLocked} />
+                <CompareStat label="Avg / bet" value={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} locked={isLocked} />
               </View>
             </ExpandableSection>
 
             {/* Your Habits */}
-            <ExpandableSection title="Your Habits">
+            <ExpandableSection title="Your habits">
               {/* Streaks */}
               <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>CURRENT STREAK</Text>
+                <Text style={styles.cardLabel}>Current streak</Text>
                 {isLocked ? (
                   <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
                 ) : (
@@ -330,11 +330,11 @@ export default function SportsBettingInsightsScreen({ navigation }) {
   
               <View style={styles.rowCards}>
                 <View style={[styles.halfCard, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>LONGEST WIN</Text>
+                  <Text style={styles.cardLabel}>Longest win</Text>
                   {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
                 </View>
                 <View style={[styles.halfCard, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>LONGEST LOSS</Text>
+                  <Text style={styles.cardLabel}>Longest loss</Text>
                   {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
                 </View>
               </View>
@@ -342,7 +342,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               {/* Sport Breakdown */}
               {sportStats && (
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>BEST & WORST SPORT</Text>
+                  <Text style={styles.cardLabel}>Best & worst sport</Text>
                   {sportStats.best && (
                     <StatLine
                       label={`Best: ${sportStats.best.sport}`}
@@ -365,7 +365,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               {/* Bet Type Breakdown */}
               {betTypes.length > 0 && (
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>PERFORMANCE BY BET TYPE</Text>
+                  <Text style={styles.cardLabel}>Performance by bet type</Text>
                   {betTypes.map((t) => (
                     <StatLine
                       key={t.type}
@@ -380,15 +380,15 @@ export default function SportsBettingInsightsScreen({ navigation }) {
 
               {/* Stake Size After Outcome */}
               <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>STAKE SIZE AFTER OUTCOME</Text>
+                <Text style={styles.cardLabel}>Stake size after outcome</Text>
                 <View style={styles.compareRow}>
                   <CompareStat
-                    label="After a Win"
+                    label="After a win"
                     value={formatMoney(betSizeAfterOutcome.avgBetAfterWin, currencySymbol, privacyMode, { signed: false })}
                     locked={isLocked}
                   />
                   <CompareStat
-                    label="After a Loss"
+                    label="After a loss"
                     value={formatMoney(betSizeAfterOutcome.avgBetAfterLoss, currencySymbol, privacyMode, { signed: false })}
                     locked={isLocked}
                   />
@@ -414,7 +414,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               {/* Live vs Pregame */}
               {liveVsPregame && (
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>LIVE VS. PREGAME</Text>
+                  <Text style={styles.cardLabel}>Live vs. pregame</Text>
                   <View style={styles.compareRow}>
                     <CompareStat
                       label={`Live`}
@@ -432,22 +432,22 @@ export default function SportsBettingInsightsScreen({ navigation }) {
             </ExpandableSection>
 
             {/* Advanced Stats */}
-            <ExpandableSection title="Advanced Stats">
+            <ExpandableSection title="Advanced stats">
               {/* Day of Week */}
               {dow && (
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
+                  <Text style={styles.cardLabel}>Best & worst days</Text>
                   <Text style={styles.cardHint}>Average net profit per session on your strongest and weakest days</Text>
                   <View style={styles.compareRow}>
                     <CompareStat
-                      label="Best Day"
+                      label="Best day"
                       value={fmtMoney(dow.best.avgNet)}
                       valueColor={COLORS.success}
                       sub={dow.best.day}
                       locked={isLocked}
                     />
                     <CompareStat
-                      label="Worst Day"
+                      label="Worst day"
                       value={fmtMoney(dow.worst.avgNet)}
                       valueColor={COLORS.danger}
                       sub={dow.worst.day}
@@ -460,7 +460,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               {/* Session Length Performance */}
               {lenPerf && (
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
+                  <Text style={styles.cardLabel}>Performance by session length</Text>
                   <Text style={styles.cardHint}>Average net profit per bet based on how many bets you make</Text>
                   <View style={styles.compareRow}>
                     <CompareStat
@@ -485,7 +485,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               {/* Risk & Volatility */}
               <View style={[styles.card, SHADOWS.card]}>
                 <View style={styles.riskHeaderRow}>
-                  <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
+                  <Text style={styles.cardLabel}>Risk & volatility</Text>
                   {isLocked ? (
                     <SkeletonBar width={56} height={18} />
                   ) : (
@@ -515,7 +515,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
                   <Text style={styles.cardHint}>Your win rate vs. the win probability your own odds implied</Text>
                   <View style={styles.compareRow}>
                     <CompareStat label={`Actual Win Rate`} value={fmtPct(oddsEdge.actualWinRate)} locked={isLocked} />
-                    <CompareStat label="Avg Implied Prob" value={fmtPct(oddsEdge.avgImpliedProbability)} locked={isLocked} />
+                    <CompareStat label="Avg implied prob" value={fmtPct(oddsEdge.avgImpliedProbability)} locked={isLocked} />
                     <CompareStat
                       label="Edge"
                       value={`${oddsEdge.edge >= 0 ? '+' : ''}${oddsEdge.edge.toFixed(1)} pts`}
@@ -531,7 +531,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               
               {/* Favorite vs Underdog */}
               <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>FAVORITE VS. UNDERDOG</Text>
+                <Text style={styles.cardLabel}>Favorite vs. underdog</Text>
                 <Text style={styles.cardHint}>Negative-odds favorites vs. positive-odds underdogs</Text>
                 <View style={styles.compareRow}>
                   <CompareStat
@@ -551,7 +551,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
 
               {/* Conditional Win Rate */}
               <View style={[styles.card, SHADOWS.card]}>
-                <Text style={styles.cardLabel}>CONDITIONAL WIN RATE</Text>
+                <Text style={styles.cardLabel}>Conditional win rate</Text>
                 <StatLine label={`After a Win`} value={fmtPct(cwr.afterWin.rate)} locked={isLocked} />
                 <StatLine label={`After a Loss`} value={fmtPct(cwr.afterLoss.rate)} locked={isLocked} />
               </View>
@@ -559,7 +559,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
               {/* Win Rate by Stake Tier */}
               {tiers && (
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>WIN RATE BY STAKE SIZE</Text>
+                  <Text style={styles.cardLabel}>Win rate by stake size</Text>
                   <Text style={styles.cardHint}>Based on your own small / medium / large stake ranges</Text>
                   <StatLine label={`Small`} value={fmtPct(tiers.small.winRate)} locked={isLocked} />
                   <StatLine label={`Medium`} value={fmtPct(tiers.medium.winRate)} locked={isLocked} />
@@ -571,7 +571,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
             {/* Copy Report */}
             <TouchableOpacity style={[styles.copyReportBtn, SHADOWS.card, isLocked && styles.copyReportBtnLocked]} activeOpacity={0.85} onPress={handleCopyReport}>
               <Ionicons name={isLocked ? 'lock-closed' : copied ? 'checkmark-circle' : 'clipboard-outline'} size={18} color={COLORS.textDark} style={{ marginRight: 8 }} />
-              <Text style={styles.copyReportBtnText}>{isLocked ? 'Unlock Ante+ to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}</Text>
+              <Text style={styles.copyReportBtnText}>{isLocked ? 'Unlock Ante+ to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy full report'}</Text>
             </TouchableOpacity>
             <Text style={styles.copyReportHint}>
               Paste this into a doc or an AI chat to dig into your numbers further. It's a plain-text summary of everything on this page — not gambling advice.
@@ -590,7 +590,7 @@ export default function SportsBettingInsightsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   topNav: {
     flexDirection: 'row',
@@ -683,10 +683,10 @@ const styles = StyleSheet.create({
   outcomeLegendText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
   overviewDivider: { height: 1, backgroundColor: COLORS.cardBorder, marginVertical: 12 },
   proRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  proRowLabel: { fontSize: 10, fontWeight: '700', color: COLORS.primary, letterSpacing: 0.8 },
+  proRowLabel: { fontSize: 10, fontWeight: '700', color: COLORS.primary, letterSpacing: 0.2 },
   riskHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   riskBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
-  riskBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  riskBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   copyReportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -706,4 +706,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 8,
   },
-});
+}));

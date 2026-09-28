@@ -7,7 +7,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont } from '../constants/layout';
 import { formatMoney, netTone } from '../utils/format';
 import { useReduceMotion } from './ui';
@@ -225,7 +225,7 @@ export default function SessionEndOverlay({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   // Above the navigator, below the splash (which sits at 999).
   layer: {
     zIndex: 900,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontSize: fluidFont(12),
     fontWeight: '700',
-    letterSpacing: 3,
+    letterSpacing: 0.2,
     color: COLORS.textSecondary,
   },
   figure: {
@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
   caption: {
     fontSize: fluidFont(11),
     fontWeight: '600',
-    letterSpacing: 2.4,
+    letterSpacing: 0.2,
     color: COLORS.textMuted,
     marginTop: moderateScale(14),
   },
-});
+}));

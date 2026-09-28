@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, getGameColor } from '../constants/theme';
+import { COLORS, getGameColor, getGameColorMuted, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useActiveSession, sessionHasContent } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
@@ -32,38 +32,38 @@ import ActiveSessionSlip from './ActiveSessionSlip';
 const GAME_CARDS = [
   {
     key: 'Blackjack',
-    title: 'Blackjack Live Tracker',
-    description: 'Track bets, doubles, splits, and calculate real-time net profit',
+    title: 'Blackjack',
+    description: 'Log each hand as it plays out, doubles and splits included',
     renderIcon: (c) => <MaterialCommunityIcons name="cards-outline" size={24} color={c} />,
   },
   {
     key: 'Poker',
-    title: 'Poker Session Tracker',
-    description: 'Log your buy-in and cash-out to track your net result',
+    title: 'Poker',
+    description: 'Buy in, jot down the hands that matter, cash out',
     renderIcon: (c) => <Ionicons name="cash-outline" size={24} color={c} />,
   },
   {
     key: 'Sports Betting',
-    title: 'Sports Betting Tracker',
-    description: 'Log stake, odds, and outcome — payout calculated automatically',
+    title: 'Sports Betting',
+    description: 'Add your bets, settle them when the game ends. We do the payout math',
     renderIcon: (c) => <Ionicons name="basketball-outline" size={24} color={c} />,
   },
   {
     key: 'Roulette',
-    title: 'Roulette Tracker',
-    description: 'Pick a bet type — straight up, red/black, dozens — odds calculated automatically',
+    title: 'Roulette',
+    description: 'Tap your bet (red, black, a number) and we work out the odds',
     renderIcon: (c) => <Ionicons name="disc-outline" size={24} color={c} />,
   },
   {
     key: 'Baccarat',
-    title: 'Baccarat Tracker',
-    description: 'Bet Player, Banker, or Tie — commission and odds calculated automatically',
+    title: 'Baccarat',
+    description: 'Player, Banker, or Tie. Commission is handled for you',
     renderIcon: (c) => <MaterialCommunityIcons name="cards-diamond-outline" size={24} color={c} />,
   },
   {
     key: 'General',
-    title: 'General Tracker',
-    description: 'Simple buy-in / cash-out for anything else',
+    title: 'Anything else',
+    description: 'Just what you sat down with and what you left with',
     renderIcon: (c) => <Ionicons name="dice-outline" size={24} color={c} />,
   },
 ];
@@ -165,7 +165,10 @@ function GameOptionCard({
   const dimTranslate = dim.interpolate({ inputRange: [0, 1], outputRange: [0, 6] });
   const dimOpacity = dim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.35] });
   const ringScale = ring.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.4] });
-  const ringOpacity = ring.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.55, 0.28, 0] });
+  const ringOpacity = ring.interpolate({
+    inputRange: [0, 0.01, 0.5, 1],
+    outputRange: [0, 0.55, 0.28, 0],
+  });
 
   return (
     <Animated.View
@@ -180,14 +183,14 @@ function GameOptionCard({
         disabled={committing || otherCommitting}
         onPress={handlePress}
         accessibilityRole="button"
-        accessibilityLabel={`Start ${card.title}`}
+        accessibilityLabel={`Start a ${card.key} session`}
       >
-        <View style={styles.gameIconBox}>
+        <View style={[styles.gameIconBox, { backgroundColor: getGameColorMuted(card.key) }]}>
           <Animated.View
             pointerEvents="none"
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: gameColor, opacity: flood, borderRadius: RADIUS.sm },
+              { backgroundColor: gameColor, opacity: flood, borderRadius: moderateScale(25) },
             ]}
           />
           <Animated.View
@@ -197,7 +200,7 @@ function GameOptionCard({
               { borderColor: gameColor, opacity: ringOpacity, transform: [{ scale: ringScale }] },
             ]}
           />
-          {card.renderIcon(COLORS.primary)}
+          {card.renderIcon(gameColor)}
         </View>
         <View style={styles.gameInfo}>
           <View style={styles.gameTitleRow}>
@@ -205,7 +208,7 @@ function GameOptionCard({
           </View>
           <Text style={styles.gameDescription}>{card.description}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+        <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -379,7 +382,7 @@ export default function StartSessionModal({ visible, onClose, onNavigateToGame }
                   something you have to scroll back up past to close the sheet. */}
               <View style={styles.headerRow}>
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.sheetTitle}>Start New Session</Text>
+                  <Text style={styles.sheetTitle}>What are you playing?</Text>
                   {activeSessionCount > 0 && (
                     <Text style={styles.sheetSubtitle}>
                       {activeSessionCount === 1
@@ -393,7 +396,7 @@ export default function StartSessionModal({ visible, onClose, onNavigateToGame }
                   onPress={onClose}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="close" size={20} color={COLORS.danger} />
+                  <Ionicons name="close" size={20} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -419,7 +422,7 @@ export default function StartSessionModal({ visible, onClose, onNavigateToGame }
                     startSession is a no-op when that game has a live session. */}
                 {activeSessionList.length > 0 && (
                   <View style={styles.runningBlock}>
-                    <Text style={styles.runningLabel}>RUNNING NOW</Text>
+                    <Text style={styles.runningLabel}>Running now</Text>
                     {activeSessionList.map((s) => (
                       <ActiveSessionSlip
                         key={s.id}
@@ -457,7 +460,7 @@ export default function StartSessionModal({ visible, onClose, onNavigateToGame }
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
     overlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.overlay,
@@ -504,8 +507,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   sheetTitle: {
-    fontSize: fluidFont(20),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(22),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   sheetSubtitle: {
@@ -530,7 +534,7 @@ const styles = StyleSheet.create({
   runningLabel: {
     fontSize: fluidFont(11),
     fontWeight: '700',
-    letterSpacing: 1.4,
+    letterSpacing: 0.2,
     color: COLORS.textSecondary,
     marginBottom: 2,
   },
@@ -547,23 +551,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  // A soft pastel of the game's own colour, so each game is recognisable
+  // before its name is read.
   gameIconBox: {
-    width: moderateScale(48),
-    height: moderateScale(48),
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.primaryMuted,
+    width: moderateScale(50),
+    height: moderateScale(50),
+    borderRadius: moderateScale(25),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
     overflow: 'visible',
   },
   commitRing: {
     position: 'absolute',
     width: '100%',
     height: '100%',
-    borderRadius: RADIUS.md,
+    borderRadius: moderateScale(25),
     borderWidth: 2,
   },
   gameInfo: {
@@ -586,4 +589,4 @@ const styles = StyleSheet.create({
     marginTop: 3,
     lineHeight: fluidFont(16),
   },
-});
+}));

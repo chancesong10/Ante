@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { LEGAL_DOCS } from '../constants/legal';
 
@@ -68,7 +68,7 @@ export default function LegalScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   topNav: {
     flexDirection: 'row',
@@ -124,4 +124,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 20,
   },
-});
+}));

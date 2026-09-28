@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, Animated, Easing } from 'react-native';
 import Svg, { Path, Line, Circle, ClipPath, Rect, Defs, Text as SvgText, G } from 'react-native-svg';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { fluidFont } from '../constants/layout';
 import { useReduceMotion } from './ui';
 import { formatNumber, formatMoney } from '../utils/format';
@@ -266,7 +266,7 @@ function BankrollLineChart({ sessions, currencySymbol = '$', privacyMode = false
 
 export default React.memo(BankrollLineChart);
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   wrap: { width: '100%' },
   notEnoughText: {
     fontSize: fluidFont(12),
@@ -284,8 +284,7 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(10),
     color: COLORS.textMuted,
     fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   statValue: {
     fontSize: fluidFont(15),
@@ -302,4 +301,4 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontWeight: '600',
   },
-});
+}));

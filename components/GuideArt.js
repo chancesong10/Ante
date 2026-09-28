@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { View, Text, Animated, Easing } from 'react-native';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, RADIUS } from '../constants/layout';
 
 // The animated illustrations behind each tracker-guide panel.
@@ -143,7 +143,7 @@ function CardsArt({ active, tint }) {
       <Animated.View
         style={[styles.outcomeTag, { borderColor: tint }, stagger(progress, 2.2, 3, { from: 12 })]}
       >
-        <Text style={[styles.outcomeTagText, { color: tint }]}>BLACKJACK</Text>
+        <Text style={[styles.outcomeTagText, { color: tint }]}>Blackjack</Text>
       </Animated.View>
     </View>
   );
@@ -185,7 +185,7 @@ function OddsArt({ active, tint }) {
     <View style={styles.center}>
       <View style={styles.oddsRow}>
         <Animated.View style={[styles.oddsBox, stagger(progress, 0, 3, { from: 18 })]}>
-          <Text style={styles.oddsLabel}>ODDS</Text>
+          <Text style={styles.oddsLabel}>Odds</Text>
           <Text style={styles.oddsValue}>+150</Text>
         </Animated.View>
 
@@ -195,7 +195,7 @@ function OddsArt({ active, tint }) {
         </Animated.View>
 
         <Animated.View style={[styles.oddsBox, { borderColor: tint }, stagger(progress, 2, 3, { from: 18 })]}>
-          <Text style={styles.oddsLabel}>TO WIN</Text>
+          <Text style={styles.oddsLabel}>To win</Text>
           <Text style={[styles.oddsValue, { color: tint }]}>$150</Text>
         </Animated.View>
       </View>
@@ -242,7 +242,7 @@ function PendingArt({ active, tint }) {
       </Animated.View>
 
       <Animated.View style={[styles.outcomeTag, { borderColor: tint }, stagger(progress, 2.1, 3, { from: 12 })]}>
-        <Text style={[styles.outcomeTagText, { color: tint }]}>SETTLE WHEN IT LANDS</Text>
+        <Text style={[styles.outcomeTagText, { color: tint }]}>Settle when it lands</Text>
       </Animated.View>
     </View>
   );
@@ -294,13 +294,13 @@ function FlowArt({ active, tint }) {
       <View style={styles.flowRow}>
         <Animated.View style={[styles.flowCol, stagger(progress, 0, 3, { from: 20 })]}>
           <View style={[styles.flowBar, { height: moderateScale(34), backgroundColor: COLORS.cardBorderHighlight }]} />
-          <Text style={styles.flowLabel}>BUY-IN</Text>
+          <Text style={styles.flowLabel}>Buy-in</Text>
           <Text style={styles.flowValue}>$200</Text>
         </Animated.View>
 
         <Animated.View style={[styles.flowCol, stagger(progress, 1, 3, { from: 20 })]}>
           <View style={[styles.flowBar, { height: moderateScale(58), backgroundColor: tint }]} />
-          <Text style={styles.flowLabel}>CASH-OUT</Text>
+          <Text style={styles.flowLabel}>Cash-out</Text>
           <Text style={styles.flowValue}>$340</Text>
         </Animated.View>
       </View>
@@ -391,7 +391,7 @@ export default function GuideArt({ art, active, tint = COLORS.accentCyan }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   stage: {
     height: ART_HEIGHT,
     alignItems: 'center',
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   outcomeTagText: {
     fontSize: fluidFont(10),
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.2,
   },
 
   // streets
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     marginTop: moderateScale(6),
     fontSize: fluidFont(9),
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
     color: COLORS.textMuted,
   },
 
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   oddsLabel: {
     fontSize: fluidFont(9),
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.2,
     color: COLORS.textMuted,
   },
   oddsValue: {
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   spotText: {
     fontSize: fluidFont(9),
     fontWeight: '800',
-    letterSpacing: 0.6,
+    letterSpacing: 0.2,
     color: COLORS.textMuted,
   },
 
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     marginTop: moderateScale(7),
     fontSize: fluidFont(9),
     fontWeight: '700',
-    letterSpacing: 0.7,
+    letterSpacing: 0.2,
     color: COLORS.textMuted,
   },
   flowValue: { fontSize: fluidFont(13), fontWeight: '800', color: COLORS.textPrimary },
@@ -641,4 +641,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.warning,
   },
-});
+}));

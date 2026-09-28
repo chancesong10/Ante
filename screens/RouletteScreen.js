@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  StyleSheet,
   Text,
   View,
   TextInput,
@@ -12,7 +11,7 @@ import {
 import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
@@ -159,7 +158,7 @@ export default function RouletteScreen({ navigation }) {
         <TrackerGuide gameType="Roulette" navigation={navigation} />
         <View style={styles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />
-          <Text style={[styles.navTitle, { marginLeft: 8 }]}>Roulette Tracker</Text>
+          <Text style={[styles.navTitle, { marginLeft: 8 }]}>Roulette tracker</Text>
         </View>
         <TouchableOpacity
           style={styles.headerEndButton}
@@ -167,7 +166,7 @@ export default function RouletteScreen({ navigation }) {
           onPress={handleEndSessionPress}
         >
           <Ionicons name="stop-circle" size={16} color={COLORS.danger} style={{ marginRight: 4 }} />
-          <Text style={styles.headerEndButtonText}>End Session</Text>
+          <Text style={styles.headerEndButtonText}>End session</Text>
         </TouchableOpacity>
       </View>
 
@@ -179,7 +178,7 @@ export default function RouletteScreen({ navigation }) {
 
         {/* SESSION STATS */}
         <View style={[styles.statsBox, SHADOWS.card]}>
-          <Text style={styles.statsSubtext}>SESSION NET OUTCOME</Text>
+          <Text style={styles.statsSubtext}>This session so far</Text>
           <Text
             style={[
               styles.netAmount,
@@ -244,7 +243,7 @@ export default function RouletteScreen({ navigation }) {
         <View style={[styles.card, SHADOWS.card]}>
           <View style={styles.cardHeader}>
             <Ionicons name="cash-outline" size={16} color={COLORS.success} style={{ marginRight: 6 }} />
-            <Text style={styles.cardTitle}>Bet Amount</Text>
+            <Text style={styles.cardTitle}>Bet amount</Text>
           </View>
 
           <Text style={styles.label}>Amount ({currencySymbol})</Text>
@@ -252,7 +251,7 @@ export default function RouletteScreen({ navigation }) {
             style={styles.input}
             keyboardType="numeric"
             placeholder="e.g. 25"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.placeholder}
             value={bet}
             onChangeText={setBet}
           />
@@ -283,7 +282,7 @@ export default function RouletteScreen({ navigation }) {
 
           {hasValidBet && (
             <View style={styles.payoutPreview}>
-              <Text style={styles.payoutPreviewLabel}>TO WIN</Text>
+              <Text style={styles.payoutPreviewLabel}>To win</Text>
               <Text style={styles.payoutPreviewValue}>
                 +{currencySymbol}
                 {formatNumber(projectedPayout)}
@@ -312,7 +311,7 @@ export default function RouletteScreen({ navigation }) {
         </View>
 
         {/* SESSION BET MIX */}
-        <SessionMixCard summary={summary} currencySymbol={currencySymbol} title="Session Bet Mix" unit="spin" />
+        <SessionMixCard summary={summary} currencySymbol={currencySymbol} title="Session bet mix" unit="spin" />
 
         {/* SPIN HISTORY */}
         {spins.length > 0 && (
@@ -360,7 +359,7 @@ export default function RouletteScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,7 +402,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  statsSubtext: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginBottom: 4 },
+  statsSubtext: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 0.2, marginBottom: 4 },
   netAmount: { fontSize: 32, fontWeight: '700', marginBottom: 12 },
   statsRow: { flexDirection: 'row', gap: 8, width: '100%' },
   statPill: {
@@ -415,7 +414,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  statPillLabel: { fontSize: 10, color: COLORS.textMuted, textTransform: 'uppercase', fontWeight: '600' },
+  statPillLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
   statPillValue: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 2 },
   betTypeWrapper: { marginBottom: 16 },
   betTypeScroll: { paddingRight: 16, gap: 8, flexDirection: 'row' },
@@ -449,8 +448,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   input: {
     backgroundColor: COLORS.backgroundSecondary,
@@ -463,7 +461,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 14,
   },
-  quickActionLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase' },
+  quickActionLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', marginBottom: 6 },
   chipWrapRowHorizontal: { flexDirection: 'row', gap: 8 },
   stakeChip: {
     paddingHorizontal: 12,
@@ -483,7 +481,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  payoutPreviewLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
+  payoutPreviewLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '700', letterSpacing: 0.2, marginBottom: 4 },
   payoutPreviewValue: { fontSize: 24, fontWeight: '700', color: COLORS.success },
   outcomeActionRow: { flexDirection: 'row', gap: 10 },
   outcomeButton: {
@@ -517,7 +515,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
     marginBottom: 4,
   },
-  betTypeBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase' },
+  betTypeBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.textSecondary },
   historySubtext: { color: COLORS.textSecondary, fontSize: 12 },
   historyNet: { fontSize: 14, fontWeight: '700' },
-});
+}));

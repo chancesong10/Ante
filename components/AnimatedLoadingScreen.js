@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Easing, Text } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { View, Animated, Easing, Text } from 'react-native';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 
 export default function AnimatedLoadingScreen({ isAppReady, onFinish }) {
@@ -127,7 +127,7 @@ export default function AnimatedLoadingScreen({ isAppReady, onFinish }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -141,6 +141,8 @@ const styles = StyleSheet.create({
   logo: {
     width: moderateScale(120),
     height: moderateScale(120),
+    // The mark ships white; ink it to match the page.
+    tintColor: COLORS.textPrimary,
   },
   textContainer: {
     position: 'absolute',
@@ -148,9 +150,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   anteText: {
-    fontSize: moderateScale(52),
-    fontWeight: '800',
+    fontFamily: 'display',
+    fontSize: moderateScale(56),
+    fontWeight: '600',
     color: COLORS.primary,
-    letterSpacing: 2,
   },
-});
+}));

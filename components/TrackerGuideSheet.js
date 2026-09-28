@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Modal,
   ScrollView,
   TouchableOpacity,
@@ -13,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import GuideArt from './GuideArt';
 import { guideForGame } from '../constants/trackerGuides';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { hapticSelection } from '../utils/haptics';
 
@@ -235,10 +234,10 @@ export default function TrackerGuideSheet({ visible, gameType, onClose, navigati
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.72)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'center',
     paddingHorizontal: SPACING.md,
   },
@@ -364,4 +363,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.textDark,
   },
-});
+}));

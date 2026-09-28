@@ -91,7 +91,7 @@ export function useCommitPress({ reduced = false, dimmed = false, onCommit }) {
     },
     // For the ring that ripples out of the tile.
     ringStyle: {
-      opacity: ring.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.55, 0.28, 0] }),
+      opacity: ring.interpolate({ inputRange: [0, 0.01, 0.5, 1], outputRange: [0, 0.55, 0.28, 0] }),
       transform: [{ scale: ring.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.4] }) }],
     },
   };

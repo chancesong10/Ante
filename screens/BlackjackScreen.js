@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  StyleSheet,
   Text,
   View,
   TextInput,
@@ -10,7 +9,7 @@ import {
 import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { screenStyles } from '../constants/screenStyles';
 import { moderateScale } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
@@ -460,8 +459,8 @@ export default function BlackjackScreen({ navigation }) {
   const outcomeTextActive = {
     win: styles.outcomeTextActive,
     blackjack: styles.outcomeTextActive,
-    loss: styles.outcomeTextLight,
-    push: styles.outcomeTextLight,
+    loss: styles.outcomeTextActive,
+    push: styles.outcomeTextActive,
   };
 
   const renderOutcomeRow = (options, current, onSelect) => (
@@ -510,7 +509,7 @@ export default function BlackjackScreen({ navigation }) {
           style={styles.input}
           keyboardType="numeric"
           placeholder="e.g. 25"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={COLORS.placeholder}
           value={h.betAmount}
           onChangeText={(v) => updateSplitHand(which, 'betAmount', v)}
         />
@@ -551,7 +550,7 @@ export default function BlackjackScreen({ navigation }) {
   const renderCardEntry = () => (
     <>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionLabel}>DEALER SHOWS</Text>
+        <Text style={styles.sectionLabel}>Dealer shows</Text>
         {hasAnyCards && (
           <TouchableOpacity onPress={clearCards} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={styles.clearText}>Clear cards</Text>
@@ -566,7 +565,7 @@ export default function BlackjackScreen({ navigation }) {
       <View style={styles.feltDivider} />
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionLabel}>YOUR CARDS</Text>
+        <Text style={styles.sectionLabel}>Your cards</Text>
       </View>
       <View style={styles.cardSlotRow}>
         <CardFace rank={playerCards[0]} onPress={() => removePlayerCard(0)} label="Your first card" />
@@ -641,7 +640,7 @@ export default function BlackjackScreen({ navigation }) {
 
         <TouchableOpacity style={styles.headerEndButton} activeOpacity={0.8} onPress={handleEndSessionPress}>
           <Ionicons name="stop-circle" size={16} color={COLORS.danger} style={{ marginRight: 4 }} />
-          <Text style={styles.headerEndButtonText}>End Session</Text>
+          <Text style={styles.headerEndButtonText}>End session</Text>
         </TouchableOpacity>
       </View>
 
@@ -654,7 +653,7 @@ export default function BlackjackScreen({ navigation }) {
 
         {/* SESSION STATS */}
         <View style={[styles.statsBox, SHADOWS.card]}>
-          <Text style={styles.statsSubtext}>SESSION NET OUTCOME</Text>
+          <Text style={styles.statsSubtext}>This session so far</Text>
           <Text style={[styles.netAmount, { color: toneOf(totalNet, privacyMode) }]}>{formatMoney(totalNet, currencySymbol, privacyMode)}</Text>
 
           <View style={styles.statsRow}>
@@ -680,7 +679,7 @@ export default function BlackjackScreen({ navigation }) {
               card-checked hands from before it was turned off. */}
           {(cardEntry || strategy) && (
             <View style={styles.strategyRow}>
-              <Text style={styles.strategyLabel}>BASIC STRATEGY</Text>
+              <Text style={styles.strategyLabel}>Basic strategy</Text>
               <Text
                 style={[
                   styles.strategyValue,
@@ -721,7 +720,7 @@ export default function BlackjackScreen({ navigation }) {
             style={styles.input}
             keyboardType="numeric"
             placeholder="e.g. 25"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.placeholder}
             value={betAmount}
             onChangeText={setBetAmount}
           />
@@ -814,7 +813,7 @@ export default function BlackjackScreen({ navigation }) {
             disabled={!canLog}
             activeOpacity={0.85}
           >
-            <Text style={styles.submitText}>{isSplit ? 'Log Split Hands' : 'Log Hand'}</Text>
+            <Text style={styles.submitText}>{isSplit ? 'Log split hands' : 'Log hand'}</Text>
           </TouchableOpacity>
           {touched && !!blocker && <Text style={styles.blockerText}>{blocker}</Text>}
         </View>
@@ -822,7 +821,7 @@ export default function BlackjackScreen({ navigation }) {
         {/* HANDS THIS SESSION */}
         {sessionHands.length > 0 && (
           <View style={styles.historySection}>
-            <Text style={styles.sectionTitle}>Hands in Current Session</Text>
+            <Text style={styles.sectionTitle}>Hands in current session</Text>
             <Text style={styles.swipeHint}>Swipe a hand to delete</Text>
 
             {sessionHands.map((r) => {
@@ -836,7 +835,7 @@ export default function BlackjackScreen({ navigation }) {
                     confirmMessage="Both hands in this split will be removed. This cannot be undone."
                   >
                     <View style={styles.splitGroupBox}>
-                      <Text style={styles.splitGroupLabel}>SPLIT HANDS</Text>
+                      <Text style={styles.splitGroupLabel}>Split hands</Text>
                       {hasCardDetail(r) && <HandDetailLine record={r} />}
                       {r.hands.map((h, i) => (
                         <View key={i} style={styles.historyRow}>
@@ -851,7 +850,7 @@ export default function BlackjackScreen({ navigation }) {
                         </View>
                       ))}
                       <View style={styles.splitGroupTotalRow}>
-                        <Text style={styles.splitGroupTotalLabel}>Split Combined</Text>
+                        <Text style={styles.splitGroupTotalLabel}>Split combined</Text>
                         <Text style={[styles.historyNet, { color: toneOf(groupNet, privacyMode) }]}>{formatMoney(groupNet, currencySymbol, privacyMode)}</Text>
                       </View>
                     </View>
@@ -905,7 +904,7 @@ export default function BlackjackScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -956,7 +955,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.2,
+    letterSpacing: 0.2,
     marginBottom: 4,
   },
   netAmount: {
@@ -981,7 +980,6 @@ const styles = StyleSheet.create({
   statPillLabel: {
     fontSize: 10,
     color: COLORS.textMuted,
-    textTransform: 'uppercase',
     fontWeight: '600',
   },
   statPillValue: {
@@ -1000,7 +998,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.cardBorder,
   },
-  strategyLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '700', letterSpacing: 1 },
+  strategyLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '700', letterSpacing: 0.2 },
   strategyValue: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, fontVariant: ['tabular-nums'] },
   optionsBar: {
     flexDirection: 'row',
@@ -1030,7 +1028,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  sectionLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, letterSpacing: 1 },
+  sectionLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, letterSpacing: 0.2 },
   clearText: { fontSize: 12, color: COLORS.danger, fontWeight: '700' },
   cardSlotRow: {
     flexDirection: 'row',
@@ -1058,8 +1056,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
     marginTop: 14,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   subLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', marginTop: 12, marginBottom: 6 },
   input: {
@@ -1151,9 +1148,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.danger,
     borderColor: COLORS.danger,
   },
+  // Solid like win and loss, so a chosen push is as obvious as the others.
   pushActive: {
-    backgroundColor: COLORS.neutral,
-    borderColor: COLORS.neutralBorder,
+    backgroundColor: COLORS.textSecondary,
+    borderColor: COLORS.textSecondary,
   },
   outcomeText: {
     color: COLORS.textPrimary,
@@ -1162,9 +1160,6 @@ const styles = StyleSheet.create({
   },
   outcomeTextActive: {
     color: COLORS.textDark,
-  },
-  outcomeTextLight: {
-    color: COLORS.textPrimary,
   },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tagChip: {
@@ -1185,9 +1180,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
   },
+  // The real button, faded: still reads as the thing you'll press.
   submitDisabled: {
-    backgroundColor: COLORS.cardBorder,
-    opacity: 0.5,
+    opacity: 0.35,
   },
   submitText: {
     color: COLORS.textDark,
@@ -1212,8 +1207,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: 18,
+    fontWeight: '600',
     color: COLORS.textPrimary,
     marginBottom: 4,
   },
@@ -1235,7 +1231,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
     marginBottom: 6,
-    letterSpacing: 1,
+    letterSpacing: 0.2,
   },
   splitGroupTotalRow: {
     flexDirection: 'row',
@@ -1273,4 +1269,4 @@ const styles = StyleSheet.create({
   detailLine: { marginTop: 4, marginBottom: 2 },
   detailText: { fontSize: 12, color: COLORS.textSecondary },
   verdictText: { fontSize: 11, fontWeight: '700', marginTop: 2 },
-});
+}));

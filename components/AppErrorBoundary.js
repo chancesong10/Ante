@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { loadSessionHistory, clearAllAppData } from '../services/storageService';
 import { exportSessionsCsv } from '../utils/exportSessions';
@@ -86,7 +86,7 @@ function CrashScreen({ error, attempts, onRetry }) {
           accessibilityRole="button"
           accessibilityLabel="Try again"
         >
-          <Text style={styles.primaryButtonText}>Try Again</Text>
+          <Text style={styles.primaryButtonText}>Try again</Text>
         </Tappable>
 
         <Tappable
@@ -105,7 +105,7 @@ function CrashScreen({ error, attempts, onRetry }) {
                 size={moderateScale(18)}
                 color={COLORS.textPrimary}
               />
-              <Text style={styles.secondaryButtonText}>Export My Data</Text>
+              <Text style={styles.secondaryButtonText}>Export my data</Text>
             </>
           )}
         </Tappable>
@@ -127,14 +127,14 @@ function CrashScreen({ error, attempts, onRetry }) {
             <ActivityIndicator size="small" color={COLORS.danger} />
           ) : (
             <Text style={styles.resetButtonText}>
-              {confirmingReset ? 'Tap again to erase everything' : 'Erase Saved Data'}
+              {confirmingReset ? 'Tap again to erase everything' : 'Erase saved data'}
             </Text>
           )}
         </Tappable>
 
         {!!error?.message && (
           <View style={styles.detailBox}>
-            <Text style={styles.detailLabel}>WHAT HAPPENED</Text>
+            <Text style={styles.detailLabel}>What happened</Text>
             <Text style={styles.detailText}>{String(error.message).slice(0, 300)}</Text>
           </View>
         )}
@@ -182,7 +182,7 @@ export default class AppErrorBoundary extends React.Component {
   }
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   content: {
@@ -203,8 +203,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   title: {
-    fontSize: fluidFont(24),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(26),
+    fontWeight: '600',
     color: COLORS.textPrimary,
     marginBottom: SPACING.sm,
   },
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: fluidFont(10),
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.2,
     color: COLORS.textMuted,
     marginBottom: SPACING.xs,
   },
@@ -279,4 +280,4 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(12),
     color: COLORS.textSecondary,
   },
-});
+}));

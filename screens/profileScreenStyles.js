@@ -1,11 +1,11 @@
 // Styles for ProfileScreen, kept alongside it rather than inside it — the
 // screen renders seven unrelated sections and its stylesheet was long enough
 // to bury the ones that matter.
-import { StyleSheet, Platform } from 'react-native';
-import { COLORS } from '../constants/theme';
-import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
+import { Platform } from 'react-native';
+import { COLORS, themed } from '../constants/theme';
+import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET, TYPE } from '../constants/layout';
 
-export const styles = StyleSheet.create({
+export const styles = themed(() => ({
   // Used by ProfileScreen on the two destructive rows and by the settings
   // screens split out of it. It was previously only defined in
   // ManageSubscriptionScreen, so Profile's references resolved to undefined
@@ -45,10 +45,8 @@ export const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   title: {
-    fontSize: fluidFont(24),
-    fontWeight: '700',
+    ...TYPE.title,
     color: COLORS.textPrimary,
-    letterSpacing: 1,
   },
   // Stake-Style Profile Card
   profileCard: {
@@ -117,8 +115,8 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.sm,
-    paddingVertical: moderateScale(13),
+    borderRadius: RADIUS.pill,
+    paddingVertical: moderateScale(14),
     marginBottom: SPACING.lg,
   },
   signInButtonText: {
@@ -153,12 +151,42 @@ export const styles = StyleSheet.create({
     marginLeft: 2,
   },
   sectionTitle: {
-    fontSize: fluidFont(13),
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    marginBottom: SPACING.xs,
+    fontFamily: 'display',
+    fontSize: fluidFont(18),
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
     marginLeft: 2,
+  },
+  appearanceCard: {
+    paddingVertical: SPACING.sm,
+  },
+  appearanceRow: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+  },
+  appearanceOption: {
+    flex: 1,
+    alignItems: 'center',
+    gap: moderateScale(6),
+    paddingVertical: moderateScale(14),
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.backgroundSecondary,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  appearanceOptionActive: {
+    backgroundColor: COLORS.accentMuted,
+    borderColor: COLORS.accent,
+  },
+  appearanceLabel: {
+    fontSize: fluidFont(13),
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  appearanceLabelActive: {
+    color: COLORS.accent,
+    fontWeight: '700',
   },
   privacyToggleBtn: {
     flexDirection: 'row',
@@ -196,7 +224,7 @@ export const styles = StyleSheet.create({
     fontSize: fluidFont(10),
     fontWeight: '700',
     color: COLORS.textSecondary,
-    letterSpacing: 0.8,
+    letterSpacing: 0.2,
   },
   gridCardValue: {
     fontSize: fluidFont(20),
@@ -212,7 +240,7 @@ export const styles = StyleSheet.create({
   // Menu Settings Cards
   menuCard: {
     backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     paddingHorizontal: SPACING.cardPadding,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
@@ -238,8 +266,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.sm,
-    paddingVertical: moderateScale(12),
+    borderRadius: RADIUS.pill,
+    paddingVertical: moderateScale(13),
     marginBottom: SPACING.sm,
   },
   proActionBtnText: {
@@ -254,15 +282,13 @@ export const styles = StyleSheet.create({
     minHeight: TOUCH_TARGET.minSize,
   },
   menuIconCircle: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: RADIUS.xs,
+    width: moderateScale(38),
+    height: moderateScale(38),
+    borderRadius: moderateScale(19),
     backgroundColor: COLORS.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
   },
   menuTextGroup: {
     flex: 1,
@@ -274,9 +300,10 @@ export const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   menuSubtitle: {
-    fontSize: fluidFont(11),
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     marginTop: 2,
+    lineHeight: fluidFont(16),
   },
   menuDivider: {
     height: 1,
@@ -315,7 +342,7 @@ export const styles = StyleSheet.create({
     fontSize: fluidFont(12),
     color: COLORS.textMuted,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   copyrightText: {
     fontSize: fluidFont(11),
@@ -346,8 +373,9 @@ export const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   modalTitle: {
-    fontSize: fluidFont(18),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(20),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   currencyOption: {
@@ -550,7 +578,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.accentCyan,
     marginTop: 6,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
 
   // Quick Chip Preset modal
@@ -596,7 +624,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textMuted,
     marginBottom: 4,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   chipPresetInputWrap: {
     flexDirection: 'row',
@@ -621,4 +649,4 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     padding: 0,
   },
-});
+}));

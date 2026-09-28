@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 
 export function ExpandableSection({ title, defaultExpanded = false, children }) {
@@ -75,7 +75,7 @@ export function TrendArrow({ trend, label, valueText, goodIsUp = true }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   section: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.md,
@@ -93,8 +93,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: fluidFont(15),
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   content: {
     padding: SPACING.md,
@@ -156,4 +155,4 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(14),
     fontWeight: '500',
   },
-});
+}));

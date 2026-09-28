@@ -82,13 +82,14 @@ export const SPACING = {
   cardPadding: moderateScale(16, 0.3),
 };
 
-// Fluid Standard Border Radii
+// Fluid Standard Border Radii. Generous on purpose: soft corners do a lot of
+// the work of making the app feel friendly rather than clinical.
 export const RADIUS = {
-  xs: moderateScale(6),
-  sm: moderateScale(10),
-  md: moderateScale(14),
-  lg: moderateScale(18),
-  xl: moderateScale(24),
+  xs: moderateScale(8),
+  sm: moderateScale(12),
+  md: moderateScale(16),
+  lg: moderateScale(22),
+  xl: moderateScale(28),
   pill: 9999,
 };
 
@@ -122,10 +123,12 @@ export const TYPE = {
     letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
   },
+  // Screen titles are set in the display serif (see constants/fonts).
   title: {
-    fontSize: fluidFont(22),
-    fontWeight: '700',
-    letterSpacing: -0.4,
+    fontFamily: 'display',
+    fontSize: fluidFont(26),
+    fontWeight: '600',
+    letterSpacing: -0.3,
   },
   heading: {
     fontSize: fluidFont(15),

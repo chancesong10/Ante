@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import SegmentedPicker from './SegmentedPicker';
 import { MIN_DECKS, MAX_DECKS, isDeckCount } from '../utils/blackjackStrategy';
@@ -164,7 +164,7 @@ export default function BlackjackOptionsSheet({ visible, rules, cardEntry, onCha
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   overlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.overlay,
@@ -210,8 +210,7 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(11),
     fontWeight: '700',
     color: COLORS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
     marginBottom: 6,
   },
   fieldHint: { fontSize: fluidFont(12), color: COLORS.textSecondary, lineHeight: fluidFont(17), marginBottom: 8 },
@@ -251,4 +250,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   doneText: { color: COLORS.textDark, fontWeight: '700', fontSize: fluidFont(15) },
-});
+}));

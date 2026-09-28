@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { COLORS, themed } from '../constants/theme';
 import { CARD_RANKS } from '../utils/blackjackStrategy';
 
 const spoken = (rank) => (rank === 'A' ? 'Ace' : rank === '10' ? '10 or face card' : rank);
@@ -61,7 +61,7 @@ export function CardFace({ rank, onPress, label }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   rankRow: { flexDirection: 'row', gap: 4 },
   rankButton: {
     flex: 1,
@@ -93,4 +93,4 @@ const styles = StyleSheet.create({
   },
   faceCorner: { position: 'absolute', top: 4, left: 6, fontSize: 10, fontWeight: '700', color: COLORS.textDark },
   faceRank: { fontSize: 22, fontWeight: '800', color: COLORS.textDark },
-});
+}));

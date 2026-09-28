@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Linking,
@@ -10,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { PLUS_NAME } from '../constants/brand';
 import { usePurchases } from '../context/PurchasesContext';
@@ -168,7 +167,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
         >
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Manage Subscription</Text>
+        <Text style={styles.navTitle}>Manage subscription</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -177,7 +176,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         {/* Membership status */}
-        <Text style={styles.sectionTitle}>MEMBERSHIP</Text>
+        <Text style={styles.sectionTitle}>Membership</Text>
         <View style={[styles.card, styles.statusCard, SHADOWS.card]}>
           <View style={styles.statusHeaderRow}>
             <View style={styles.iconCircle}>
@@ -217,7 +216,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
                 color={COLORS.textDark}
                 style={{ marginRight: 6 }}
               />
-              <Text style={styles.primaryBtnText}>See Plans</Text>
+              <Text style={styles.primaryBtnText}>See plans</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -225,7 +224,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
         {/* Manage / cancel */}
         {!!entitlement && (
           <>
-            <Text style={styles.sectionTitle}>MANAGE</Text>
+            <Text style={styles.sectionTitle}>Manage</Text>
             <View style={[styles.card, styles.menuCard, SHADOWS.card]}>
               {isLifetime ? (
                 <View style={styles.menuRow}>
@@ -314,7 +313,7 @@ export default function ManageSubscriptionScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   topNav: {
     flexDirection: 'row',
@@ -336,7 +335,7 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(13),
     fontWeight: '700',
     color: COLORS.textSecondary,
-    letterSpacing: 1,
+    letterSpacing: 0.2,
     marginBottom: SPACING.xs,
     marginLeft: 2,
   },
@@ -434,4 +433,4 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     marginHorizontal: 2,
   },
-});
+}));

@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Text, View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { GameIconTile } from './GameIcon';
 import LivePulseDot from './LivePulseDot';
@@ -73,7 +73,7 @@ export default function ActiveSessionSlip({ session, currencySymbol = '$', priva
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   slip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -115,4 +115,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

@@ -4,31 +4,49 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 
+// Getters, so each read picks up the active palette.
 const VARIANTS = {
   danger: {
     icon: 'alert-circle-outline',
-    color: COLORS.danger,
-    muted: COLORS.dangerMuted,
-    border: COLORS.dangerBorder,
+    get color() {
+      return COLORS.danger;
+    },
+    get muted() {
+      return COLORS.dangerMuted;
+    },
+    get border() {
+      return COLORS.dangerBorder;
+    },
   },
   warning: {
     icon: 'warning-outline',
-    color: COLORS.warning,
-    muted: COLORS.warningMuted,
-    border: COLORS.warningBorder,
+    get color() {
+      return COLORS.warning;
+    },
+    get muted() {
+      return COLORS.warningMuted;
+    },
+    get border() {
+      return COLORS.warningBorder;
+    },
   },
   primary: {
     icon: 'information-circle-outline',
-    color: COLORS.primary,
-    muted: COLORS.primaryMuted,
-    border: COLORS.primaryGlow,
+    get color() {
+      return COLORS.primary;
+    },
+    get muted() {
+      return COLORS.primaryMuted;
+    },
+    get border() {
+      return COLORS.primaryGlow;
+    },
   },
 };
 
@@ -102,7 +120,7 @@ export default function ConfirmModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   overlay: {
     flex: 1,
     backgroundColor: COLORS.overlay,
@@ -129,15 +147,17 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   title: {
-    fontSize: fluidFont(16),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(18),
+    fontWeight: '600',
     textAlign: 'center',
-    letterSpacing: 0.3,
     marginBottom: 6,
   },
   message: {
     fontSize: fluidFont(13),
-    color: COLORS.textSecondary,
+    get color() {
+      return COLORS.textSecondary;
+    },
     textAlign: 'center',
     lineHeight: fluidFont(18),
     marginBottom: SPACING.sm,
@@ -156,7 +176,9 @@ const styles = StyleSheet.create({
     minHeight: TOUCH_TARGET.minSize,
   },
   primaryBtnText: {
-    color: COLORS.textDark,
+    get color() {
+      return COLORS.textDark;
+    },
     fontSize: fluidFont(14),
     fontWeight: '700',
   },
@@ -171,8 +193,10 @@ const styles = StyleSheet.create({
     minHeight: TOUCH_TARGET.minSize,
   },
   secondaryBtnText: {
-    color: COLORS.textSecondary,
+    get color() {
+      return COLORS.textSecondary;
+    },
     fontSize: fluidFont(13),
     fontWeight: '700',
   },
-});
+}));

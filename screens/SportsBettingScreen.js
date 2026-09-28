@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  StyleSheet,
   Text,
   View,
   TextInput,
@@ -12,7 +11,7 @@ import {
 import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
@@ -193,9 +192,9 @@ export default function SportsBettingScreen({ navigation }) {
     >
       <ConfirmModal
         visible={showEndWarning}
-        title="Pending Bets Remaining"
+        title="Pending bets remaining"
         message="You have unresolved pending bets in this session. If you end the session now, they will be saved to your history as unresolved and cannot be edited later.\n\nAre you sure you want to end this session?"
-        confirmText="End Session"
+        confirmText="End session"
         cancelText="Cancel"
         variant="danger"
         icon="alert-circle-outline"
@@ -214,7 +213,7 @@ export default function SportsBettingScreen({ navigation }) {
         <TrackerGuide gameType="Sports Betting" navigation={navigation} />
         <View style={styles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />
-          <Text style={[styles.navTitle, { marginLeft: 8 }]}>Bet Slip Tracker</Text>
+          <Text style={[styles.navTitle, { marginLeft: 8 }]}>Bet slip tracker</Text>
         </View>
         <TouchableOpacity
           style={styles.headerEndButton}
@@ -222,7 +221,7 @@ export default function SportsBettingScreen({ navigation }) {
           onPress={handleEndSessionPress}
         >
           <Ionicons name="stop-circle" size={16} color={COLORS.danger} style={{ marginRight: 4 }} />
-          <Text style={styles.headerEndButtonText}>End Session</Text>
+          <Text style={styles.headerEndButtonText}>End session</Text>
         </TouchableOpacity>
       </View>
 
@@ -237,7 +236,7 @@ export default function SportsBettingScreen({ navigation }) {
 
         {/* SESSION STATS */}
         <View style={[styles.statsBox, SHADOWS.card]}>
-          <Text style={styles.statsSubtext}>SESSION NET OUTCOME</Text>
+          <Text style={styles.statsSubtext}>This session so far</Text>
           <Text
             style={[
               styles.netAmount,
@@ -295,7 +294,7 @@ export default function SportsBettingScreen({ navigation }) {
         <View style={[styles.card, SHADOWS.card]}>
           <View style={styles.cardHeader}>
             <Ionicons name="document-text-outline" size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.cardTitle}>Bet Details</Text>
+            <Text style={styles.cardTitle}>Bet details</Text>
           </View>
 
           {!isParlay && (
@@ -318,23 +317,23 @@ export default function SportsBettingScreen({ navigation }) {
           )}
 
           <Text style={styles.label}>
-            {isParlay ? 'Parlay Description' : isProp ? 'Prop Details (e.g. LeBron O 25.5 Pts)' : 'Matchup'}
+            {isParlay ? 'Parlay description' : isProp ? 'Prop Details (e.g. LeBron O 25.5 Pts)' : 'Matchup'}
           </Text>
           <TextInput
             style={styles.input}
             placeholder={isParlay ? "e.g. 4-Leg NFL Sunday" : "e.g. Lakers vs Celtics"}
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.placeholder}
             value={matchup}
             onChangeText={setMatchup}
           />
 
           {showLineField && (
             <>
-              <Text style={styles.label}>{betType === 'Spread' ? 'Spread Line' : 'Total Line'}</Text>
+              <Text style={styles.label}>{betType === 'Spread' ? 'Spread line' : 'Total line'}</Text>
               <TextInput
                 style={styles.input}
                 placeholder={betType === 'Spread' ? 'e.g. -3.5' : 'e.g. O 220.5'}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.placeholder}
                 value={line}
                 onChangeText={setLine}
               />
@@ -366,7 +365,7 @@ export default function SportsBettingScreen({ navigation }) {
         <View style={[styles.card, SHADOWS.card]}>
           <View style={styles.cardHeader}>
             <Ionicons name="cash-outline" size={16} color={COLORS.success} style={{ marginRight: 6 }} />
-            <Text style={styles.cardTitle}>Stake & Odds</Text>
+            <Text style={styles.cardTitle}>Stake & odds</Text>
           </View>
           
           <View style={styles.rowInputs}>
@@ -376,7 +375,7 @@ export default function SportsBettingScreen({ navigation }) {
                 style={styles.input}
                 keyboardType="numeric"
                 placeholder="e.g. 50"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.placeholder}
                 value={stake}
                 onChangeText={setStake}
               />
@@ -387,7 +386,7 @@ export default function SportsBettingScreen({ navigation }) {
                 style={styles.input}
                 keyboardType="numbers-and-punctuation"
                 placeholder="e.g. -110"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.placeholder}
                 value={odds}
                 onChangeText={setOdds}
               />
@@ -418,7 +417,7 @@ export default function SportsBettingScreen({ navigation }) {
             )}
             
             <View style={styles.quickChipsCol}>
-              <Text style={styles.quickActionLabel}>Set Odds</Text>
+              <Text style={styles.quickActionLabel}>Set odds</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.chipWrapRowHorizontal}>
                   {COMMON_ODDS.map((o) => (
@@ -434,7 +433,7 @@ export default function SportsBettingScreen({ navigation }) {
           {hasValidStake && hasValidOdds && (
             <View style={styles.payoutPreview}>
               <View style={styles.payoutPreviewRow}>
-                <Text style={styles.payoutPreviewLabel}>TO WIN</Text>
+                <Text style={styles.payoutPreviewLabel}>To win</Text>
                 <View style={[styles.favDogBadge, { backgroundColor: parsedOdds < 0 ? COLORS.primaryMuted : COLORS.accentCyanMuted }]}>
                   <Text style={[styles.favDogBadgeText, { color: parsedOdds < 0 ? COLORS.primary : COLORS.accentCyan }]}>
                     {parsedOdds < 0 ? 'FAV' : 'DOG'}
@@ -451,7 +450,7 @@ export default function SportsBettingScreen({ navigation }) {
             disabled={!canSubmit}
             activeOpacity={0.85}
           >
-            <Text style={styles.submitText}>Add to Bet Slip</Text>
+            <Text style={styles.submitText}>Add to bet slip</Text>
           </TouchableOpacity>
         </View>
 
@@ -487,7 +486,7 @@ export default function SportsBettingScreen({ navigation }) {
                           </View>
                           {b.live && (
                             <View style={styles.liveBadge}>
-                              <Text style={styles.liveBadgeText}>LIVE</Text>
+                              <Text style={styles.liveBadgeText}>Live</Text>
                             </View>
                           )}
                         </View>
@@ -564,7 +563,7 @@ export default function SportsBettingScreen({ navigation }) {
                             ]}
                             onPress={() => resolveBet(b.id, b, 'push')}
                           >
-                            <Text style={[styles.outcomeButtonSmallText, b.outcome === 'push' ? { color: COLORS.textDark } : { color: COLORS.textSecondary }]}>Push</Text>
+                            <Text style={[styles.outcomeButtonSmallText, b.outcome === 'push' ? { color: COLORS.textPrimary } : { color: COLORS.textSecondary }]}>Push</Text>
                           </TouchableOpacity>
                           
                           {!isPending && (
@@ -592,7 +591,7 @@ export default function SportsBettingScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -635,7 +634,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  statsSubtext: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginBottom: 4 },
+  statsSubtext: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 0.2, marginBottom: 4 },
   netAmount: { fontSize: 32, fontWeight: '700', marginBottom: 12 },
   statsRow: { flexDirection: 'row', gap: 8, width: '100%' },
   statPill: {
@@ -647,7 +646,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  statPillLabel: { fontSize: 10, color: COLORS.textMuted, textTransform: 'uppercase', fontWeight: '600' },
+  statPillLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
   statPillValue: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 2 },
   betTypeWrapper: { marginBottom: 16 },
   betTypeScroll: { paddingRight: 16, gap: 8, flexDirection: 'row' },
@@ -678,8 +677,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   input: {
     backgroundColor: COLORS.backgroundSecondary,
@@ -723,7 +721,7 @@ const styles = StyleSheet.create({
   liveToggleTextActive: { color: COLORS.textPrimary, fontWeight: '700' },
   quickActionContainer: { flexDirection: 'column', gap: 12, marginBottom: 16 },
   quickChipsCol: { width: '100%', overflow: 'hidden' },
-  quickActionLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase' },
+  quickActionLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', marginBottom: 6 },
   stakeChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -754,7 +752,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
   },
   payoutPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  payoutPreviewLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '700', letterSpacing: 1 },
+  payoutPreviewLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '700', letterSpacing: 0.2 },
   payoutPreviewValue: { fontSize: 24, fontWeight: '700', color: COLORS.success },
   favDogBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   favDogBadgeText: { fontSize: 9, fontWeight: '700' },
@@ -764,7 +762,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  submitDisabled: { backgroundColor: COLORS.cardBorder, opacity: 0.5 },
+  // The real button, faded: still reads as the thing you'll press.
+  submitDisabled: { opacity: 0.35 },
   submitText: { color: COLORS.textDark, fontWeight: '700', fontSize: 15 },
   historySection: { marginTop: 8 },
   swipeHint: { fontSize: 12, color: COLORS.textMuted, marginBottom: 12, textAlign: 'center' },
@@ -789,7 +788,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  betTypeBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase' },
+  betTypeBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.textSecondary },
   liveBadge: {
     backgroundColor: COLORS.warningMuted,
     paddingHorizontal: 6,
@@ -817,4 +816,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   outcomeButtonSmallText: { fontWeight: '700', fontSize: 14 },
-});
+}));

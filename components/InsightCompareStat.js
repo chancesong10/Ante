@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { View, Text } from 'react-native';
+import { COLORS, themed } from '../constants/theme';
 import { fluidFont, moderateScale, RADIUS } from '../constants/layout';
 import { SkeletonBar } from './InsightsPaywall';
 
@@ -44,7 +44,7 @@ export default function InsightCompareStat({ label, value, valueColor, sub, lock
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   // Flattened: a cell with a subtle inset ground, to distinguish it
   // from the parent card ground and create a "bento box" aesthetic.
   compareCol: {
@@ -77,4 +77,4 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontVariant: ['tabular-nums'],
   },
-});
+}));

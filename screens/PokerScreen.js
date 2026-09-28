@@ -48,9 +48,9 @@ const STREETS = [
 ];
 
 const BLIND_MODES = [
-  { key: 'none', label: 'No Blinds' },
-  { key: 'big', label: 'Big Blind Only' },
-  { key: 'both', label: 'Small + Big Blind' },
+  { key: 'none', label: 'No blinds' },
+  { key: 'big', label: 'Big blind only' },
+  { key: 'both', label: 'Small + big blind' },
 ];
 
 // The blind shortcuts, Call, and the chip grid. Rendered once for the hero
@@ -186,7 +186,7 @@ const OpponentCard = React.memo(function OpponentCard({
         <Text style={styles.sectionHeaderTitle}>{label}</Text>
         {opp.folded ? (
           <View style={styles.foldedBadge}>
-            <Text style={styles.foldedBadgeText}>FOLDED</Text>
+            <Text style={styles.foldedBadgeText}>Folded</Text>
           </View>
         ) : (
           oppBet > 0 && (
@@ -211,7 +211,7 @@ const OpponentCard = React.memo(function OpponentCard({
               style={styles.heroBetInput}
               keyboardType="numeric"
               placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.placeholder}
               value={oppBet > 0 ? String(oppBet) : ''}
               onChangeText={(text) => onBetChange(opp.id, text)}
             />
@@ -220,7 +220,7 @@ const OpponentCard = React.memo(function OpponentCard({
             </Text>
           </View>
 
-          <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
+          <Text style={styles.chipRowLabel}>Tap chips to increment bet:</Text>
           <BetChips
             currentBet={oppBet}
             onChipPress={handleChipPress}
@@ -249,7 +249,7 @@ const OpponentCard = React.memo(function OpponentCard({
           style={{ marginRight: 6 }}
         />
         <Text style={[styles.foldToggleBtnText, opp.folded && styles.foldToggleBtnTextActive]}>
-          {opp.folded ? 'Undo Fold' : 'Fold This Player'}
+          {opp.folded ? 'Undo fold' : 'Fold this player'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -413,9 +413,9 @@ export default function PokerScreen({ navigation }) {
     if (isNaN(count) || count < 2 || count > 10) {
       setAlertModal({
         variant: 'warning',
-        title: 'Invalid Player Count',
+        title: 'Invalid player count',
         message: 'Enter a number of players between 2 and 10.',
-        confirmText: 'Got It',
+        confirmText: 'Got it',
         showCancel: false,
         onConfirm: closeAlertModal,
       });
@@ -611,7 +611,7 @@ export default function PokerScreen({ navigation }) {
               ))}
             </View>
           ),
-          confirmText: 'Got It',
+          confirmText: 'Got it',
           showCancel: false,
           onConfirm: closeAlertModal,
         });
@@ -667,10 +667,10 @@ export default function PokerScreen({ navigation }) {
       setAlertModal({
         variant: 'primary',
         icon: 'trophy-outline',
-        title: 'Everyone Folded',
+        title: 'Everyone folded',
         message: `The table folded to you. Take the ${currencySymbol}${formatNumber(effectiveTotalPot)} pot for a ${foldWinNet >= 0 ? '+' : '-'}${currencySymbol}${formatNumber(Math.abs(foldWinNet))} net. Folded someone by mistake? Go back and hit "Undo Fold" on their card.`,
-        confirmText: 'Take the Pot',
-        cancelText: 'Go Back',
+        confirmText: 'Take the pot',
+        cancelText: 'Go back',
         onConfirm: handleWinByFold,
         onCancel: () => {
           closeAlertModal();
@@ -758,8 +758,8 @@ export default function PokerScreen({ navigation }) {
             icon: 'close-circle-outline',
             title: 'Cancel This Hand?',
             message: 'Progress for this hand will be lost.',
-            confirmText: 'Cancel Hand',
-            cancelText: 'Keep Tracking',
+            confirmText: 'Cancel hand',
+            cancelText: 'Keep tracking',
             onConfirm: () => {
               closeAlertModal();
               setViewMode('dashboard');
@@ -866,8 +866,8 @@ export default function PokerScreen({ navigation }) {
                 icon: 'close-circle-outline',
                 title: 'Cancel This Hand?',
                 message: 'Progress for this hand will be lost.',
-                confirmText: 'Cancel Hand',
-                cancelText: 'Keep Tracking',
+                confirmText: 'Cancel hand',
+                cancelText: 'Keep tracking',
                 onConfirm: () => {
                   closeAlertModal();
                   setViewMode('dashboard');
@@ -956,7 +956,7 @@ export default function PokerScreen({ navigation }) {
                     style={styles.heroBetInput}
                     keyboardType="numeric"
                     placeholder="0"
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={COLORS.placeholder}
                     value={currentHeroBet > 0 ? String(currentHeroBet) : ''}
                     onChangeText={handleHeroDirectBetChange}
                   />
@@ -966,7 +966,7 @@ export default function PokerScreen({ navigation }) {
                 </View>
 
                 {/* Incremental Quick Chips */}
-                <Text style={styles.chipRowLabel}>Tap Chips to Increment Bet:</Text>
+                <Text style={styles.chipRowLabel}>Tap chips to increment bet:</Text>
                 <BetChips
                   currentBet={currentHeroBet}
                   onChipPress={handleHeroChipPress}
@@ -1003,7 +1003,7 @@ export default function PokerScreen({ navigation }) {
           ) : (
             // SHOWDOWN STAGE (STAGE 5)
             <View style={[styles.card, SHADOWS.card]}>
-              <Text style={styles.sectionHeaderTitle}>Hand Showdown</Text>
+              <Text style={styles.sectionHeaderTitle}>Hand showdown</Text>
               <Text style={styles.cardSubtitle}>
                 Select the outcome of the hand to calculate your final net profit or loss.
               </Text>
@@ -1107,7 +1107,7 @@ export default function PokerScreen({ navigation }) {
               {/* Split Way selector */}
               {showdownResult === 'split' && (
                 <View style={styles.splitWayRow}>
-                  <Text style={styles.label}>Split Chopped Pot Ways:</Text>
+                  <Text style={styles.label}>Split chopped pot ways:</Text>
                   <View style={styles.splitWayBtnGroup}>
                     {[2, 3, 4].map((w) => (
                       <TouchableOpacity
@@ -1132,7 +1132,7 @@ export default function PokerScreen({ navigation }) {
 
               {/* Final Net Calculation Summary Card */}
               <View style={styles.showdownSummaryBox}>
-                <Text style={styles.showdownSummaryTitle}>PROJECTED HAND NET</Text>
+                <Text style={styles.showdownSummaryTitle}>Projected hand net</Text>
                 <Text
                   style={[
                     styles.showdownNetNumber,
@@ -1201,7 +1201,7 @@ export default function PokerScreen({ navigation }) {
               activeOpacity={0.85}
             >
               <Ionicons name="checkmark-done" size={20} color={COLORS.textDark} style={{ marginRight: 6 }} />
-              <Text style={styles.handPrimaryBtnText}>Save Hand</Text>
+              <Text style={styles.handPrimaryBtnText}>Save hand</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -1217,9 +1217,9 @@ export default function PokerScreen({ navigation }) {
             <View style={[styles.modalCard, SHADOWS.card]}>
               <View style={styles.modalHeader}>
                 <View style={styles.modalIconCircle}>
-                  <Ionicons name="close" size={24} color={COLORS.danger} />
+                  <Ionicons name="close" size={24} color={COLORS.textSecondary} />
                 </View>
-                <Text style={styles.modalTitle}>Fold Assessment</Text>
+                <Text style={styles.modalTitle}>Fold assessment</Text>
                 <Text style={styles.modalSubtitle}>
                   You committed {currencySymbol}{formatNumber(heroTotalInvestment)} up to {STREETS[currentStreetIdx]?.label}.
                   Tag this fold for your behavioral analytics:
@@ -1233,9 +1233,9 @@ export default function PokerScreen({ navigation }) {
                   activeOpacity={0.8}
                 >
                   <View style={styles.foldTagBadge}>
-                    <Text style={styles.foldTagBadgeText}>BLUFFED</Text>
+                    <Text style={styles.foldTagBadgeText}>Bluffed</Text>
                   </View>
-                  <Text style={styles.foldOptionLabel}>I Got Bluffed</Text>
+                  <Text style={styles.foldOptionLabel}>I got bluffed</Text>
                   <Text style={styles.foldOptionDesc}>
                     Opponent showed weak cards / I folded the winner.
                   </Text>
@@ -1247,9 +1247,9 @@ export default function PokerScreen({ navigation }) {
                   activeOpacity={0.8}
                 >
                   <View style={styles.foldTagBadge}>
-                    <Text style={styles.foldTagBadgeText}>GOOD FOLD</Text>
+                    <Text style={styles.foldTagBadgeText}>Good fold</Text>
                   </View>
-                  <Text style={styles.foldOptionLabel}>Good Discipline Fold</Text>
+                  <Text style={styles.foldOptionLabel}>Good discipline fold</Text>
                   <Text style={styles.foldOptionDesc}>Opponent had the better hand.</Text>
                 </TouchableOpacity>
 
@@ -1259,9 +1259,9 @@ export default function PokerScreen({ navigation }) {
                   activeOpacity={0.8}
                 >
                   <View style={styles.foldTagBadge}>
-                    <Text style={styles.foldTagBadgeText}>NO-SHOW</Text>
+                    <Text style={styles.foldTagBadgeText}>No-show</Text>
                   </View>
-                  <Text style={styles.foldOptionLabel}>Mucked / Unknown</Text>
+                  <Text style={styles.foldOptionLabel}>Mucked / unknown</Text>
                   <Text style={styles.foldOptionDesc}>Cards were hidden.</Text>
                 </TouchableOpacity>
               </View>
@@ -1270,7 +1270,7 @@ export default function PokerScreen({ navigation }) {
                 style={styles.modalCancelBtn}
                 onPress={() => setFoldModalVisible(false)}
               >
-                <Text style={styles.modalCancelText}>Cancel (Keep Playing Hand)</Text>
+                <Text style={styles.modalCancelText}>Cancel (keep playing hand)</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1309,7 +1309,7 @@ export default function PokerScreen({ navigation }) {
           onPress={handleEndSessionPress}
         >
           <Ionicons name="stop-circle" size={16} color={COLORS.danger} style={{ marginRight: 4 }} />
-          <Text style={styles.headerEndButtonText}>End Session</Text>
+          <Text style={styles.headerEndButtonText}>End session</Text>
         </TouchableOpacity>
       </View>
 
@@ -1334,7 +1334,7 @@ export default function PokerScreen({ navigation }) {
             </Text>
           </View>
 
-          <Text style={styles.statsSubtext}>SESSION NET OUTCOME</Text>
+          <Text style={styles.statsSubtext}>This session so far</Text>
           <Text
             style={[
               styles.netAmount,
@@ -1391,7 +1391,7 @@ export default function PokerScreen({ navigation }) {
         {/* Player Names */}
         {numOpponents > 0 && (
           <View style={[styles.card, SHADOWS.card]}>
-            <Text style={styles.sectionHeaderTitle}>Name Your Players</Text>
+            <Text style={styles.sectionHeaderTitle}>Name your players</Text>
             <Text style={styles.cardSubtitle}>
               Optional — give the other seats real names instead of "Player 1, 2, 3…"
             </Text>
@@ -1403,7 +1403,7 @@ export default function PokerScreen({ navigation }) {
                   <TextInput
                     style={styles.playerNameInput}
                     placeholder={`Player ${id}`}
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={COLORS.placeholder}
                     value={playerNames[id] || ''}
                     onChangeText={(text) => handlePlayerNameChange(id, text)}
                   />
@@ -1426,7 +1426,7 @@ export default function PokerScreen({ navigation }) {
         {/* Hands Logged in Current Session */}
         {sessionHands.length > 0 && (
           <View style={styles.historySection}>
-            <Text style={styles.sectionTitle}>Hands in Current Session</Text>
+            <Text style={styles.sectionTitle}>Hands in current session</Text>
             <Text style={styles.swipeHint}>Swipe a hand to delete • Tap to expand details</Text>
 
             {sessionHands.map((h, idx) => {
@@ -1458,12 +1458,12 @@ export default function PokerScreen({ navigation }) {
                           )}
                           {isFold && h.foldReason === 'bluffed' && (
                             <View style={[styles.historyPosBadge, { backgroundColor: COLORS.primaryMuted }]}>
-                              <Text style={[styles.historyPosText, { color: COLORS.primary }]}>BLUFFED</Text>
+                              <Text style={[styles.historyPosText, { color: COLORS.primary }]}>Bluffed</Text>
                             </View>
                           )}
                           {isFold && h.foldReason === 'good_fold' && (
                             <View style={[styles.historyPosBadge, { backgroundColor: COLORS.backgroundSecondary }]}>
-                              <Text style={styles.historyPosText}>GOOD FOLD</Text>
+                              <Text style={styles.historyPosText}>Good fold</Text>
                             </View>
                           )}
                         </View>
@@ -1494,7 +1494,7 @@ export default function PokerScreen({ navigation }) {
                     {isExpanded && h.streets && (
                       <View style={styles.expandedBreakdown}>
                         <View style={styles.expandedDivider} />
-                        <Text style={styles.expandedBreakdownTitle}>Street Investments:</Text>
+                        <Text style={styles.expandedBreakdownTitle}>Street investments:</Text>
                         <View style={styles.streetGrid}>
                           <Text style={styles.streetGridItem}>Pre-Flop: {currencySymbol}{formatAmount(h.streets.preflop)}</Text>
                           <Text style={styles.streetGridItem}>Flop: {currencySymbol}{formatAmount(h.streets.flop)}</Text>

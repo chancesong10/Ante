@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   StatusBar,
   TouchableOpacity,
@@ -10,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { screenStyles } from '../constants/screenStyles';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
@@ -232,7 +231,7 @@ export default function AnalyticsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={COLORS.statusBarContent} backgroundColor={COLORS.background} />
       <ScrollView
         refreshControl={refreshControl}
         style={screenStyles.container}
@@ -247,12 +246,12 @@ export default function AnalyticsScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Analytics</Text>
-          <Text style={styles.subtitle}>Dynamic session performance metrics</Text>
+          <Text style={styles.subtitle}>How your sessions add up</Text>
         </View>
 
         {/* Top Summary Hero Card */}
         <View style={[styles.card, SHADOWS.card]}>
-          <Text style={styles.cardHeaderLabel}>OVERALL NET PROFIT</Text>
+          <Text style={styles.cardHeaderLabel}>All-time net</Text>
           <CountUp
             value={totalNetProfit}
             format={formatNet}
@@ -272,7 +271,7 @@ export default function AnalyticsScreen({ navigation }) {
 
           <View style={styles.subStatsRow}>
             <View style={styles.subStatItem}>
-              <Text style={styles.subStatLabel}>Win Rate</Text>
+              <Text style={styles.subStatLabel}>Win rate</Text>
               <Text
                 style={[
                   styles.subStatValue,
@@ -284,7 +283,7 @@ export default function AnalyticsScreen({ navigation }) {
             </View>
             <View style={styles.subStatDivider} />
             <View style={styles.subStatItem}>
-              <Text style={styles.subStatLabel}>Profit Factor</Text>
+              <Text style={styles.subStatLabel}>Profit factor</Text>
               <Text style={styles.subStatValue}>{profitFactor}</Text>
             </View>
             <View style={styles.subStatDivider} />
@@ -303,9 +302,10 @@ export default function AnalyticsScreen({ navigation }) {
               size={moderateScale(28)}
               color={COLORS.textMuted}
             />
-            <Text style={styles.emptyNoticeTitle}>No Session Data Available</Text>
+            <Text style={styles.emptyNoticeTitle}>Nothing to chart yet</Text>
             <Text style={styles.emptyNoticeText}>
-              All metrics on this screen are calculated live from your recorded session history. Start tracking a session to populate analytics.
+              Play a session or two and this page fills in on its own: your bankroll over time, your best
+              and worst nights, and how each game is treating you.
             </Text>
           </View>
         )}
@@ -315,7 +315,7 @@ export default function AnalyticsScreen({ navigation }) {
           <>
             {/* The chart sits directly under the headline net, so the number
                 and the shape that produced it are read as one thing. */}
-            <Text style={styles.sectionTitle}>Bankroll Over Time</Text>
+            <Text style={styles.sectionTitle}>Bankroll over time</Text>
             <View style={[styles.card, SHADOWS.card]}>
               <BankrollLineChart
                 sessions={allChronologicalSessions}
@@ -326,7 +326,7 @@ export default function AnalyticsScreen({ navigation }) {
 
             {/* This month vs last — the comparison people actually ask for,
                 on calendar months rather than a rolling window. */}
-            <Text style={styles.sectionTitle}>This Month vs Last</Text>
+            <Text style={styles.sectionTitle}>This month vs last</Text>
             <View style={[styles.card, SHADOWS.card, styles.monthCard]}>
               <View style={styles.monthRow}>
                 <View style={styles.monthCol}>
@@ -385,7 +385,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* Dynamic Session Performance Bars */}
         {totalSessions > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Recent Session Trajectory</Text>
+            <Text style={styles.sectionTitle}>Your last few sessions</Text>
             <View style={[styles.card, SHADOWS.card]}>
               {/* Diverging around a zero line: wins rise, losses drop. The old
                   version drew |net| upward from a shared baseline, so a -$300
@@ -518,12 +518,12 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* Dynamic Key Performance Indicators Grid */}
-        <Text style={styles.sectionTitle}>Detailed Statistics</Text>
+        <Text style={styles.sectionTitle}>The details</Text>
         <View style={styles.grid}>
           {/* Net per hour actually at the table — the figure that makes a
               bankroll comparable to a wage. */}
           <View style={[styles.gridCard, SHADOWS.card]}>
-            <Text style={styles.gridLabel}>Net Per Hour</Text>
+            <Text style={styles.gridLabel}>Net per hour</Text>
             {hourlyRate === null ? (
               <Text style={[styles.gridValue, { color: COLORS.textMuted }]}>—</Text>
             ) : (
@@ -544,7 +544,7 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
 
           <View style={[styles.gridCard, SHADOWS.card]}>
-            <Text style={styles.gridLabel}>Best Session</Text>
+            <Text style={styles.gridLabel}>Best session</Text>
             <Text
               style={[
                 styles.gridValue,
@@ -556,7 +556,7 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
 
           <View style={[styles.gridCard, SHADOWS.card]}>
-            <Text style={styles.gridLabel}>Worst Session</Text>
+            <Text style={styles.gridLabel}>Worst session</Text>
             <Text
               style={[
                 styles.gridValue,
@@ -568,7 +568,7 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
 
           <View style={[styles.gridCard, SHADOWS.card]}>
-            <Text style={styles.gridLabel}>Avg Net / Session</Text>
+            <Text style={styles.gridLabel}>Avg net / session</Text>
             <Text
               style={[
                 styles.gridValue,
@@ -580,13 +580,13 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
 
           <View style={[styles.gridCard, SHADOWS.card]}>
-            <Text style={styles.gridLabel}>Total Hands Logged</Text>
+            <Text style={styles.gridLabel}>Total hands logged</Text>
             <Text style={styles.gridValue}>{totalHands}</Text>
           </View>
         </View>
 
         {/* Game Portfolio Breakdown */}
-        <Text style={styles.sectionTitle}>Game Portfolio Breakdown</Text>
+        <Text style={styles.sectionTitle}>Game by game</Text>
         <View style={[styles.portfolioCard, SHADOWS.card]}>
           {/* Blackjack */}
           <View style={styles.portfolioRow}>
@@ -670,7 +670,7 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={styles.portfolioRow}>
             <GameIconTile gameType="General" glyph={moderateScale(18)} style={styles.portfolioIconBox} />
             <View style={styles.portfolioInfo}>
-              <Text style={styles.portfolioName}>General Tracker</Text>
+              <Text style={styles.portfolioName}>General tracker</Text>
               <Text style={styles.portfolioSub}>{games.General.sessions} sessions logged</Text>
             </View>
             <Text style={[styles.portfolioNet, { color: netColor(games.General.net) }]}>
@@ -679,14 +679,14 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Behavioral Insights</Text>
+        <Text style={styles.sectionTitle}>Insights</Text>
           <TouchableOpacity
             style={[styles.card, SHADOWS.card, styles.insightLinkCard]}
             activeOpacity={0.8}
             onPress={() => navigation.navigate('LifetimeInsights')}
           >
             <View>
-              <Text style={styles.insightLinkTitle}>Lifetime Insights</Text>
+              <Text style={styles.insightLinkTitle}>Lifetime insights</Text>
               <Text style={styles.insightLinkSubtitle}>Cross-game patterns, streaks, and leak detection</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
@@ -698,7 +698,7 @@ export default function AnalyticsScreen({ navigation }) {
             onPress={() => navigation.navigate('Insights', { gameType: 'Blackjack' })}
           >
             <View>
-              <Text style={styles.insightLinkTitle}>Blackjack Insights</Text>
+              <Text style={styles.insightLinkTitle}>Blackjack insights</Text>
               <Text style={styles.insightLinkSubtitle}>Strategy accuracy, doubling, and patterns</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
@@ -710,7 +710,7 @@ export default function AnalyticsScreen({ navigation }) {
             onPress={() => navigation.navigate('PokerInsights')}
           >
             <View>
-              <Text style={styles.insightLinkTitle}>Poker Insights</Text>
+              <Text style={styles.insightLinkTitle}>Poker insights</Text>
               <Text style={styles.insightLinkSubtitle}>Bluff-catching, tilt, and leak detection</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
@@ -722,7 +722,7 @@ export default function AnalyticsScreen({ navigation }) {
             onPress={() => navigation.navigate('SportsBettingInsights')}
           >
             <View>
-              <Text style={styles.insightLinkTitle}>Sports Betting Insights</Text>
+              <Text style={styles.insightLinkTitle}>Sports Betting insights</Text>
               <Text style={styles.insightLinkSubtitle}>Odds edge, favorites vs. dogs, and leak detection</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
@@ -734,7 +734,7 @@ export default function AnalyticsScreen({ navigation }) {
             onPress={() => navigation.navigate('TableGameInsights', { gameType: 'Roulette' })}
           >
             <View>
-              <Text style={styles.insightLinkTitle}>Roulette Insights</Text>
+              <Text style={styles.insightLinkTitle}>Roulette insights</Text>
               <Text style={styles.insightLinkSubtitle}>House edge vs. luck, wheel choice, and bet types</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
@@ -746,7 +746,7 @@ export default function AnalyticsScreen({ navigation }) {
             onPress={() => navigation.navigate('TableGameInsights', { gameType: 'Baccarat' })}
           >
             <View>
-              <Text style={styles.insightLinkTitle}>Baccarat Insights</Text>
+              <Text style={styles.insightLinkTitle}>Baccarat insights</Text>
               <Text style={styles.insightLinkSubtitle}>House edge vs. luck, Tie bets, and progressions</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
@@ -756,7 +756,7 @@ export default function AnalyticsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   contentContainer: {
     paddingHorizontal: SPACING.pageHorizontal,
     paddingTop: SPACING.sm,
@@ -766,13 +766,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   title: {
-    fontSize: fluidFont(26),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(28),
+    fontWeight: '600',
     color: COLORS.textPrimary,
-    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: fluidFont(12),
+    fontSize: fluidFont(14),
     color: COLORS.textSecondary,
     marginTop: 2,
   },
@@ -785,10 +785,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   cardHeaderLabel: {
-    fontSize: fluidFont(11),
-    fontWeight: '700',
+    fontSize: fluidFont(13),
+    fontWeight: '600',
     color: COLORS.textSecondary,
-    letterSpacing: 1.5,
     marginBottom: 4,
     textAlign: 'center',
   },
@@ -837,21 +836,23 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   emptyNoticeTitle: {
-    fontSize: fluidFont(15),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(17),
+    fontWeight: '600',
     color: COLORS.textPrimary,
     marginTop: SPACING.xs,
   },
   emptyNoticeText: {
-    fontSize: fluidFont(12),
-    color: COLORS.textMuted,
+    fontSize: fluidFont(13),
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    marginTop: 4,
-    lineHeight: fluidFont(16),
+    marginTop: 6,
+    lineHeight: fluidFont(19),
   },
   sectionTitle: {
-    fontSize: fluidFont(16),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(18),
+    fontWeight: '600',
     color: COLORS.textPrimary,
     marginBottom: SPACING.sm,
   },
@@ -972,7 +973,7 @@ const styles = StyleSheet.create({
   monthLabel: {
     fontSize: fluidFont(10),
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.2,
     color: COLORS.textSecondary,
     marginBottom: 6,
   },
@@ -1066,4 +1067,4 @@ insightLinkSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }
     backgroundColor: COLORS.cardBorder,
     marginHorizontal: -SPACING.cardPadding + moderateScale(12),
   },
-});
+}));

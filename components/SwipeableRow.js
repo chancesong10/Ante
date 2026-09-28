@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { StyleSheet, Animated, View, Text, TouchableOpacity } from 'react-native';
+import { Animated, View, Text, TouchableOpacity } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import ConfirmModal from './ConfirmModal';
 
 export default function SwipeableRow({
@@ -142,7 +142,7 @@ export default function SwipeableRow({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   leftActionContainer: {
     width: 76,
     marginRight: 8,
@@ -185,7 +185,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
-});
+}));

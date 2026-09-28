@@ -72,7 +72,7 @@ export default function DataPrivacyScreen({ navigation }) {
       icon: 'trash-outline',
       title: 'Erase all session data?',
       message: `This permanently deletes all ${sessionHistory.length} recorded sessions from this device${user ? ' and from your account' : ''}. Your preferences and ${PLUS_NAME} membership are not affected. This cannot be undone.`,
-      confirmText: 'Erase Everything',
+      confirmText: 'Erase everything',
       cancelText: 'Cancel',
       onConfirm: () => {
         clearAllSessions();
@@ -111,7 +111,7 @@ export default function DataPrivacyScreen({ navigation }) {
               />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Hide Amounts</Text>
+              <Text style={styles.menuTitle}>Hide amounts</Text>
               <Text style={styles.menuSubtitle}>
                 Masks every figure app-wide. Live bets and pots stay visible so trackers
                 remain usable.
@@ -138,7 +138,7 @@ export default function DataPrivacyScreen({ navigation }) {
               <Ionicons name="finger-print-outline" size={moderateScale(18)} color={COLORS.accentViolet} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Vault Device Seed</Text>
+              <Text style={styles.menuTitle}>Device seed</Text>
               <Text style={styles.menuSubtitle} numberOfLines={1}>
                 {deviceId.slice(0, 18)}...
               </Text>
@@ -172,7 +172,7 @@ export default function DataPrivacyScreen({ navigation }) {
               />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Export Session History</Text>
+              <Text style={styles.menuTitle}>Export session history</Text>
               <Text style={styles.menuSubtitle}>
                 {sessionHistory.length > 0
                   ? `${sessionHistory.length} session${sessionHistory.length === 1 ? '' : 's'} as a CSV file`
@@ -193,7 +193,7 @@ export default function DataPrivacyScreen({ navigation }) {
               <Ionicons name="trash-outline" size={moderateScale(18)} color={COLORS.danger} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Erase All Data</Text>
+              <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Erase all data</Text>
               <Text style={styles.menuSubtitle}>Permanently delete every recorded session</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />

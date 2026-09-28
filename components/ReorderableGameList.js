@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { renderGameIcon } from './GameIcon';
 import { hapticLight } from '../utils/haptics';
@@ -142,7 +142,7 @@ export default function ReorderableGameList({ initialOrder, onChange }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   row: {
     position: 'absolute',
     top: 0,
@@ -176,4 +176,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8),
     paddingVertical: moderateScale(10),
   },
-});
+}));
