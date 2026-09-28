@@ -10,7 +10,7 @@ export function ExpandableSection({ title, defaultExpanded = false, children }) 
   return (
     <View style={styles.section}>
       <Pressable 
-        style={styles.header} 
+        style={[styles.header, expanded && styles.headerExpanded]} 
         onPress={() => setExpanded(!expanded)}
       >
         <Text style={styles.title}>{title}</Text>
@@ -87,7 +87,10 @@ const styles = themed(() => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: SPACING.md,
-    minHeight: TOUCH_TARGET,
+    minHeight: TOUCH_TARGET.minSize,
+    },
+    headerExpanded: {
+      paddingBottom: SPACING.xs,
   },
   title: {
     color: COLORS.textPrimary,
@@ -97,8 +100,8 @@ const styles = themed(() => ({
   },
   content: {
     padding: SPACING.md,
-    paddingTop: 0,
-    borderTopWidth: 1,
+    paddingTop: SPACING.md - SPACING.xs,
+      borderTopWidth: 1,
     borderTopColor: COLORS.surfaceHighlight,
   },
   progressContainer: {
@@ -156,3 +159,4 @@ const styles = themed(() => ({
     fontWeight: '500',
   },
 }));
+
