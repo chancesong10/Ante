@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 
 // Full-screen block shown in place of an Insights screen when the user
@@ -20,19 +20,19 @@ export default function AuthGateScreen({ onSignIn, navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={COLORS.statusBarContent} backgroundColor={COLORS.background} />
       <View style={styles.container}>
         <View style={[styles.card, SHADOWS.card]}>
           <View style={styles.iconBadge}>
             <Ionicons name="lock-closed" size={moderateScale(26)} color={COLORS.primary} />
           </View>
-          <Text style={styles.title}>Sign In to View Insights</Text>
+          <Text style={styles.title}>Sign in to view insights</Text>
           <Text style={styles.subtitle}>
             Behavioral insights are tied to your account so they can follow you across devices. Create a free account or sign in to continue.
           </Text>
           <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85} onPress={handlePress}>
             <Ionicons name="log-in-outline" size={18} color={COLORS.textDark} style={{ marginRight: 6 }} />
-            <Text style={styles.ctaButtonText}>Sign In / Create Account</Text>
+            <Text style={styles.ctaButtonText}>Sign in or create an account</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -40,7 +40,7 @@ export default function AuthGateScreen({ onSignIn, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -73,8 +73,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primaryGlow,
   },
   title: {
-    fontSize: fluidFont(18),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(20),
+    fontWeight: '600',
     color: COLORS.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
@@ -100,4 +101,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: fluidFont(14),
   },
-});
+}));

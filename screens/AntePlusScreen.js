@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RevenueCatUI from 'react-native-purchases-ui';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { PLUS_NAME } from '../constants/brand';
 import { useAuth } from '../context/AuthContext';
@@ -70,7 +70,7 @@ export default function AntePlusScreen({ navigation }) {
               color={COLORS.textDark}
               style={{ marginRight: 6 }}
             />
-            <Text style={styles.gateBtnText}>Sign In / Create Account</Text>
+            <Text style={styles.gateBtnText}>Sign in or create an account</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={goBack} activeOpacity={0.7} style={styles.gateLink}>
             <Text style={styles.gateLinkText}>Not now</Text>
@@ -94,7 +94,7 @@ export default function AntePlusScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   container: { flex: 1, backgroundColor: COLORS.background },
 
   // Floats over the paywall. The scrim keeps it legible whatever artwork the
@@ -109,9 +109,9 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(18),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(10, 10, 10, 0.6)',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
+    borderColor: COLORS.cardBorder,
   },
 
   gate: {
@@ -176,4 +176,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
-});
+}));

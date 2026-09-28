@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { View, Text } from 'react-native';
+import { COLORS, themed } from '../constants/theme';
 import { fluidFont, moderateScale } from '../constants/layout';
 import { SkeletonBar } from './InsightsPaywall';
 
@@ -30,7 +30,7 @@ export default function InsightStatLine({ label, subLabel, value, valueColor, lo
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -58,4 +58,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
-});
+}));

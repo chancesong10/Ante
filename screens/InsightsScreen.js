@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, LAYOUT } from '../constants/layout';
 import { netTone, formatNumber, formatMoney } from '../utils/format';
 import { NavBar, Tappable } from '../components/ui';
@@ -32,7 +32,7 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
   switch (leak.id) {
     case 'loss_chasing':
       return {
-        title: 'You Bet Bigger After Losing',
+        title: 'You bet bigger after losing',
         detail: `You bet ${fmtDollar(leak.avgBetAfterLoss)} on average right after a loss, vs. ${fmtDollar(leak.avgBetAfterWin)} after a win — ${leak.pctIncrease.toFixed(0)}% more. That's a classic loss-chasing pattern.`,
       };
     case 'double_down_underuse':
@@ -52,12 +52,12 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
       };
     case 'bet_tier_dropoff':
       return {
-        title: 'Your Win Rate Drops on Your Biggest Bets',
+        title: 'Your win rate drops on your biggest bets',
         detail: `Your win rate is ${fmtPct(leak.smallWinRate)} on your smallest bets but only ${fmtPct(leak.largeWinRate)} on your largest. That can be variance, but it can also mean bigger bets are going in on worse decisions.`,
       };
     case 'volatility':
       return {
-        title: 'Your Results Are Highly Volatile',
+        title: 'Your results are highly volatile',
         detail: `Your net result per hand swings about ${leak.volatilityRatio.toFixed(1)}x your average bet, hand to hand. Big swings add variance risk on top of whatever edge basic strategy gives you.`,
       };
     case 'strategy_mistakes':
@@ -72,16 +72,16 @@ function getLeakCopy(leak, { fmtDollar, fmtPct }) {
       };
     case 'insurance':
       return {
-        title: 'Insurance Is a Losing Side Bet',
+        title: 'Insurance is a losing side bet',
         detail: `You took insurance ${leak.taken} of the ${leak.offered} times the dealer showed an Ace, for a net ${leak.net >= 0 ? '+' : '-'}${fmtDollar(Math.abs(leak.net))}. Basic strategy never takes it: it carries about a 7% house edge in a six-deck game.`,
       };
     case 'six_five_tables':
       return {
-        title: '6:5 Tables Are Shorting Your Blackjacks',
+        title: '6:5 tables are shorting your blackjacks',
         detail: `${fmtPct(leak.share)} of your hands with table rules recorded were at tables paying 6:5 for blackjack, which adds about 1.4% to the house edge.${leak.blackjacks > 0 ? ` Your ${leak.blackjacks} blackjack${leak.blackjacks === 1 ? '' : 's'} there paid ${fmtDollar(leak.cost)} less than at 3:2.` : ''}`,
       };
     default:
-      return { title: 'Leak Detected', detail: '' };
+      return { title: 'Leak detected', detail: '' };
   }
 }
 
@@ -317,7 +317,7 @@ export default function InsightsScreen({ route, navigation }) {
               <View style={[styles.card, styles.freeCard]}>
                 <View style={styles.proRow}>
                   <Ionicons name="checkmark-done-outline" size={moderateScale(13)} color={COLORS.primary} />
-                  <Text style={styles.proRowLabel}>BASIC STRATEGY ACCURACY</Text>
+                  <Text style={styles.proRowLabel}>Basic strategy accuracy</Text>
                 </View>
                 <Text style={styles.cardHint}>
                   How often your play matched basic strategy for your table's rules, across {detail.accuracy.judged} decision
@@ -344,7 +344,7 @@ export default function InsightsScreen({ route, navigation }) {
               <View style={[styles.card, styles.freeCard]}>
                 <View style={styles.proRow}>
                   <Ionicons name="albums-outline" size={moderateScale(13)} color={COLORS.primary} />
-                  <Text style={styles.proRowLabel}>CHECK YOUR PLAY</Text>
+                  <Text style={styles.proRowLabel}>Check your play</Text>
                 </View>
                 <Text style={styles.cardHint}>
                   In the Blackjack tracker, open Options and turn on Enter cards. Then tap your two cards, the dealer's upcard,
@@ -393,7 +393,7 @@ export default function InsightsScreen({ route, navigation }) {
               )}
 
               {/* The Basics */}
-              <ExpandableSection title="The Basics" defaultExpanded={true}>
+              <ExpandableSection title="The basics" defaultExpanded={true}>
                 <Text style={styles.cardHint}>Your actual results across {outcomes.sample} hands</Text>
 
                 {isLocked ? (
@@ -432,7 +432,7 @@ export default function InsightsScreen({ route, navigation }) {
               </ExpandableSection>
 
               {/* Your Habits */}
-              <ExpandableSection title="Your Habits">
+              <ExpandableSection title="Your habits">
                 <Text style={styles.cardLabel}>Current streak</Text>
                 {isLocked ? (
                   <SkeletonBar width={110} height={26} style={{ marginTop: 4, marginBottom: 16 }} />
@@ -496,7 +496,7 @@ export default function InsightsScreen({ route, navigation }) {
                   the mistakes breakdown below. */}
               {isBlackjack && detail && detail.accuracy && (
                 <>
-                  <ExpandableSection title="The Details">
+                  <ExpandableSection title="The details">
                     <View style={styles.card}>
                       <Text style={styles.cardLabel}>Basic strategy performance</Text>
                       <Text style={styles.cardHint}>Your net result on the hands where you followed basic strategy vs. the ones where you deviated</Text>
@@ -522,7 +522,7 @@ export default function InsightsScreen({ route, navigation }) {
               )}
 
               {/* Advanced Stats */}
-              <ExpandableSection title="Advanced Stats">
+              <ExpandableSection title="Advanced stats">
               {isBlackjack && (
                 <>
                   {/* Doubling performance */}
@@ -844,7 +844,7 @@ export default function InsightsScreen({ route, navigation }) {
                   <Text style={styles.cardLabel}>Best &amp; worst days</Text>
                   <View style={styles.rowCards}>
                     <View style={[styles.halfCard, { borderColor: COLORS.cardBorder }]}>
-                      <Text style={styles.cardLabel}>BEST DAY</Text>
+                      <Text style={styles.cardLabel}>Best day</Text>
                       {isLocked ? (
                         <SkeletonBar width={50} height={20} style={{ marginTop: 8 }} />
                       ) : (
@@ -853,7 +853,7 @@ export default function InsightsScreen({ route, navigation }) {
                       <Text style={styles.cardFootnote}>{dow.best.sessions} session{dow.best.sessions !== 1 ? 's' : ''} · {fmtMoney(dow.best.avgNet)} avg</Text>
                     </View>
                     <View style={[styles.halfCard, { borderColor: COLORS.cardBorder }]}>
-                      <Text style={styles.cardLabel}>WORST DAY</Text>
+                      <Text style={styles.cardLabel}>Worst day</Text>
                       {isLocked ? (
                         <SkeletonBar width={50} height={20} style={{ marginTop: 8 }} />
                       ) : (
@@ -934,7 +934,7 @@ export default function InsightsScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   contentArea: { flex: 1 },
   scroll: { padding: SPACING.pageHorizontal },
@@ -1047,7 +1047,7 @@ const styles = StyleSheet.create({
   // Free cards get the same lifted border as other featured surfaces.
   freeCard: { borderColor: COLORS.primaryGlow },
   proRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  proRowLabel: { fontSize: fluidFont(10), fontWeight: '700', color: COLORS.primary, letterSpacing: 0.8 },
+  proRowLabel: { fontSize: fluidFont(10), fontWeight: '700', color: COLORS.primary, letterSpacing: 0.2 },
   mistakeRow: { paddingVertical: moderateScale(10) },
   mistakeRowDivider: { borderTopWidth: 1, borderTopColor: COLORS.cardBorder },
   mistakeTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -1065,4 +1065,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 8,
   },
-});
+}));

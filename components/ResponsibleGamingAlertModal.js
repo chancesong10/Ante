@@ -4,12 +4,11 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   TouchableWithoutFeedback,
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { formatAmount, formatNumber } from '../utils/format';
 import { HELPLINE } from '../constants/legal';
@@ -50,7 +49,7 @@ export default function ResponsibleGamingAlertModal({
                 styles.iconBadge,
                 {
                   backgroundColor: COLORS.dangerMuted,
-                  borderColor: 'rgba(244, 63, 94, 0.3)',
+                  borderColor: COLORS.dangerBorder,
                 },
               ]}
             >
@@ -72,7 +71,7 @@ export default function ResponsibleGamingAlertModal({
             {/* Live Metrics Grid */}
             <View style={styles.metricsBox}>
               <View style={styles.metricCol}>
-                <Text style={styles.metricLabel}>LIVE OUTCOME</Text>
+                <Text style={styles.metricLabel}>Live outcome</Text>
                 <Text
                   style={[
                     styles.metricVal,
@@ -88,14 +87,14 @@ export default function ResponsibleGamingAlertModal({
               <View style={styles.metricDivider} />
 
               <View style={styles.metricCol}>
-                <Text style={styles.metricLabel}>DURATION</Text>
+                <Text style={styles.metricLabel}>Duration</Text>
                 <Text style={styles.metricVal}>{formatTime(durationMinutes)}</Text>
               </View>
 
               <View style={styles.metricDivider} />
 
               <View style={styles.metricCol}>
-                <Text style={styles.metricLabel}>LOGS</Text>
+                <Text style={styles.metricLabel}>Logs</Text>
                 <Text style={styles.metricVal}>{totalBets}</Text>
               </View>
             </View>
@@ -136,7 +135,7 @@ export default function ResponsibleGamingAlertModal({
                 activeOpacity={0.85}
                 onPress={onEndSession}
                 accessibilityRole="button"
-                accessibilityLabel="End Session and Save"
+                accessibilityLabel="End session and save"
               >
                 <Ionicons
                   name="stop-circle-outline"
@@ -144,7 +143,7 @@ export default function ResponsibleGamingAlertModal({
                   color={COLORS.textDark}
                   style={{ marginRight: 6 }}
                 />
-                <Text style={styles.primaryEndBtnText}>End Session & Protect Bankroll</Text>
+                <Text style={styles.primaryEndBtnText}>End session & protect bankroll</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -152,9 +151,9 @@ export default function ResponsibleGamingAlertModal({
                 activeOpacity={0.85}
                 onPress={onAcknowledge}
                 accessibilityRole="button"
-                accessibilityLabel="Acknowledge and Continue"
+                accessibilityLabel="Acknowledge and continue"
               >
-                <Text style={styles.secondaryBtnText}>Acknowledge & Continue</Text>
+                <Text style={styles.secondaryBtnText}>Acknowledge & continue</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -164,7 +163,7 @@ export default function ResponsibleGamingAlertModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   overlay: {
     flex: 1,
     backgroundColor: COLORS.overlay,
@@ -191,10 +190,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   title: {
-    fontSize: fluidFont(17),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(19),
+    fontWeight: '600',
     textAlign: 'center',
-    letterSpacing: 0.5,
     marginBottom: 6,
   },
   subtitle: {
@@ -229,7 +228,7 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(10),
     fontWeight: '700',
     color: COLORS.textSecondary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
     marginBottom: 2,
   },
   metricVal: {
@@ -248,7 +247,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: SPACING.xs,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: COLORS.successMuted,
     minHeight: TOUCH_TARGET.minSize,
   },
   supportText: {
@@ -304,4 +303,4 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(13),
     fontWeight: '700',
   },
-});
+}));

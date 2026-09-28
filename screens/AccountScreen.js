@@ -118,7 +118,7 @@ export default function AccountScreen({ navigation }) {
         title: 'Account deleted',
         message:
           'Your account and everything synced to it are gone. The sessions recorded on this device are still here — erase them from Data & Privacy if you want them gone too.',
-        confirmText: 'Got It',
+        confirmText: 'Got it',
         showCancel: false,
         // Signed out now, so there is no account screen left to stand on.
         onConfirm: () => {
@@ -273,7 +273,7 @@ export default function AccountScreen({ navigation }) {
                   />
                 </View>
                 <View style={styles.menuTextGroup}>
-                  <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Delete Account</Text>
+                  <Text style={[styles.menuTitle, { color: COLORS.danger }]}>Delete account</Text>
                   <Text style={styles.menuSubtitle}>
                     Permanently close this account and erase what's synced to it
                   </Text>
@@ -311,7 +311,7 @@ export default function AccountScreen({ navigation }) {
                 style={[styles.modalSheet, SHADOWS.card]}
               >
                 <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Change Username</Text>
+                  <Text style={styles.modalTitle}>Change username</Text>
                   <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
                     <Ionicons name="close" size={22} color={COLORS.textSecondary} />
                   </TouchableOpacity>
@@ -323,7 +323,7 @@ export default function AccountScreen({ navigation }) {
                     style={styles.textInput}
                     value={tempUsername}
                     onChangeText={setTempUsername}
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={COLORS.placeholder}
                     autoCapitalize="words"
                     autoCorrect={false}
                     maxLength={24}
@@ -341,7 +341,7 @@ export default function AccountScreen({ navigation }) {
                   {accountBusy ? (
                     <ActivityIndicator size="small" color={COLORS.textDark} />
                   ) : (
-                    <Text style={styles.saveModalBtnText}>Save Username</Text>
+                    <Text style={styles.saveModalBtnText}>Save username</Text>
                   )}
                 </TouchableOpacity>
               </TouchableOpacity>
@@ -369,7 +369,7 @@ export default function AccountScreen({ navigation }) {
                 style={[styles.modalSheet, SHADOWS.card]}
               >
                 <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Change Password</Text>
+                  <Text style={styles.modalTitle}>Change password</Text>
                   <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
                     <Ionicons name="close" size={22} color={COLORS.textSecondary} />
                   </TouchableOpacity>
@@ -386,7 +386,7 @@ export default function AccountScreen({ navigation }) {
                         value={currentPassword}
                         onChangeText={setCurrentPassword}
                         placeholder="Current password"
-                        placeholderTextColor={COLORS.textMuted}
+                        placeholderTextColor={COLORS.placeholder}
                         secureTextEntry
                         autoCapitalize="none"
                         autoCorrect={false}
@@ -406,7 +406,7 @@ export default function AccountScreen({ navigation }) {
                           value={verifyCode}
                           onChangeText={setVerifyCode}
                           placeholder="6-digit code"
-                          placeholderTextColor={COLORS.textMuted}
+                          placeholderTextColor={COLORS.placeholder}
                           keyboardType="number-pad"
                           autoCapitalize="none"
                           autoCorrect={false}
@@ -437,7 +437,7 @@ export default function AccountScreen({ navigation }) {
                       value={newPassword}
                       onChangeText={setNewPassword}
                       placeholder="New password (8+ characters)"
-                      placeholderTextColor={COLORS.textMuted}
+                      placeholderTextColor={COLORS.placeholder}
                       secureTextEntry
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -451,7 +451,7 @@ export default function AccountScreen({ navigation }) {
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
                       placeholder="Confirm new password"
-                      placeholderTextColor={COLORS.textMuted}
+                      placeholderTextColor={COLORS.placeholder}
                       secureTextEntry
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -471,7 +471,7 @@ export default function AccountScreen({ navigation }) {
                     {accountBusy ? (
                       <ActivityIndicator size="small" color={COLORS.textDark} />
                     ) : (
-                      <Text style={styles.saveModalBtnText}>Save Password</Text>
+                      <Text style={styles.saveModalBtnText}>Save password</Text>
                     )}
                   </TouchableOpacity>
                 )}
@@ -500,7 +500,7 @@ export default function AccountScreen({ navigation }) {
                 style={[styles.modalSheet, SHADOWS.card]}
               >
                 <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Delete Account</Text>
+                  <Text style={styles.modalTitle}>Delete account</Text>
                   <TouchableOpacity onPress={closeAccountModal} hitSlop={TOUCH_TARGET.hitSlop}>
                     <Ionicons name="close" size={22} color={COLORS.textSecondary} />
                   </TouchableOpacity>
@@ -524,7 +524,7 @@ export default function AccountScreen({ navigation }) {
                       value={currentPassword}
                       onChangeText={setCurrentPassword}
                       placeholder="Current password"
-                      placeholderTextColor={COLORS.textMuted}
+                      placeholderTextColor={COLORS.placeholder}
                       secureTextEntry
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -544,7 +544,7 @@ export default function AccountScreen({ navigation }) {
                     value={deleteConfirmEmail}
                     onChangeText={setDeleteConfirmEmail}
                     placeholder="Email address"
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={COLORS.placeholder}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -565,7 +565,7 @@ export default function AccountScreen({ navigation }) {
                   {accountBusy ? (
                     <ActivityIndicator size="small" color={COLORS.textPrimary} />
                   ) : (
-                    <Text style={styles.deleteModalBtnText}>Delete My Account</Text>
+                    <Text style={styles.deleteModalBtnText}>Delete my account</Text>
                   )}
                 </TouchableOpacity>
               </TouchableOpacity>

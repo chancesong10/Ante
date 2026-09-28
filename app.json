@@ -6,7 +6,7 @@
     "scheme": "ante",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
@@ -31,15 +31,15 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/splash-icon-light.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#09090B",
+          "backgroundColor": "#FBF5EC",
           "dark": {
             "image": "./assets/splash-icon.png",
             "imageWidth": 200,
             "resizeMode": "contain",
-            "backgroundColor": "#09090B"
+            "backgroundColor": "#1C1714"
           }
         }
       ]

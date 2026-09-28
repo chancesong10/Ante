@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useVisibleSessionHistory } from '../context/SyncContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -34,26 +34,26 @@ function getLeakCopy(leak, { fmtMoney, fmtDollar, fmtPct }) {
   switch (leak.id) {
     case 'double_zero_wheel':
       return {
-        title: 'Double-Zero Wheels Are Doubling Your House Edge',
+        title: 'Double-zero wheels are doubling your house edge',
         detail: `${fmtPct(leak.shareOfWagered)} of your roulette action (${leak.sample} spins) went on double-zero wheels, where every bet carries a 5.26% house edge instead of 2.70%. That cost an expected ${fmtDollar(leak.extraCost)} on its own — same bets, same luck, just a worse wheel.`,
       };
     case 'tie_bets':
       return {
-        title: 'Tie Bets Are Your Most Expensive Habit',
+        title: 'Tie bets are your most expensive habit',
         detail: `${fmtPct(leak.shareOfWagered)} of your baccarat action went on Tie, which carries a ${fmtPct(leak.houseEdge)} house edge. Those bets cost an expected ${fmtDollar(leak.expectedCost)}, ${fmtDollar(leak.extraCostVsBanker)} more than the same money on Banker.`,
       };
     case 'martingale':
       return {
-        title: 'You Double Up After Losing',
+        title: 'You double up after losing',
         detail: `After ${leak.opportunities} losing even-money bets, you roughly doubled your next bet ${fmtPct(leak.rate)} of the time${leak.longestChain >= 2 ? `, up to ${leak.longestChain} times in a row` : ''}. That's a Martingale progression. It can't beat the house edge, and one long losing run wipes out every small win it bought.`,
       };
     case 'loss_chasing':
       return {
-        title: 'You Bet Bigger After Losing',
+        title: 'You bet bigger after losing',
         detail: `You bet ${fmtDollar(leak.avgBetAfterLoss)} on average right after a loss, vs. ${fmtDollar(leak.avgBetAfterWin)} after a win — ${leak.pctIncrease.toFixed(0)}% more. That's a classic loss-chasing pattern.`,
       };
     default:
-      return { title: 'Leak Detected', detail: '' };
+      return { title: 'Leak detected', detail: '' };
   }
 }
 
@@ -295,7 +295,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
             <View style={[styles.card, SHADOWS.card, styles.edgeCard]}>
               <View style={styles.proRow}>
                 <Ionicons name="scale-outline" size={13} color={COLORS.primary} />
-                <Text style={styles.proRowLabel}>YOU VS. THE HOUSE EDGE</Text>
+                <Text style={styles.proRowLabel}>You vs. the house edge</Text>
               </View>
               <Text style={styles.cardHint}>
                 What the math expected from {fmtAmount(eva.totalWagered)} wagered across {plural(eva.sample, unit)}, and what actually happened
@@ -327,7 +327,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
           {!hasEnoughData && !isLocked ? (
             <View style={styles.emptyCard}>
               <Ionicons name="analytics-outline" size={28} color={COLORS.textMuted} />
-              <Text style={styles.emptyTitle}>Not Enough Data Yet</Text>
+              <Text style={styles.emptyTitle}>Not enough data yet</Text>
               <Text style={styles.emptyText}>
                 Log at least 5 {gameType} {unit}s to unlock bet breakdowns, progression tracking, and leak detection. Right now you have {stats.totalHands}.
               </Text>
@@ -354,7 +354,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
               ) : (
                 <View style={[styles.card, SHADOWS.card, styles.noLeakCard]}>
                   <Ionicons name="shield-checkmark" size={20} color={COLORS.success} />
-                  <Text style={styles.noLeakTitle}>No Major Leaks Detected</Text>
+                  <Text style={styles.noLeakTitle}>No major leaks detected</Text>
                   <Text style={styles.noLeakText}>
                     {isRoulette
                       ? `Your wheel choice, bet progression, and sizing all look within a healthy range across ${outcomes.sample} spins.`
@@ -363,7 +363,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 </View>
               )}
 
-              <ExpandableSection title="The Basics" defaultExpanded={true}>
+              <ExpandableSection title="The basics" defaultExpanded={true}>
                 {isLocked ? (
                   <>
                     <View style={styles.outcomeBarRow}>
@@ -377,24 +377,24 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                   </>
                 ) : (
                   <>
-                    {outcomes.winRate > 0 && <ProgressBar label="Win Rate" valueText={fmtPct(outcomes.winRate)} percent={outcomes.winRate} color={COLORS.success} />}
-                    {!isRoulette && outcomes.pushRate > 0 && <ProgressBar label="Push Rate" valueText={fmtPct(outcomes.pushRate)} percent={outcomes.pushRate} color={COLORS.textMuted} />}
-                    {outcomes.lossRate > 0 && <ProgressBar label="Loss Rate" valueText={fmtPct(outcomes.lossRate)} percent={outcomes.lossRate} color={COLORS.danger} />}
+                    {outcomes.winRate > 0 && <ProgressBar label="Win rate" valueText={fmtPct(outcomes.winRate)} percent={outcomes.winRate} color={COLORS.success} />}
+                    {!isRoulette && outcomes.pushRate > 0 && <ProgressBar label="Push rate" valueText={fmtPct(outcomes.pushRate)} percent={outcomes.pushRate} color={COLORS.textMuted} />}
+                    {outcomes.lossRate > 0 && <ProgressBar label="Loss rate" valueText={fmtPct(outcomes.lossRate)} percent={outcomes.lossRate} color={COLORS.danger} />}
                   </>
                 )}
 
                 <View style={styles.overviewDivider} />
 
-                <TrendArrow trend={returns.netProfit} label="Net Result" valueText={fmtMoney(returns.netProfit)} goodIsUp={true} />
-                <TrendArrow trend={returns.roi || 0} label="Return on Wagered" valueText={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'} goodIsUp={true} />
+                <TrendArrow trend={returns.netProfit} label="Net result" valueText={fmtMoney(returns.netProfit)} goodIsUp={true} />
+                <TrendArrow trend={returns.roi || 0} label="Return on wagered" valueText={returns.roi !== null ? `${returns.roi >= 0 ? '+' : ''}${returns.roi.toFixed(1)}%` : '—'} goodIsUp={true} />
                 <TrendArrow trend={returns.avgResultPerHand || 0} label={isRoulette ? 'Avg / Spin' : 'Avg / Hand'} valueText={returns.avgResultPerHand !== null ? fmtMoney(returns.avgResultPerHand) : '—'} goodIsUp={true} />
               </ExpandableSection>
 
-              <ExpandableSection title="Your Habits" defaultExpanded={false}>
+              <ExpandableSection title="Your habits" defaultExpanded={false}>
                 {/* Roulette: wheel mix */}
                 {isRoulette && wheelMix && (
                   <View style={[styles.card, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>WHEEL MIX</Text>
+                    <Text style={styles.cardLabel}>Wheel mix</Text>
                     <Text style={styles.cardHint}>Share of your action on each wheel — the one choice that moves roulette's house edge</Text>
                     <View style={styles.compareRow}>
                       <CompareStat label="Single 0" value={wheelShare(wheelMix.single.wagered)} sub="2.70% edge" locked={isLocked} />
@@ -417,7 +417,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 {/* Roulette: results by bet type */}
                 {isRoulette && betTypes.length > 0 && (
                   <View style={[styles.card, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>RESULTS BY BET TYPE</Text>
+                    <Text style={styles.cardLabel}>Results by bet type</Text>
                     <Text style={styles.cardHint}>
                       How often each bet hit against its true odds. A low hit rate on a 35:1 bet is expected, not a leak.
                     </Text>
@@ -439,7 +439,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 {/* Baccarat: where the money goes */}
                 {!isRoulette && sides.length > 0 && (
                   <View style={[styles.card, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>WHERE YOUR MONEY GOES</Text>
+                    <Text style={styles.cardLabel}>Where your money goes</Text>
                     <Text style={styles.cardHint}>
                       Each side against its true odds. A tie pushes Player and Banker bets, so their win rate counts decided hands only.
                     </Text>
@@ -469,15 +469,15 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 {/* Progression betting */}
                 {prog && (
                   <View style={[styles.card, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>PROGRESSION BETTING</Text>
+                    <Text style={styles.cardLabel}>Progression betting</Text>
                     <Text style={styles.cardHint}>
                       {isRoulette
                         ? 'How often you roughly doubled an even-money bet right after losing one'
                         : 'How often you roughly doubled a Player or Banker bet right after losing one'}
                     </Text>
                     <View style={styles.compareRow}>
-                      <CompareStat label="Doubled After a Loss" value={fmtPct(prog.rate)} locked={isLocked} />
-                      <CompareStat label="Longest Doubling Run" value={String(prog.longestChain)} locked={isLocked} />
+                      <CompareStat label="Doubled after a loss" value={fmtPct(prog.rate)} locked={isLocked} />
+                      <CompareStat label="Longest doubling run" value={String(prog.longestChain)} locked={isLocked} />
                     </View>
                     <Text style={styles.cardFootnote}>
                       Doubling after losses (a Martingale) doesn't change the house edge. It swaps lots of small wins for a rare, very large loss when a losing run meets the table limit or your bankroll.
@@ -487,15 +487,15 @@ export default function TableGameInsightsScreen({ route, navigation }) {
 
                 {/* Bet size after outcome */}
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>BET SIZE AFTER OUTCOME</Text>
+                  <Text style={styles.cardLabel}>Bet size after outcome</Text>
                   <View style={styles.compareRow}>
                     <CompareStat
-                      label="After a Win"
+                      label="After a win"
                       value={fmtDollar(sizing.avgBetAfterWin)}
                       locked={isLocked}
                     />
                     <CompareStat
-                      label="After a Loss"
+                      label="After a loss"
                       value={fmtDollar(sizing.avgBetAfterLoss)}
                       locked={isLocked}
                     />
@@ -520,7 +520,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
 
                 {/* Streaks */}
                 <View style={[styles.card, SHADOWS.card]}>
-                  <Text style={styles.cardLabel}>CURRENT STREAK</Text>
+                  <Text style={styles.cardLabel}>Current streak</Text>
                   {isLocked ? (
                     <SkeletonBar width={100} height={26} style={{ marginTop: 4 }} />
                   ) : (
@@ -534,21 +534,21 @@ export default function TableGameInsightsScreen({ route, navigation }) {
 
                 <View style={styles.rowCards}>
                   <View style={[styles.halfCard, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>LONGEST WIN STREAK</Text>
+                    <Text style={styles.cardLabel}>Longest win streak</Text>
                     {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.success }]}>{streaks.longestWinStreak}</Text>}
                   </View>
                   <View style={[styles.halfCard, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>LONGEST LOSS STREAK</Text>
+                    <Text style={styles.cardLabel}>Longest loss streak</Text>
                     {isLocked ? <SkeletonBar width={36} height={20} /> : <Text style={[styles.halfValue, { color: COLORS.danger }]}>{streaks.longestLossStreak}</Text>}
                   </View>
                 </View>
               </ExpandableSection>
 
-              <ExpandableSection title="Advanced Stats" defaultExpanded={false}>
+              <ExpandableSection title="Advanced stats" defaultExpanded={false}>
                 {/* Risk & Volatility */}
                 <View style={[styles.card, SHADOWS.card]}>
                   <View style={styles.riskHeaderRow}>
-                    <Text style={styles.cardLabel}>RISK & VOLATILITY</Text>
+                    <Text style={styles.cardLabel}>Risk & volatility</Text>
                     {isLocked ? (
                       <SkeletonBar width={56} height={18} />
                     ) : (
@@ -571,18 +571,18 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 {/* Day of Week */}
                 {dow && (
                   <View style={[styles.card, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>BEST & WORST DAYS</Text>
+                    <Text style={styles.cardLabel}>Best & worst days</Text>
                     <Text style={styles.cardHint}>Average net profit per session on your strongest and weakest days</Text>
                     <View style={styles.compareRow}>
                       <CompareStat
-                        label="Best Day"
+                        label="Best day"
                         value={fmtMoney(dow.best.avgNet)}
                         valueColor={COLORS.success}
                         sub={dow.best.day}
                         locked={isLocked}
                       />
                       <CompareStat
-                        label="Worst Day"
+                        label="Worst day"
                         value={fmtMoney(dow.worst.avgNet)}
                         valueColor={COLORS.danger}
                         sub={dow.worst.day}
@@ -595,7 +595,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                 {/* Session Length Performance */}
                 {lenPerf && (
                   <View style={[styles.card, SHADOWS.card]}>
-                    <Text style={styles.cardLabel}>PERFORMANCE BY SESSION LENGTH</Text>
+                    <Text style={styles.cardLabel}>Performance by session length</Text>
                     <Text style={styles.cardHint}>Average net profit per {unit} based on how long you play</Text>
                     <View style={styles.compareRow}>
                       <CompareStat
@@ -631,7 +631,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
                   style={{ marginRight: 8 }}
                 />
                 <Text style={styles.copyReportBtnText}>
-                  {isLocked ? 'Unlock Ante+ to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy Full Report'}
+                  {isLocked ? 'Unlock Ante+ to Copy Report' : copied ? 'Copied to Clipboard' : 'Copy full report'}
                 </Text>
               </TouchableOpacity>
               <Text style={styles.copyReportHint}>
@@ -656,7 +656,7 @@ export default function TableGameInsightsScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   contentArea: { flex: 1 },
   scroll: { padding: 16 },
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   outcomeLegendText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
   overviewDivider: { height: 1, backgroundColor: COLORS.cardBorder, marginVertical: 12 },
   proRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  proRowLabel: { fontSize: 10, fontWeight: '700', color: COLORS.primary, letterSpacing: 0.8 },
+  proRowLabel: { fontSize: 10, fontWeight: '700', color: COLORS.primary, letterSpacing: 0.2 },
   breakdownRow: { paddingVertical: 10 },
   breakdownRowDivider: { borderTopWidth: 1, borderTopColor: COLORS.cardBorder },
   breakdownTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
   shareFill: { height: '100%', borderRadius: 2, backgroundColor: COLORS.textMuted },
   riskHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   riskBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
-  riskBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  riskBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   copyReportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -777,4 +777,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 8,
   },
-});
+}));

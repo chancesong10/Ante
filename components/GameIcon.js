@@ -1,10 +1,10 @@
 // One place for "which glyph represents this game type". Was copy-pasted in
 // HomeScreen, AnalyticsScreen and HistoryScreen.
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
-import { moderateScale, RADIUS } from '../constants/layout';
+import { COLORS, getGameColor, getGameColorMuted, themed } from '../constants/theme';
+import { moderateScale } from '../constants/layout';
 
 export function renderGameIcon(gameType, size = 18, color = COLORS.primary) {
   if (gameType === 'Poker') {
@@ -28,10 +28,9 @@ export function renderGameIcon(gameType, size = 18, color = COLORS.primary) {
   return <MaterialCommunityIcons name="cards-outline" size={size} color={color} />;
 }
 
-// Rounded tile holding the game glyph — the small square that encapsulates
-// the icon. Style is lifted verbatim from the start-session sheet's
-// `gameIconBox` (dark surface, thin 1px border) and the glyph is drawn in
-// COLORS.primary exactly as that sheet draws it, so the two match.
+// Round chip holding the game glyph: a soft pastel of the game's colour with
+// the glyph in the colour itself, matching the start-session sheet's
+// `gameIconBox` so a game looks the same wherever it appears.
 // `children` render behind the glyph, so a caller can layer effects inside
 // the tile (the commit flood and ripple ring on Home's recent sessions).
 export function GameIconTile({
@@ -42,21 +41,23 @@ export function GameIconTile({
   children,
 }) {
   return (
-    <View style={[styles.tile, { width: size, height: size }, style]}>
+    <View
+      style={[
+        styles.tile,
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: getGameColorMuted(gameType) },
+        style,
+      ]}
+    >
       {children}
-      {renderGameIcon(gameType, glyph, COLORS.primary)}
+      {renderGameIcon(gameType, glyph, getGameColor(gameType))}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   tile: {
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primaryGlow,
     overflow: 'visible',
   },
-});
+}));

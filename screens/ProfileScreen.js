@@ -34,6 +34,13 @@ import { ANTE_PRO_ENTITLEMENT_ID } from '../services/purchasesService';
 import { formatAmount, formatMoney, relativeTime, netTone } from '../utils/format';
 import { tallyHands, winRateOf } from '../utils/sessionTally';
 import useFlash from '../components/useFlash';
+import { useTheme } from '../context/ThemeContext';
+
+const APPEARANCE_CHOICES = [
+  { value: 'light', label: 'Light', icon: 'sunny-outline' },
+  { value: 'dark', label: 'Dark', icon: 'moon-outline' },
+  { value: 'system', label: 'Match phone', icon: 'phone-portrait-outline' },
+];
 
 // Ordered by how likely they are to be picked rather than alphabetically, so
 // the common four stay at the top of a long list. Dollar-family currencies
@@ -99,23 +106,23 @@ const CHIP_PRESET_GAMES = [
 function syncRowCopy({ state, lastSyncedAt, error }) {
   switch (state) {
     case 'syncing':
-      return { icon: 'sync-outline', tone: 'muted', title: 'Cloud Sync', subtitle: 'Syncing…' };
+      return { icon: 'sync-outline', tone: 'muted', title: 'Cloud sync', subtitle: 'Syncing…' };
     case 'synced':
       return {
         icon: 'cloud-done-outline',
         tone: 'ok',
-        title: 'Cloud Sync',
+        title: 'Cloud sync',
         subtitle: lastSyncedAt ? `Last synced ${relativeTime(lastSyncedAt)}` : 'Up to date',
       };
     case 'error':
       return {
         icon: 'cloud-offline-outline',
         tone: 'bad',
-        title: 'Cloud Sync',
+        title: 'Cloud sync',
         subtitle: `Couldn't sync — will retry. Your sessions are safe on this device.${error ? ` (${error})` : ''}`,
       };
     default:
-      return { icon: 'cloud-outline', tone: 'muted', title: 'Cloud Sync', subtitle: 'Waiting to sync' };
+      return { icon: 'cloud-outline', tone: 'muted', title: 'Cloud sync', subtitle: 'Waiting to sync' };
   }
 }
 
@@ -130,6 +137,7 @@ export default function ProfileScreen({ navigation }) {
     restorePurchases,
   } = usePurchases();
   const insets = useSafeAreaInsets();
+  const { appearance, setAppearance } = useTheme();
   const {
     quickChipsEnabled = true,
     setQuickChipsEnabled,
@@ -205,7 +213,7 @@ export default function ProfileScreen({ navigation }) {
           title: "Couldn't restore",
           message:
             "We couldn't reach the store to check for previous purchases. Check your connection and try again.",
-          confirmText: 'Got It',
+          confirmText: 'Got it',
           showCancel: false,
           onConfirm: () => setProfileModal(null),
         });
@@ -340,7 +348,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={COLORS.statusBarContent} backgroundColor={COLORS.background} />
       <ScrollView
         style={screenStyles.container}
         contentContainerStyle={[
@@ -352,7 +360,7 @@ export default function ProfileScreen({ navigation }) {
         {/* Top Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>VAULT PROFILE</Text>
+            <Text style={styles.title}>Profile</Text>
           </View>
         </View>
 
@@ -394,7 +402,7 @@ export default function ProfileScreen({ navigation }) {
             disabled={signingOut}
           >
             <Ionicons name="log-out-outline" size={16} color={COLORS.danger} />
-            <Text style={styles.signOutButtonText}>{signingOut ? 'Signing Out…' : 'Sign Out'}</Text>
+            <Text style={styles.signOutButtonText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -403,12 +411,12 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => navigation.navigate('Auth')}
           >
             <Ionicons name="log-in-outline" size={16} color={COLORS.textDark} />
-            <Text style={styles.signInButtonText}>Sign In / Create Account</Text>
+            <Text style={styles.signInButtonText}>Sign in or create an account</Text>
           </TouchableOpacity>
         )}
 
         {/* Section 0: Ante+ */}
-        <Text style={styles.sectionTitle}>{PLUS_NAME.toUpperCase()}</Text>
+        <Text style={styles.sectionTitle}>{PLUS_NAME}</Text>
         <View style={[styles.menuCard, styles.proMenuCard, SHADOWS.card]}>
           <View style={styles.menuRow}>
             <View style={styles.proIconCircle}>
@@ -420,12 +428,12 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <View style={styles.menuTextGroup}>
               <Text style={styles.menuTitle}>
-                {isPro ? `${PLUS_NAME} Active` : `Unlock ${PLUS_NAME}`}
+                {isPro ? `${PLUS_NAME} is on` : `Unlock ${PLUS_NAME}`}
               </Text>
               <Text style={styles.menuSubtitle}>
                 {isPro
                   ? proPlanLabel || 'Every behavioral insights page is unlocked'
-                  : `Leak detection, streaks, and every insights page — unlocked with ${PLUS_NAME}`}
+                  : 'Spot your leaks, follow your streaks, and open every insights page'}
               </Text>
             </View>
             {purchasesLoading && <ActivityIndicator size="small" color={COLORS.primary} />}
@@ -438,7 +446,7 @@ export default function ProfileScreen({ navigation }) {
               onPress={() => navigation.navigate('ManageSubscription')}
             >
               <Ionicons name="settings-outline" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
-              <Text style={styles.proActionBtnText}>Manage Subscription</Text>
+              <Text style={styles.proActionBtnText}>Manage subscription</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -447,7 +455,7 @@ export default function ProfileScreen({ navigation }) {
               onPress={handleUpgradePress}
             >
               <Ionicons name="sparkles" size={16} color={COLORS.textDark} style={{ marginRight: 6 }} />
-              <Text style={styles.proActionBtnText}>See Plans</Text>
+              <Text style={styles.proActionBtnText}>See plans</Text>
             </TouchableOpacity>
           )}
 
@@ -465,7 +473,7 @@ export default function ProfileScreen({ navigation }) {
               <Ionicons name="refresh-outline" size={moderateScale(18)} color={COLORS.icon} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Restore Purchases</Text>
+              <Text style={styles.menuTitle}>Restore purchases</Text>
               <Text style={styles.menuSubtitle}>
                 Already subscribed? Bring it back on this device
               </Text>
@@ -481,7 +489,7 @@ export default function ProfileScreen({ navigation }) {
         {/* Section: Account (signed-in only) */}
         {!!user && (
           <>
-            <Text style={styles.sectionTitle}>ACCOUNT</Text>
+            <Text style={styles.sectionTitle}>Account</Text>
             <View style={[styles.menuCard, SHADOWS.card]}>
               {/* Cloud sync state. Every failure path in syncService ends at
                   console.error, so without this the app looked identical
@@ -537,7 +545,7 @@ export default function ProfileScreen({ navigation }) {
 
         {/* 2x2 High-Impact Bankroll Vault Grid */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>LIFETIME VAULT STATS</Text>
+          <Text style={styles.sectionTitle}>Your story so far</Text>
           <TouchableOpacity
             onPress={() => updatePreferences && updatePreferences({ privacyMode: !privacyMode })}
             hitSlop={TOUCH_TARGET.hitSlop}
@@ -561,7 +569,7 @@ export default function ProfileScreen({ navigation }) {
           {/* Card 1: Lifetime Net Profit */}
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
-              <Text style={styles.gridCardLabel}>NET OUTCOME</Text>
+              <Text style={styles.gridCardLabel}>Net outcome</Text>
               <Ionicons
                 name={stats.totalNet >= 0 ? 'trending-up' : 'trending-down'}
                 size={moderateScale(15)}
@@ -582,40 +590,40 @@ export default function ProfileScreen({ navigation }) {
               adjustsFontSizeToFit
             />
             <Text style={styles.gridCardFoot}>
-              {stats.totalNet >= 0 ? 'Profit realized' : 'Total variance'}
+              {stats.totalNet > 0 ? 'Up, all told' : stats.totalNet < 0 ? 'Down, all told' : 'Even so far'}
             </Text>
           </View>
 
           {/* Card 2: Total Lifetime Wagered */}
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
-              <Text style={styles.gridCardLabel}>TOTAL WAGERED</Text>
+              <Text style={styles.gridCardLabel}>Total wagered</Text>
               <Ionicons name="flame-outline" size={moderateScale(15)} color={COLORS.accentOrange} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
               {formatMoney(stats.totalWagered, currencySymbol, privacyMode, { signed: false })}
             </Text>
-            <Text style={styles.gridCardFoot}>Lifetime volume</Text>
+            <Text style={styles.gridCardFoot}>Everything you put in play</Text>
           </View>
 
           {/* Card 3: Win Rate */}
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
-              <Text style={styles.gridCardLabel}>WIN RATE</Text>
+              <Text style={styles.gridCardLabel}>Win rate</Text>
               <Ionicons name="trophy-outline" size={moderateScale(15)} color={COLORS.warning} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]}>
               {stats.winRate}%
             </Text>
             <Text style={styles.gridCardFoot}>
-              {stats.totalSessions} recorded session{stats.totalSessions === 1 ? '' : 's'}
+              Across {stats.totalSessions} session{stats.totalSessions === 1 ? '' : 's'}
             </Text>
           </View>
 
           {/* Card 4: Total Hands / Bets */}
           <View style={[styles.gridCard, SHADOWS.card]}>
             <View style={styles.gridCardTop}>
-              <Text style={styles.gridCardLabel}>BETS LOGGED</Text>
+              <Text style={styles.gridCardLabel}>Bets logged</Text>
               <Ionicons name="layers-outline" size={moderateScale(15)} color={COLORS.accentCyan} />
             </View>
             <Text style={[styles.gridCardValue, { color: COLORS.textPrimary }]}>
@@ -625,8 +633,39 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Appearance. Kept on the device by ThemeContext rather than in
+            preferences, because the consent screen is drawn in it too. */}
+        <Text style={styles.sectionTitle}>Appearance</Text>
+        <View style={[styles.menuCard, styles.appearanceCard, SHADOWS.card]}>
+          <View style={styles.appearanceRow} accessibilityRole="radiogroup">
+            {APPEARANCE_CHOICES.map((choice) => {
+              const active = appearance === choice.value;
+              return (
+                <TouchableOpacity
+                  key={choice.value}
+                  style={[styles.appearanceOption, active && styles.appearanceOptionActive]}
+                  activeOpacity={0.85}
+                  onPress={() => setAppearance(choice.value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`${choice.label} appearance`}
+                >
+                  <Ionicons
+                    name={choice.icon}
+                    size={moderateScale(20)}
+                    color={active ? COLORS.accent : COLORS.icon}
+                  />
+                  <Text style={[styles.appearanceLabel, active && styles.appearanceLabelActive]}>
+                    {choice.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* Section 1: Gameplay Preferences */}
-        <Text style={styles.sectionTitle}>GAMEPLAY & PREFERENCES</Text>
+        <Text style={styles.sectionTitle}>At the table</Text>
         <View style={[styles.menuCard, SHADOWS.card]}>
           {/* Quick Chips Toggle */}
           <View style={styles.menuRow}>
@@ -634,8 +673,8 @@ export default function ProfileScreen({ navigation }) {
               <Ionicons name="flash-outline" size={moderateScale(18)} color={COLORS.warning} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Quick Chip Buttons</Text>
-              <Text style={styles.menuSubtitle}>Fast cumulative chip buttons during betting</Text>
+              <Text style={styles.menuTitle}>Quick chip buttons</Text>
+              <Text style={styles.menuSubtitle}>Tap chips to build a bet instead of typing it</Text>
             </View>
             <Toggle
               value={quickChipsEnabled}
@@ -655,8 +694,8 @@ export default function ProfileScreen({ navigation }) {
               />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Haptic Feedback</Text>
-              <Text style={styles.menuSubtitle}>Vibration on taps, wins, and session actions</Text>
+              <Text style={styles.menuTitle}>Haptic feedback</Text>
+              <Text style={styles.menuSubtitle}>A little buzz on taps, wins, and big moments</Text>
             </View>
             <Toggle
               value={hapticsEnabled}
@@ -685,9 +724,9 @@ export default function ProfileScreen({ navigation }) {
               <MaterialCommunityIcons name="poker-chip" size={moderateScale(18)} color={COLORS.accentOrange} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Quick Chip Presets</Text>
+              <Text style={styles.menuTitle}>Quick chip presets</Text>
               <Text style={styles.menuSubtitle}>
-                Set the chip amounts per game
+                Pick the chip amounts for each game
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
@@ -705,9 +744,9 @@ export default function ProfileScreen({ navigation }) {
               <Ionicons name="reorder-three-outline" size={moderateScale(18)} color={COLORS.accentCyan} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Game Order</Text>
+              <Text style={styles.menuTitle}>Game order</Text>
               <Text style={styles.menuSubtitle}>
-                Choose which games lead the Start Session sheet
+                Put your favourite games first when you start a session
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
@@ -725,8 +764,8 @@ export default function ProfileScreen({ navigation }) {
               <Ionicons name="globe-outline" size={moderateScale(18)} color={COLORS.success} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Display Currency</Text>
-              <Text style={styles.menuSubtitle}>Currently formatted in {currency}</Text>
+              <Text style={styles.menuTitle}>Display currency</Text>
+              <Text style={styles.menuSubtitle}>Showing amounts in {currency}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
@@ -743,8 +782,8 @@ export default function ProfileScreen({ navigation }) {
               />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Privacy Mode</Text>
-              <Text style={styles.menuSubtitle}>Mask balances with bullets across cards</Text>
+              <Text style={styles.menuTitle}>Privacy mode</Text>
+              <Text style={styles.menuSubtitle}>Hide amounts for when someone's looking over</Text>
             </View>
             <Toggle
               value={privacyMode}
@@ -755,7 +794,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         {/* Section 2: Responsible Gaming & Limits */}
-        <Text style={styles.sectionTitle}>RESPONSIBLE GAMING & LIMITS</Text>
+        <Text style={styles.sectionTitle}>Playing well</Text>
         <View style={[styles.menuCard, SHADOWS.card]}>
           {/* Stop Loss Limits */}
           <TouchableOpacity
@@ -771,9 +810,11 @@ export default function ProfileScreen({ navigation }) {
               />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Session Loss Alert</Text>
+              <Text style={styles.menuTitle}>Session loss alert</Text>
               <Text style={styles.menuSubtitle}>
-                {stopLossAlert ? `Active warning at ${currencySymbol}${formatAmount(stopLossAmount)}` : 'No threshold configured'}
+                {stopLossAlert
+                  ? `We'll check in if a session is down ${currencySymbol}${formatAmount(stopLossAmount)}`
+                  : 'Get a gentle nudge when a session goes too far'}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
@@ -791,8 +832,8 @@ export default function ProfileScreen({ navigation }) {
               <Ionicons name="heart-circle-outline" size={moderateScale(18)} color={COLORS.success} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Safer Play Resources</Text>
-              <Text style={styles.menuSubtitle}>Helpline contacts & variance guidance</Text>
+              <Text style={styles.menuTitle}>Safer play resources</Text>
+              <Text style={styles.menuSubtitle}>Someone to talk to, and how luck really works</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
@@ -802,7 +843,7 @@ export default function ProfileScreen({ navigation }) {
             their own screen — erasing everything and exporting your history
             are not settings rows, and they were sharing this screen's state
             bag with the haptics toggle. */}
-        <Text style={styles.sectionTitle}>DATA VAULT & SECURITY</Text>
+        <Text style={styles.sectionTitle}>Your data</Text>
         <View style={[styles.menuCard, SHADOWS.card]}>
           <TouchableOpacity
             style={styles.menuRow}
@@ -821,22 +862,22 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         {/* Section: Support */}
-        <Text style={styles.sectionTitle}>SUPPORT</Text>
+        <Text style={styles.sectionTitle}>Support</Text>
         <View style={[styles.menuCard, SHADOWS.card]}>
           <TouchableOpacity style={styles.menuRow} activeOpacity={0.7} onPress={handleSendFeedback}>
             <View style={styles.menuIconCircle}>
               <Ionicons name="mail-outline" size={moderateScale(18)} color={COLORS.accentViolet} />
             </View>
             <View style={styles.menuTextGroup}>
-              <Text style={styles.menuTitle}>Send Feedback</Text>
-              <Text style={styles.menuSubtitle}>Report a bug or ask for a feature</Text>
+              <Text style={styles.menuTitle}>Send feedback</Text>
+              <Text style={styles.menuSubtitle}>Found a bug or wish Ante did something? Tell us</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* Section 4: Legal */}
-        <Text style={styles.sectionTitle}>LEGAL</Text>
+        <Text style={styles.sectionTitle}>Legal</Text>
         <View style={[styles.menuCard, SHADOWS.card]}>
           <TouchableOpacity
             style={styles.menuRow}
@@ -873,8 +914,8 @@ export default function ProfileScreen({ navigation }) {
 
         {/* Footer Info */}
         <View style={styles.footerInfo}>
-          <Text style={styles.versionText}>Ante Protocol v1.0.0</Text>
-          <Text style={styles.copyrightText}>Device-Agnostic Adaptive Engine • Offline First</Text>
+          <Text style={styles.versionText}>Ante 1.0.0</Text>
+          <Text style={styles.copyrightText}>Works offline. Play responsibly.</Text>
         </View>
       </ScrollView>
 
@@ -895,7 +936,7 @@ export default function ProfileScreen({ navigation }) {
               style={[styles.modalSheet, SHADOWS.card]}
             >
               <View style={styles.modalHeaderRow}>
-                <Text style={styles.modalTitle}>Select Currency</Text>
+                <Text style={styles.modalTitle}>Select currency</Text>
                 <TouchableOpacity
                   onPress={() => setCurrencyModalVisible(false)}
                   hitSlop={TOUCH_TARGET.hitSlop}
@@ -968,7 +1009,7 @@ export default function ProfileScreen({ navigation }) {
                 style={[styles.modalSheet, SHADOWS.card]}
               >
                 <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Responsible Play Limits</Text>
+                  <Text style={styles.modalTitle}>Responsible play limits</Text>
                   <TouchableOpacity
                     onPress={() => setLimitsModalVisible(false)}
                     hitSlop={TOUCH_TARGET.hitSlop}
@@ -980,7 +1021,7 @@ export default function ProfileScreen({ navigation }) {
                 {/* Loss Alert Config */}
                 <View style={styles.limitBlock}>
                   <View style={styles.limitTopRow}>
-                    <Text style={styles.limitLabel}>Session Stop-Loss Alert</Text>
+                    <Text style={styles.limitLabel}>Session stop-loss alert</Text>
                     <Toggle
                       value={tempStopLossAlert}
                       onValueChange={setTempStopLossAlert}
@@ -998,7 +1039,7 @@ export default function ProfileScreen({ navigation }) {
                       value={tempLossLimit}
                       onChangeText={setTempLossLimit}
                       placeholder="250"
-                      placeholderTextColor={COLORS.textMuted}
+                      placeholderTextColor={COLORS.placeholder}
                     />
                   </View>
                 </View>
@@ -1008,7 +1049,7 @@ export default function ProfileScreen({ navigation }) {
                   activeOpacity={0.85}
                   onPress={handleSaveLimits}
                 >
-                  <Text style={styles.saveModalBtnText}>Save Limits</Text>
+                  <Text style={styles.saveModalBtnText}>Save limits</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
             </View>
@@ -1031,7 +1072,7 @@ export default function ProfileScreen({ navigation }) {
               style={[styles.modalSheet, SHADOWS.card]}
             >
               <View style={styles.modalHeaderRow}>
-                <Text style={styles.modalTitle}>Safer Play & Support</Text>
+                <Text style={styles.modalTitle}>Safer play & support</Text>
                 <TouchableOpacity
                   onPress={() => setHelpModalVisible(false)}
                   hitSlop={TOUCH_TARGET.hitSlop}
@@ -1046,7 +1087,7 @@ export default function ProfileScreen({ navigation }) {
 
               <View style={styles.helpBox}>
                 <Text style={styles.helpBoxTitle}>National Council on Problem Gambling</Text>
-                <Text style={styles.helpBoxSub}>24/7 Confidential Helpline</Text>
+                <Text style={styles.helpBoxSub}>24/7 confidential helpline</Text>
                 <Text style={styles.helpPhone}>1-800-522-4700</Text>
               </View>
 
@@ -1081,7 +1122,7 @@ export default function ProfileScreen({ navigation }) {
                 style={[styles.modalSheet, SHADOWS.card]}
               >
                 <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Quick Chip Presets</Text>
+                  <Text style={styles.modalTitle}>Quick chip presets</Text>
                   <TouchableOpacity
                     onPress={() => setChipPresetModalVisible(false)}
                     hitSlop={TOUCH_TARGET.hitSlop}
@@ -1126,7 +1167,7 @@ export default function ProfileScreen({ navigation }) {
                           keyboardType="numeric"
                           value={chip}
                           placeholder="0"
-                          placeholderTextColor={COLORS.textMuted}
+                          placeholderTextColor={COLORS.placeholder}
                           onChangeText={(val) => {
                             setTempChips((prev) => {
                               const next = [...prev];
@@ -1145,7 +1186,7 @@ export default function ProfileScreen({ navigation }) {
                   activeOpacity={0.85}
                   onPress={handleSaveChipPreset}
                 >
-                  <Text style={styles.saveModalBtnText}>Save Preset</Text>
+                  <Text style={styles.saveModalBtnText}>Save preset</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
             </View>
@@ -1173,7 +1214,7 @@ export default function ProfileScreen({ navigation }) {
               style={[styles.modalSheet, SHADOWS.card]}
             >
               <View style={styles.modalHeaderRow}>
-                <Text style={styles.modalTitle}>Game Order</Text>
+                <Text style={styles.modalTitle}>Game order</Text>
                 <TouchableOpacity
                   onPress={() => setGameOrderModalVisible(false)}
                   hitSlop={TOUCH_TARGET.hitSlop}

@@ -1,12 +1,18 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  useNavigationContainerRef,
+  DefaultTheme,
+  DarkTheme,
+} from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { PreferencesProvider, usePreferences } from './context/PreferencesContext';
 import { AuthProvider } from './context/AuthContext';
 import { PurchasesProvider } from './context/PurchasesContext';
@@ -40,7 +46,7 @@ import ResponsibleGamingAlertModal from './components/ResponsibleGamingAlertModa
 import AnimatedLoadingScreen from './components/AnimatedLoadingScreen';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import LegalConsentGate from './components/LegalConsentGate';
-import { COLORS } from './constants/theme';
+import { COLORS, SHADOWS, themed } from './constants/theme';
 import { moderateScale, fluidFont, TOUCH_TARGET } from './constants/layout';
 import { SessionProvider, useActiveSession, useSessionHistory } from './context/SessionContext';
 import { hapticLight } from './utils/haptics';
@@ -94,7 +100,7 @@ function MainTabNavigator({ onOpenAddModal }) {
             borderRadius: tabBarHeight / 2,
           },
         ],
-        tabBarActiveTintColor: COLORS.accentCyan,
+        tabBarActiveTintColor: COLORS.accent,
         tabBarInactiveTintColor: COLORS.tabBarInactive,
         tabBarLabelStyle: [
           styles.tabBarLabel,
@@ -155,7 +161,7 @@ function MainTabNavigator({ onOpenAddModal }) {
               hitSlop={TOUCH_TARGET.hitSlop}
               onPress={onOpenAddModal}
               accessibilityRole="button"
-              accessibilityLabel="Start New Session"
+              accessibilityLabel="Start new session"
             >
               <View
                 style={[
@@ -167,7 +173,7 @@ function MainTabNavigator({ onOpenAddModal }) {
                   },
                 ]}
               >
-                <Ionicons name="add" size={moderateScale(28)} color={COLORS.textDark} />
+                <Ionicons name="add" size={moderateScale(28)} color={COLORS.onAccent} />
               </View>
             </TouchableOpacity>
           ),
@@ -222,6 +228,14 @@ function MainTabNavigator({ onOpenAddModal }) {
 // left the sheet and the stop-loss alert outside it and unable to use it.
 function AppShell() {
   const navigationRef = useNavigationContainerRef();
+  const { scheme } = useTheme();
+
+  // Changing the palette remounts everything below (see the key), so every
+  // screen redraws in it — including frozen tabs and memoised rows that a
+  // plain re-render would skip. Whatever should outlive that lives up here:
+  // where you were in the app, and whether the intro has already played.
+  const navStateRef = useRef(undefined);
+  const [appReady, setAppReady] = useState(false);
 
   // Fired once the end-session wash is opaque — History mounts and the stack
   // finishes its pop entirely out of sight, well before the wash lifts.
@@ -232,14 +246,18 @@ function AppShell() {
   }, [navigationRef]);
 
   return (
-    <SessionEndFxProvider onNavigate={handleSessionEndNavigate}>
-      <AppContent navigationRef={navigationRef} />
+    <SessionEndFxProvider key={scheme} onNavigate={handleSessionEndNavigate}>
+      <AppContent
+        navigationRef={navigationRef}
+        navStateRef={navStateRef}
+        appReady={appReady}
+        onAppReady={() => setAppReady(true)}
+      />
     </SessionEndFxProvider>
   );
 }
 
-function AppContent({ navigationRef }) {
-  const [appReady, setAppReady] = useState(false);
+function AppContent({ navigationRef, navStateRef, appReady, onAppReady }) {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const { endSessionWithFx } = useSessionEndFx();
   const { activeSessionList, endActiveSession, updateActiveSessionMetadata } = useActiveSession();
@@ -355,10 +373,33 @@ function AppContent({ navigationRef }) {
 
 
 
+  // Paints the gap behind screen transitions in the page colour, instead of
+  // React Navigation's default white/black flashing between two cream pages.
+  const navigationTheme = {
+    ...(COLORS.statusBar === 'light' ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(COLORS.statusBar === 'light' ? DarkTheme : DefaultTheme).colors,
+      background: COLORS.background,
+      card: COLORS.card,
+      border: COLORS.cardBorder,
+      text: COLORS.textPrimary,
+      primary: COLORS.accent,
+    },
+  };
+
   return (
     <View style={styles.rootContainer}>
-      <StatusBar style="light" backgroundColor={COLORS.background} />
-      <NavigationContainer ref={navigationRef}>
+      <StatusBar style={COLORS.statusBar} backgroundColor={COLORS.background} />
+      <NavigationContainer
+        ref={navigationRef}
+        // Read once, when a palette change remounts the navigator.
+        // eslint-disable-next-line react-hooks/refs
+        initialState={navStateRef.current}
+        onStateChange={(state) => {
+          navStateRef.current = state;
+        }}
+        theme={navigationTheme}
+      >
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           <Stack.Screen name="MainTabs">
             {() => (
@@ -413,7 +454,7 @@ function AppContent({ navigationRef }) {
         <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
           <AnimatedLoadingScreen
             isAppReady={isPrefsLoaded && isSessionLoaded}
-            onFinish={() => setAppReady(true)}
+            onFinish={onAppReady}
           />
         </View>
       )}
@@ -425,6 +466,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <ThemeProvider>
         {/* Inside SafeAreaProvider so the crash screen can inset itself, but
             above every other provider so a throw in one of them is caught
             too — a malformed session record reaching SessionProvider is the
@@ -451,12 +493,13 @@ export default function App() {
             </AuthProvider>
           </LegalConsentGate>
         </AppErrorBoundary>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   rootContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -464,16 +507,14 @@ const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
     backgroundColor: COLORS.tabBar,
+    borderWidth: 1,
     borderTopWidth: 1,
+    borderColor: COLORS.tabBarBorder,
     borderTopColor: COLORS.tabBarBorder,
     paddingHorizontal: 8,
     paddingBottom: 0,
     paddingTop: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 5,
+    ...SHADOWS.neon,
   },
   tabBarLabel: {
     fontWeight: '600',
@@ -484,14 +525,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  // The one tomato button in the app: starting a session is the main thing
+  // you come here to do, the way a timer app's single big start button is.
   centerAddButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 6,
   },
-});
+}));

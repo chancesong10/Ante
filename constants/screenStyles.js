@@ -1,5 +1,4 @@
-import { StyleSheet } from 'react-native';
-import { COLORS } from './theme';
+import { COLORS, themed } from './theme';
 
 // Screen-shell styles that were byte-identical everywhere they appeared.
 //
@@ -18,7 +17,7 @@ import { COLORS } from './theme';
 // A shared style that needs a per-screen override is not shared, it is a
 // default with exceptions, and those are harder to reason about than the
 // duplication they replace.
-export const screenStyles = StyleSheet.create({
+export const screenStyles = themed(() => ({
   // The root of a screen, and the SafeAreaView variant of the same thing.
   container: {
     flex: 1,
@@ -29,8 +28,9 @@ export const screenStyles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   navTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: 18,
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   navTitleContainer: {
@@ -38,4 +38,4 @@ export const screenStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-});
+}));

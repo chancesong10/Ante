@@ -1,11 +1,10 @@
 // Styles for PokerScreen, kept alongside it rather than inside it — they ran
 // to roughly a third of a 2,450-line file and sat between the reader and the
 // hand logic.
-import { StyleSheet } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { SPACING, RADIUS } from '../constants/layout';
 
-export const styles = StyleSheet.create({
+export const styles = themed(() => ({
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -90,8 +89,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 6,
     marginTop: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   input: {
     backgroundColor: COLORS.backgroundSecondary,
@@ -269,13 +267,13 @@ export const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: COLORS.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   statsSubtext: {
     color: COLORS.textSecondary,
     fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1.2,
+    letterSpacing: 0.2,
     marginBottom: 4,
     textAlign: 'center',
   },
@@ -331,15 +329,13 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.textMuted,
-    textTransform: 'uppercase',
   },
   chipRowLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.textMuted,
     marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   chipGrid: {
     flexDirection: 'row',
@@ -423,7 +419,7 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.danger,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   foldedContributionText: {
     fontSize: 12,
@@ -565,7 +561,7 @@ export const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: COLORS.textMuted,
-    letterSpacing: 1.2,
+    letterSpacing: 0.2,
   },
   showdownNetNumber: {
     fontSize: 28,
@@ -626,7 +622,7 @@ export const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -655,8 +651,9 @@ export const styles = StyleSheet.create({
     borderColor: COLORS.dangerBorder,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: 20,
+    fontWeight: '600',
     color: COLORS.textPrimary,
     textAlign: 'center',
   },
@@ -728,7 +725,6 @@ export const styles = StyleSheet.create({
   statPillLabel: {
     fontSize: 9,
     color: COLORS.textMuted,
-    textTransform: 'uppercase',
     fontWeight: '600',
   },
   statPillValue: {
@@ -762,8 +758,9 @@ export const styles = StyleSheet.create({
     marginTop: 4,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: 17,
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   swipeHint: {
@@ -828,7 +825,6 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textMuted,
     marginTop: 2,
-    textTransform: 'uppercase',
   },
   expandedBreakdown: {
     marginTop: 10,
@@ -842,7 +838,6 @@ export const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: COLORS.textMuted,
-    textTransform: 'uppercase',
     marginBottom: 4,
   },
   streetGrid: {
@@ -854,4 +849,4 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
-});
+}));

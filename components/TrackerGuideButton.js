@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { TouchableOpacity, StyleSheet, Animated, Easing, View } from 'react-native';
+import { TouchableOpacity, Animated, Easing, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, TOUCH_TARGET } from '../constants/layout';
 
 // The circled ⓘ that opens a tracker's guide.
@@ -78,7 +78,7 @@ export default function TrackerGuideButton({ onPress, unseen = false, tint = COL
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   button: {
     width: moderateScale(34),
     height: moderateScale(34),
@@ -102,4 +102,4 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(12),
     borderWidth: 1.5,
   },
-});
+}));

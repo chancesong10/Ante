@@ -12,7 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS, getGameColor } from '../constants/theme';
+import { COLORS, SHADOWS, getGameColor, themed } from '../constants/theme';
 import { screenStyles } from '../constants/screenStyles';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useActiveSession, formatDuration, sessionHasContent, formatSessionDateTime } from '../context/SessionContext';
@@ -88,7 +88,7 @@ function RecentSessionCard({
             pointerEvents="none"
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: gameColor, opacity: flood, borderRadius: RADIUS.sm },
+              { backgroundColor: gameColor, opacity: flood, borderRadius: moderateScale(19) },
             ]}
           />
           <Animated.View
@@ -98,7 +98,7 @@ function RecentSessionCard({
         </GameIconTile>
 
         <View style={styles.sessionInfo}>
-          <Text style={styles.sessionTitle}>{session.gameType} Session</Text>
+          <Text style={styles.sessionTitle}>{session.gameType}</Text>
           <Text style={styles.sessionDate}>{formatSessionDateTime(session.startTime)}</Text>
         </View>
 
@@ -151,11 +151,12 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
   const insets = useSafeAreaInsets();
 
   const hour = new Date().getHours();
-  let greetingTime = 'Good Evening';
-  if (hour < 12) greetingTime = 'Good Morning';
-  else if (hour < 18) greetingTime = 'Good Afternoon';
+  let greetingTime = 'Good evening';
+  if (hour < 12) greetingTime = 'Good morning';
+  else if (hour < 18) greetingTime = 'Good afternoon';
 
-  const firstName = user ? (profile?.username || user?.email?.split('@')[0] || 'Player') : 'Guest';
+  const firstName = user ? profile?.username || user?.email?.split('@')[0] || null : null;
+  const greeting = firstName ? `${greetingTime}, ${firstName}` : greetingTime;
 
   // Lifetime figures, in one pass and only when history actually changes.
   // Home re-renders on every hand logged in a live session elsewhere in the
@@ -271,12 +272,12 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
         icon="time-outline"
         title="Still at the table?"
         message={staleMessage}
-        confirmText={staleNeedsTracker ? 'Open Tracker' : 'Save to History'}
-        cancelText="Keep Playing"
+        confirmText={staleNeedsTracker ? 'Open tracker' : 'Save to History'}
+        cancelText="Keep playing"
         onConfirm={handleStaleConfirm}
         onCancel={() => stale && resumeStaleSession(stale.gameType)}
       />
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={COLORS.statusBarContent} backgroundColor={COLORS.background} />
       <ScrollView
         style={screenStyles.container}
         contentContainerStyle={[
@@ -296,12 +297,12 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
               resizeMode="contain"
             />
             <View style={styles.brandTextContainer}>
-              <Text style={styles.brandTitle}>ANTE</Text>
-              {!!user && (
-                <Text style={styles.greetingText} numberOfLines={1}>
-                  {greetingTime}, {firstName}
-                </Text>
-              )}
+              <Text style={styles.greetingText} numberOfLines={1}>
+                {greeting}
+              </Text>
+              <Text style={styles.brandTitle}>
+                {activeSessionCount > 0 ? 'Good luck out there' : 'Ready when you are'}
+              </Text>
             </View>
           </View>
         </View>
@@ -323,7 +324,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
               <View style={styles.liveBadge}>
                 <LivePulseDot size={moderateScale(6)} />
                 <Text style={styles.liveBadgeText}>
-                  {activeSessionCount === 1 ? 'SESSION RUNNING' : 'SESSIONS RUNNING'}
+                  {activeSessionCount === 1 ? 'Playing now' : `${activeSessionCount} playing now`}
                 </Text>
               </View>
               <Text style={styles.activeGameName}>
@@ -336,7 +337,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
             <View style={styles.activeBalanceRow}>
               <View>
                 <Text style={styles.activeLabel}>
-                  {activeSessionCount === 1 ? 'LIVE NET OUTCOME' : 'COMBINED LIVE NET'}
+                  {activeSessionCount === 1 ? 'Up or down so far' : 'All tables so far'}
                 </Text>
                 <Text
                   style={[
@@ -357,7 +358,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 
             <View style={styles.activeOpenRow}>
               <Text style={styles.activeOpenText}>
-                {activeSessionCount === 1 ? 'View session' : 'View all sessions'}
+                {activeSessionCount === 1 ? 'Back to the table' : 'See all tables'}
               </Text>
               <Ionicons name="chevron-forward" size={moderateScale(16)} color={COLORS.textSecondary} />
             </View>
@@ -366,7 +367,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 
         {/* OVERALL PERFORMANCE CARD */}
         <View style={[styles.card, SHADOWS.card]}>
-          <Text style={styles.cardHeaderLabel}>TOTAL NET PROFIT</Text>
+          <Text style={styles.cardHeaderLabel}>All-time net</Text>
           <Text
             style={[
               styles.balanceAmount,
@@ -386,7 +387,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Win Rate</Text>
+              <Text style={styles.metricLabel}>Win rate</Text>
               <Text
                 style={[
                   styles.metricValue,
@@ -398,36 +399,38 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Total Hands</Text>
+              <Text style={styles.metricLabel}>Hands</Text>
               <Text style={styles.metricValue}>
                 {sessionHistory.reduce((sum, s) => sum + s.totalHands, 0)}
               </Text>
             </View>
           </View>
 
-          {/* Quick Action when nothing is running */}
-          {activeSessionCount === 0 && (
-            <TouchableOpacity
-              style={styles.startSessionCta}
-              activeOpacity={0.85}
-              onPress={handleStartNewSession}
-              accessibilityRole="button"
-              accessibilityLabel="Start a Session"
-            >
-              <Ionicons
-                name="add"
-                size={moderateScale(18)}
-                color={COLORS.textDark}
-                style={{ marginRight: moderateScale(6) }}
-              />
-              <Text style={styles.startSessionCtaText}>Start a Session</Text>
-            </TouchableOpacity>
-          )}
         </View>
+
+        {/* The one big button, the way a focus timer has one: when nothing
+            is running, starting a session is the thing you came to do. */}
+        {activeSessionCount === 0 && (
+          <TouchableOpacity
+            style={styles.startSessionCta}
+            activeOpacity={0.85}
+            onPress={handleStartNewSession}
+            accessibilityRole="button"
+            accessibilityLabel="Start a session"
+          >
+            <View style={styles.startSessionIcon}>
+              <Ionicons name="play" size={moderateScale(18)} color={COLORS.accent} />
+            </View>
+            <View style={styles.flex}>
+              <Text style={styles.startSessionCtaText}>Start a session</Text>
+              <Text style={styles.startSessionCtaSub}>Sitting down somewhere? Log it as you go.</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* RECENT SESSIONS SECTION */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Sessions</Text>
+          <Text style={styles.sectionTitle}>Recent sessions</Text>
           {totalSessions > 0 && (
             <TouchableOpacity
               hitSlop={TOUCH_TARGET.hitSlop}
@@ -440,10 +443,12 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
 
         {totalSessions === 0 ? (
           <View style={styles.emptyStateCard}>
-            <Ionicons name="time-outline" size={moderateScale(32)} color={COLORS.textMuted} />
-            <Text style={styles.emptyTitle}>No Sessions Recorded</Text>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="book-outline" size={moderateScale(26)} color={COLORS.accent} />
+            </View>
+            <Text style={styles.emptyTitle}>Your first page is blank</Text>
             <Text style={styles.emptySubtitle}>
-              Start a live session to track hands and build your history.
+              Finish a session and it lands here, with how long you played and how it went.
             </Text>
           </View>
         ) : (
@@ -469,7 +474,7 @@ export default function HomeScreen({ navigation, onOpenAddModal }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   contentContainer: {
     paddingHorizontal: SPACING.pageHorizontal,
     paddingTop: SPACING.sm,
@@ -491,23 +496,27 @@ const styles = StyleSheet.create({
   headerLogo: {
     width: moderateScale(44),
     height: moderateScale(44),
+    // The mark ships white; ink it to match the page.
+    tintColor: COLORS.textPrimary,
   },
   brandTextContainer: {
     flex: 1,
     justifyContent: 'center',
   },
   brandTitle: {
-    fontSize: fluidFont(19),
-    fontWeight: '800',
-    letterSpacing: 1.4,
+    fontFamily: 'display',
+    fontSize: fluidFont(24),
+    fontWeight: '600',
+    letterSpacing: -0.3,
     color: COLORS.textPrimary,
   },
   greetingText: {
-    fontSize: fluidFont(12),
-    fontWeight: '500',
+    fontSize: fluidFont(13),
+    fontWeight: '600',
     color: COLORS.textSecondary,
-    marginTop: 1,
+    marginBottom: 1,
   },
+  flex: { flex: 1 },
   // Active Session Card
   activeCard: {
     backgroundColor: COLORS.card,
@@ -530,16 +539,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.dangerMuted,
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: moderateScale(4),
-    borderRadius: RADIUS.xs,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(5),
+    borderRadius: RADIUS.pill,
     gap: moderateScale(6),
   },
   liveBadgeText: {
     color: COLORS.danger,
-    fontSize: fluidFont(11),
+    fontSize: fluidFont(12),
     fontWeight: '700',
-    letterSpacing: 0.5,
   },
   activeGameName: {
     fontSize: fluidFont(14),
@@ -553,10 +561,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   activeLabel: {
-    fontSize: fluidFont(11),
+    fontSize: fluidFont(12),
     color: COLORS.textSecondary,
     fontWeight: '600',
-    letterSpacing: 0.5,
     marginBottom: 4,
   },
   activeNetAmount: {
@@ -618,18 +625,17 @@ const styles = StyleSheet.create({
   // Base Summary Card
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.cardPadding,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   cardHeaderLabel: {
-    fontSize: fluidFont(11),
+    fontSize: fluidFont(13),
     fontWeight: '600',
     color: COLORS.textSecondary,
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    marginBottom: 2,
     textAlign: 'center',
   },
   balanceAmount: {
@@ -641,13 +647,11 @@ const styles = StyleSheet.create({
   },
   metricsRow: {
     flexDirection: 'row',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.backgroundSecondary,
     borderRadius: RADIUS.md,
     paddingVertical: moderateScale(12),
     paddingHorizontal: moderateScale(8),
     marginTop: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
   },
   metricItem: {
     flex: 1,
@@ -659,7 +663,8 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   metricLabel: {
-    fontSize: fluidFont(11),
+    fontSize: fluidFont(12),
+    fontWeight: '500',
     color: COLORS.textSecondary,
     marginBottom: 4,
   },
@@ -672,17 +677,39 @@ const styles = StyleSheet.create({
   startSessionCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.sm,
-    paddingVertical: moderateScale(13),
+    gap: SPACING.sm,
+    backgroundColor: COLORS.accent,
+    borderRadius: RADIUS.xl,
+    paddingVertical: moderateScale(16),
+    paddingHorizontal: moderateScale(18),
     minHeight: TOUCH_TARGET.minSize,
-    marginTop: SPACING.md,
+    marginBottom: SPACING.xl,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  startSessionIcon: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: COLORS.onAccent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 2,
   },
   startSessionCtaText: {
-    color: COLORS.textDark,
-    fontSize: fluidFont(14),
+    color: COLORS.onAccent,
+    fontSize: fluidFont(17),
     fontWeight: '700',
+  },
+  startSessionCtaSub: {
+    color: COLORS.onAccent,
+    opacity: 0.85,
+    fontSize: fluidFont(12),
+    fontWeight: '500',
+    marginTop: 1,
   },
 
   // Section Headers
@@ -693,14 +720,15 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   sectionTitle: {
-    fontSize: fluidFont(16),
+    fontFamily: 'display',
+    fontSize: fluidFont(19),
     fontWeight: '600',
     color: COLORS.textPrimary,
   },
   viewAllText: {
     fontSize: fluidFont(13),
-    fontWeight: '600',
-    color: COLORS.primary,
+    fontWeight: '700',
+    color: COLORS.accent,
   },
 
   // Empty State
@@ -713,18 +741,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
+  emptyIcon: {
+    width: moderateScale(56),
+    height: moderateScale(56),
+    borderRadius: moderateScale(28),
+    backgroundColor: COLORS.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyTitle: {
-    fontSize: fluidFont(15),
+    fontFamily: 'display',
+    fontSize: fluidFont(18),
     fontWeight: '600',
     color: COLORS.textPrimary,
-    marginTop: SPACING.xs,
+    marginTop: SPACING.sm,
   },
   emptySubtitle: {
-    fontSize: fluidFont(12),
-    color: COLORS.textMuted,
+    fontSize: fluidFont(13),
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    marginTop: 4,
-    lineHeight: fluidFont(16),
+    marginTop: 6,
+    lineHeight: fluidFont(19),
+    maxWidth: moderateScale(260),
   },
 
   // Sessions List
@@ -763,7 +801,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    borderRadius: RADIUS.md,
+    borderRadius: moderateScale(19),
     borderWidth: 2,
   },
   sessionInfo: {
@@ -792,4 +830,4 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 2,
   },
-});
+}));

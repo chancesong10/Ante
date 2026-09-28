@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
+import { View, Text, Pressable, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS } from '../constants/layout';
 
 // A redacted placeholder bar standing in for a real number/value when a
@@ -88,7 +88,7 @@ export function InsightsUnlockCta({ subtitle, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   skeletonBar: {
     backgroundColor: COLORS.backgroundSecondary,
     borderWidth: 1,
@@ -166,4 +166,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: fluidFont(14),
   },
-});
+}));

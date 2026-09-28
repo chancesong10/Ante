@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
@@ -14,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { screenStyles } from '../constants/screenStyles';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import { useAuth } from '../context/AuthContext';
@@ -152,14 +151,14 @@ export default function AuthScreen({ navigation }) {
 
   return (
     <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={COLORS.statusBarContent} backgroundColor={COLORS.background} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            {needsUsername ? 'Choose a Username' : mode === 'signUp' ? 'Create Account' : 'Sign In'}
+            {needsUsername ? 'Choose a Username' : mode === 'signUp' ? 'Create account' : 'Sign in'}
           </Text>
           {!needsUsername && (
             <TouchableOpacity
@@ -189,7 +188,7 @@ export default function AuthScreen({ navigation }) {
                   style={styles.textInput}
                   value={pendingUsername}
                   onChangeText={setPendingUsername}
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={COLORS.placeholder}
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoFocus
@@ -248,7 +247,7 @@ export default function AuthScreen({ navigation }) {
                 style={styles.textInput}
                 value={username}
                 onChangeText={setUsername}
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.placeholder}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
@@ -297,7 +296,7 @@ export default function AuthScreen({ navigation }) {
               <ActivityIndicator color={COLORS.textDark} />
             ) : (
               <Text style={styles.submitButtonText}>
-                {mode === 'signUp' ? 'Create Account' : 'Sign In'}
+                {mode === 'signUp' ? 'Create account' : 'Sign in'}
               </Text>
             )}
           </TouchableOpacity>
@@ -350,7 +349,7 @@ export default function AuthScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -360,8 +359,9 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.sm,
   },
   headerTitle: {
-    fontSize: fluidFont(20),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(22),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   closeButton: {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     fontSize: fluidFont(11),
     fontWeight: '700',
     marginHorizontal: SPACING.sm,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   inputBlock: {
     marginBottom: SPACING.md,
@@ -489,4 +489,4 @@ const styles = StyleSheet.create({
     color: COLORS.accentCyan,
     fontWeight: '700',
   },
-});
+}));

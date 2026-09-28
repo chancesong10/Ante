@@ -3,13 +3,12 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import {
   LEGAL_VERSION,
@@ -238,7 +237,7 @@ export default function LegalConsentGate({ children }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   scroll: {
     flexGrow: 1,
@@ -259,8 +258,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   title: {
-    fontSize: fluidFont(22),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(24),
+    fontWeight: '600',
     color: COLORS.textPrimary,
     textAlign: 'center',
   },
@@ -391,4 +391,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: fluidFont(20),
   },
-});
+}));

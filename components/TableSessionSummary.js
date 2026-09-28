@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { formatAmount, formatNumber } from '../utils/format';
 
 // Live session figures shared by the roulette and baccarat trackers. Both
@@ -29,7 +29,7 @@ export function SessionMoneyStrip({ summary, currencySymbol = '$', bestLabel = '
     <View style={styles.strip}>
       <View style={styles.pillRow}>
         <Pill label="Wagered" value={`${currencySymbol}${amount(summary.totalWagered)}`} />
-        <Pill label="Avg Bet" value={`${currencySymbol}${amount(summary.avgBet)}`} />
+        <Pill label="Avg bet" value={`${currencySymbol}${amount(summary.avgBet)}`} />
         <Pill
           label={bestLabel}
           value={summary.biggestWin > 0 ? `+${currencySymbol}${amount(summary.biggestWin)}` : `${currencySymbol}0`}
@@ -96,7 +96,7 @@ export function SessionMixCard({ summary, currencySymbol = '$', title, unit }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   strip: { width: '100%', marginTop: 8 },
   pillRow: { flexDirection: 'row', gap: 8 },
   pill: {
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
-  pillLabel: { fontSize: 10, color: COLORS.textMuted, textTransform: 'uppercase', fontWeight: '600' },
+  pillLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
   pillValue: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 2 },
   expectedText: {
     fontSize: 12,
@@ -144,4 +144,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   shareFill: { height: '100%', borderRadius: 2, backgroundColor: COLORS.textMuted },
-});
+}));

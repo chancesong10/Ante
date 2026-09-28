@@ -6,7 +6,6 @@ import React, { useEffect, useRef, useSyncExternalStore } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   Pressable,
   StatusBar,
@@ -16,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TYPE, LAYOUT, TOUCH_TARGET } from '../constants/layout';
 
 /* ------------------------------------------------------------------ motion */
@@ -212,7 +211,7 @@ export function Screen({
   if (navBar) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+        <StatusBar barStyle={COLORS.statusBarContent} backgroundColor={COLORS.background} />
         {navBar}
         {body}
       </View>
@@ -221,7 +220,7 @@ export function Screen({
 
   return (
     <SafeAreaView style={s.screen} edges={edges}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={COLORS.statusBarContent} backgroundColor={COLORS.background} />
       {body}
     </SafeAreaView>
   );
@@ -243,7 +242,7 @@ export function NavBar({ title, onBack, live = false, right = null }) {
           <Ionicons name="chevron-back" size={moderateScale(22)} color={COLORS.textPrimary} />
         </Tappable>
       ) : (
-        <View style={s.navBack} />
+        <View style={s.navBackSpacer} />
       )}
       <View style={s.navTitleWrap}>
         {live && <LiveDot />}
@@ -352,7 +351,7 @@ export function ListRow({ onPress, children, style, accessibilityLabel }) {
 
 /* ------------------------------------------------------------------ styles */
 
-const s = StyleSheet.create({
+const s = themed(() => ({
   flex: { flex: 1 },
   pressed: { opacity: 0.62 },
   disabled: { opacity: 0.4 },
@@ -373,15 +372,22 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.pageHorizontal,
     paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.cardBorder,
   },
+  // A soft round button rather than a bare chevron, so "back" is an obvious,
+  // generous target.
   navBack: {
-    width: moderateScale(38),
-    height: moderateScale(38),
-    borderRadius: moderateScale(19),
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  navBackSpacer: {
+    width: moderateScale(40),
+    height: moderateScale(40),
   },
   navTitleWrap: {
     flex: 1,
@@ -391,7 +397,9 @@ const s = StyleSheet.create({
     gap: moderateScale(7),
   },
   navTitle: {
-    ...TYPE.heading,
+    fontFamily: 'display',
+    fontSize: fluidFont(18),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   navRight: {
@@ -425,7 +433,9 @@ const s = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   sectionTitle: {
-    ...TYPE.heading,
+    fontFamily: 'display',
+    fontSize: fluidFont(19),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
 
@@ -436,6 +446,7 @@ const s = StyleSheet.create({
     padding: SPACING.cardPadding,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    ...SHADOWS.card,
   },
   cardElevated: {
     backgroundColor: COLORS.cardElevated,
@@ -498,7 +509,7 @@ const s = StyleSheet.create({
   listGroup: {
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     backgroundColor: COLORS.card,
     overflow: 'hidden',
   },
@@ -509,8 +520,8 @@ const s = StyleSheet.create({
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: moderateScale(12),
-    paddingHorizontal: moderateScale(14),
+    paddingVertical: moderateScale(14),
+    paddingHorizontal: moderateScale(16),
   },
 
   // Button
@@ -519,8 +530,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: moderateScale(6),
-    borderRadius: RADIUS.sm,
-    paddingVertical: moderateScale(13),
+    borderRadius: RADIUS.pill,
+    paddingVertical: moderateScale(14),
     minHeight: TOUCH_TARGET.minSize,
   },
   btnPrimary: {
@@ -528,10 +539,11 @@ const s = StyleSheet.create({
   },
   btnPrimaryText: {
     color: COLORS.textDark,
-    fontSize: fluidFont(14),
+    fontSize: fluidFont(15),
     fontWeight: '700',
   },
   btnGhost: {
+    backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.cardBorderHighlight,
   },
@@ -540,4 +552,4 @@ const s = StyleSheet.create({
     fontSize: fluidFont(13),
     fontWeight: '600',
   },
-});
+}));

@@ -11,5 +11,7 @@ module.exports = {
   // it covers.
   moduleNameMapper: {
     '^react-native$': '<rootDir>/test/mocks/react-native.js',
+    // Font and image files are binary; the app's bundler turns them into ids.
+    '\\.(ttf|otf|png|jpg)$': '<rootDir>/test/mocks/file.js',
   },
 };

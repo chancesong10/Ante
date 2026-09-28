@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  StyleSheet,
   Text,
   View,
   TextInput,
@@ -11,7 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '../constants/theme';
+import { COLORS, SHADOWS, themed } from '../constants/theme';
 import { moderateScale } from '../constants/layout';
 import { useGameSession } from '../context/SessionContext';
 import { useSessionEndFx } from '../context/SessionEndFxContext';
@@ -82,9 +81,9 @@ export default function GeneralTrackerScreen({ navigation }) {
     if (!hasValidNumbers) {
       setAlertModal({
         variant: 'warning',
-        title: 'Enter Buy-In and Cash-Out',
+        title: 'Enter buy-in and cash-out',
         message: 'You need to enter both amounts before ending this session.',
-        confirmText: 'Got It',
+        confirmText: 'Got it',
         showCancel: false,
         onConfirm: closeAlertModal,
       });
@@ -143,7 +142,7 @@ export default function GeneralTrackerScreen({ navigation }) {
 
         <View style={styles.navTitleContainer}>
           <LivePulseDot size={8} color={COLORS.danger} />
-          <Text style={styles.navTitle}>General Tracker</Text>
+          <Text style={styles.navTitle}>General tracker</Text>
         </View>
 
         <TouchableOpacity
@@ -152,7 +151,7 @@ export default function GeneralTrackerScreen({ navigation }) {
           onPress={handleEndSessionPress}
         >
           <Ionicons name="stop-circle" size={16} color={COLORS.danger} style={{ marginRight: 4 }} />
-          <Text style={styles.headerEndButtonText}>End Session</Text>
+          <Text style={styles.headerEndButtonText}>End session</Text>
         </TouchableOpacity>
       </View>
 
@@ -166,7 +165,7 @@ export default function GeneralTrackerScreen({ navigation }) {
         {!user && <GuestModeBanner />}
 
         <View style={[styles.statsBox, SHADOWS.card]}>
-          <Text style={styles.statsSubtext}>PROJECTED NET OUTCOME</Text>
+          <Text style={styles.statsSubtext}>Where you would end up</Text>
           <Text
             style={[
               styles.netAmount,
@@ -189,7 +188,7 @@ export default function GeneralTrackerScreen({ navigation }) {
           <TextInput
             style={styles.input}
             placeholder="e.g. Slots, Craps, Keno"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.placeholder}
             value={label}
             onChangeText={setLabel}
           />
@@ -199,7 +198,7 @@ export default function GeneralTrackerScreen({ navigation }) {
             style={styles.input}
             keyboardType="numeric"
             placeholder="e.g. 100"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.placeholder}
             value={buyIn}
             onChangeText={setBuyIn}
           />
@@ -209,7 +208,7 @@ export default function GeneralTrackerScreen({ navigation }) {
             style={styles.input}
             keyboardType="numeric"
             placeholder="e.g. 80"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.placeholder}
             value={cashOut}
             onChangeText={setCashOut}
           />
@@ -221,7 +220,7 @@ export default function GeneralTrackerScreen({ navigation }) {
           disabled={!hasValidNumbers}
           activeOpacity={0.85}
         >
-          <Text style={styles.submitText}>End Session & Save to History</Text>
+          <Text style={styles.submitText}>End session & save to history</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -230,7 +229,7 @@ export default function GeneralTrackerScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   container: { flex: 1, backgroundColor: COLORS.background },
   topNav: {
     flexDirection: 'row',
@@ -279,7 +278,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.2,
+    letterSpacing: 0.2,
     marginBottom: 4,
   },
   netAmount: { fontSize: 34, fontWeight: '700', marginBottom: 8 },
@@ -298,8 +297,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
     marginTop: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   input: {
     backgroundColor: COLORS.backgroundSecondary,
@@ -318,6 +316,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  submitDisabled: { backgroundColor: COLORS.cardBorder, opacity: 0.5 },
+  // The real button, faded: still reads as the thing you'll press.
+  submitDisabled: { opacity: 0.35 },
   submitText: { color: COLORS.textDark, fontWeight: '700', fontSize: 15 },
-});
+}));

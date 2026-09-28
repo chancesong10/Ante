@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, TOUCH_TARGET } from '../constants/layout';
 import ActiveSessionSlip from './ActiveSessionSlip';
 
@@ -49,10 +49,10 @@ export default function ActiveSessionsModal({
 
               <View style={styles.header}>
                 <View style={{ flex: 1, marginRight: SPACING.sm }}>
-                  <Text style={styles.title}>
-                    {sessions.length === 1 ? 'Session Running' : 'Sessions Running'}
+                  <Text style={styles.title}>Playing now</Text>
+                  <Text style={styles.subtitle}>
+                    Tap a table to go back to it, or stop it on the right
                   </Text>
-                  <Text style={styles.subtitle}>Tap one to resume, or stop it on the right</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.closeBtn}
@@ -61,7 +61,7 @@ export default function ActiveSessionsModal({
                   accessibilityRole="button"
                   accessibilityLabel="Close"
                 >
-                  <Ionicons name="close" size={20} color={COLORS.danger} />
+                  <Ionicons name="close" size={20} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -89,7 +89,7 @@ export default function ActiveSessionsModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   overlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: COLORS.overlay,
@@ -120,8 +120,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   title: {
-    fontSize: fluidFont(20),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(22),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   subtitle: {
@@ -142,4 +143,4 @@ const styles = StyleSheet.create({
   // Four rows fit comfortably; the cap keeps this from ever needing more.
   list: { maxHeight: moderateScale(320) },
   listContent: { gap: SPACING.sm, paddingBottom: SPACING.xs },
-});
+}));

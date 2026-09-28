@@ -12,7 +12,7 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/theme';
+import { COLORS, themed } from '../constants/theme';
 import { moderateScale, fluidFont, SPACING, RADIUS, LAYOUT, TOUCH_TARGET } from '../constants/layout';
 import { netTone, formatMoney, formatAmount } from '../utils/format';
 import { Screen, ScreenHeader, Tappable, Rise, useReduceMotion } from '../components/ui';
@@ -361,17 +361,17 @@ const SessionRow = React.memo(function SessionRow({
                         </View>
                         <View style={styles.structuredHandGrid}>
                           <View style={styles.structuredHandCol}>
-                            <Text style={styles.structuredHandLabel}>BET</Text>
+                            <Text style={styles.structuredHandLabel}>Bet</Text>
                             <Text style={styles.structuredHandValue}>{betStr}</Text>
                           </View>
                           {playStr && (
                             <View style={styles.structuredHandCol}>
-                              <Text style={styles.structuredHandLabel}>PLAY</Text>
+                              <Text style={styles.structuredHandLabel}>Play</Text>
                               <Text style={styles.structuredHandValue}>{playStr}</Text>
                             </View>
                           )}
                           <View style={styles.structuredHandCol}>
-                            <Text style={styles.structuredHandLabel}>OUTCOME</Text>
+                            <Text style={styles.structuredHandLabel}>Outcome</Text>
                             <Text style={styles.structuredHandValue}>{outcomeStr}</Text>
                           </View>
                         </View>
@@ -718,7 +718,7 @@ export default function HistoryScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => ({
   flex: { flex: 1 },
 
   gameFilterButton: {
@@ -814,8 +814,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: 'rgba(250, 250, 250, 0.05)',
+    borderColor: COLORS.accent,
+    backgroundColor: COLORS.accentMuted,
   },
 
   // Session card
@@ -1002,8 +1002,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   emptyTitle: {
-    fontSize: fluidFont(17),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(19),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   emptySubtitle: {
@@ -1037,8 +1038,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   modalTitle: {
-    fontSize: fluidFont(17),
-    fontWeight: '700',
+    fontFamily: 'display',
+    fontSize: fluidFont(19),
+    fontWeight: '600',
     color: COLORS.textPrimary,
   },
   gameOptionRow: {
@@ -1052,7 +1054,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
   },
   gameOptionRowSelected: {
-    borderColor: COLORS.primary,
+    borderColor: COLORS.accent,
     backgroundColor: COLORS.primaryMuted,
   },
   gameOptionIconBox: {
@@ -1081,7 +1083,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textSecondary,
     marginBottom: 4,
-    textTransform: 'uppercase',
   },
   structuredHandBox: {
     backgroundColor: COLORS.background,
@@ -1118,11 +1119,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textMuted,
     marginBottom: 2,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   structuredHandValue: {
     fontSize: fluidFont(11),
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
-});
+}));
