@@ -49,6 +49,12 @@
         "projectId": "d08c3238-d2ff-431d-9179-450700d528f7"
       }
     },
-    "owner": "chancesong"
+    "owner": "chancesong",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d08c3238-d2ff-431d-9179-450700d528f7"
+    }
   }
 }
