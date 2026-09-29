@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { View, useColorScheme } from 'react-native';
+import { Appearance, View, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import { PALETTES, setColorScheme } from '../constants/theme';
@@ -15,6 +15,17 @@ import { FONT_FILES } from '../constants/fonts';
 const STORAGE_KEY = '@ante/appearance';
 export const APPEARANCE_OPTIONS = ['light', 'dark', 'system'];
 const DEFAULT_APPEARANCE = 'light';
+
+// Native views we don't draw — RevenueCat's paywall, alerts, the keyboard —
+// take their colours from the OS, not from our palette. Overriding the app's
+// OS-level scheme makes them follow the in-app choice instead of the phone's.
+// Called before the state update so useColorScheme() already reads the
+// override on the render that follows, rather than one render late.
+const applyNativeScheme = (appearance) => {
+  try {
+    Appearance.setColorScheme(appearance === 'system' ? 'unspecified' : appearance);
+  } catch {}
+};
 
 const ThemeContext = createContext({
   scheme: 'light',
@@ -32,11 +43,16 @@ export function ThemeProvider({ children }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((stored) => {
         if (!cancelled) {
-          setAppearanceState(APPEARANCE_OPTIONS.includes(stored) ? stored : DEFAULT_APPEARANCE);
+          const initial = APPEARANCE_OPTIONS.includes(stored) ? stored : DEFAULT_APPEARANCE;
+          applyNativeScheme(initial);
+          setAppearanceState(initial);
         }
       })
       .catch(() => {
-        if (!cancelled) setAppearanceState(DEFAULT_APPEARANCE);
+        if (!cancelled) {
+          applyNativeScheme(DEFAULT_APPEARANCE);
+          setAppearanceState(DEFAULT_APPEARANCE);
+        }
       });
     return () => {
       cancelled = true;
@@ -45,6 +61,7 @@ export function ThemeProvider({ children }) {
 
   const setAppearance = useCallback((next) => {
     if (!APPEARANCE_OPTIONS.includes(next)) return;
+    applyNativeScheme(next);
     setAppearanceState(next);
     AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
   }, []);
