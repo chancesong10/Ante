@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { AppState } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import {
   loadSessionHistory,
@@ -315,26 +316,42 @@ export function SessionProvider({ children }) {
   // measured against on the way back in and what a stale session is finalized
   // at — so a session the app died on is never credited with the hours it
   // spent not running.
+  const persistSessions = useCallback((sessionsToSave) => {
+    const now = Date.now();
+    const toPersist = {};
+    Object.entries(sessionsToSave).forEach(([gameType, session]) => {
+      if (!sessionWorthRestoring(session)) return;
+      const { staleSince, ...rest } = session;
+      // A session still waiting on the user's answer keeps the timestamp it
+      // was last genuinely alive at, so dying a second time before they
+      // answer doesn't reset the gap to zero and make it look freshly
+      // active. `staleSince` itself is never persisted — it's rederived
+      // from `lastActiveAt` on the way back in, which is where the
+      // threshold lives.
+      toPersist[gameType] = { ...rest, lastActiveAt: staleSince ?? now };
+    });
+    saveActiveSessions(toPersist);
+  }, []);
+
+
+
   useEffect(() => {
     if (!isLoaded) return undefined;
     const t = setTimeout(() => {
-      const now = Date.now();
-      const toPersist = {};
-      Object.entries(activeSessions).forEach(([gameType, session]) => {
-        if (!sessionWorthRestoring(session)) return;
-        const { staleSince, ...rest } = session;
-        // A session still waiting on the user's answer keeps the timestamp it
-        // was last genuinely alive at, so dying a second time before they
-        // answer doesn't reset the gap to zero and make it look freshly
-        // active. `staleSince` itself is never persisted — it's rederived
-        // from `lastActiveAt` on the way back in, which is where the
-        // threshold lives.
-        toPersist[gameType] = { ...rest, lastActiveAt: staleSince ?? now };
-      });
-      saveActiveSessions(toPersist);
+      persistSessions(activeSessionsRef.current);
     }, 500);
     return () => clearTimeout(t);
-  }, [activeSessions, isLoaded]);
+  }, [activeSessions, isLoaded, persistSessions]);
+
+  useEffect(() => {
+    if (!isLoaded) return undefined;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background' || state === 'inactive') {
+        persistSessions(activeSessionsRef.current);
+      }
+    });
+    return () => sub.remove();
+  }, [isLoaded, persistSessions]);
 
   // Applies `fn` to one game's live session, leaving the others untouched.
   const patchSession = useCallback((gameType, fn) => {
