@@ -260,6 +260,10 @@ export function SessionProvider({ children }) {
   const [sessionHistory, setSessionHistory] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const hasLoadedOnce = useRef(false);
+  // False when the stored history exists but couldn't be read. Persisting is
+  // then switched off for the rest of the run: whatever is in memory is
+  // missing everything on disk, so writing it would destroy what's there.
+  const historyWritable = useRef(true);
 
   // Mirrors activeSessions so action callbacks below can read the latest
   // value without listing it as a dependency — keeps their identities
@@ -284,13 +288,20 @@ export function SessionProvider({ children }) {
     hasLoadedOnce.current = true;
 
     (async () => {
-      const [storedHistory, storedActive] = await Promise.all([
+      let [storedHistory, storedActive] = await Promise.all([
         loadSessionHistory(),
         loadActiveSessions(),
       ]);
+      // One retry absorbs a transient storage error. A failure that repeats is
+      // left on disk untouched rather than overwritten (see historyWritable).
+      if (storedHistory === null) storedHistory = await loadSessionHistory();
+      if (storedHistory === null) {
+        historyWritable.current = false;
+        console.error('SessionProvider: session history unreadable; not saving history this run');
+      }
       // Sweeps anything a pre-multi-session build left under the old key.
       await clearLegacyActiveSession();
-      setSessionHistory(storedHistory.map(sanitizeSessionRecord).filter(Boolean));
+      setSessionHistory((storedHistory ?? []).map(sanitizeSessionRecord).filter(Boolean));
       setActiveSessions(restoreActiveSessions(storedActive));
       setIsLoaded(true);
     })();
@@ -298,7 +309,7 @@ export function SessionProvider({ children }) {
 
   // Persist sessionHistory to storage any time it changes, after initial load completes.
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !historyWritable.current) return;
     saveSessionHistory(sessionHistory);
   }, [sessionHistory, isLoaded]);
 
@@ -471,7 +482,22 @@ export function SessionProvider({ children }) {
     setSessionHistory((prev) => prev.filter((s) => s.id !== sessionId));
   }, []);
 
+  // Removes the local copies of sessions the sync engine found deleted on
+  // another device. Separate from deleteSession only to say why: the cloud
+  // already lacks these, so nothing should be sent back for them.
+  const dropSessionsDeletedElsewhere = useCallback((sessionIds) => {
+    if (!sessionIds?.length) return;
+    const idSet = new Set(sessionIds);
+    setSessionHistory((prev) => {
+      const next = prev.filter((s) => !idSet.has(s.id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, []);
+
   const clearAllSessions = useCallback(() => {
+    // Erasing is the one write that's safe over an unreadable history: the
+    // user has asked for whatever is on disk to go.
+    historyWritable.current = true;
     setActiveSessions({});
     setSessionHistory([]);
     // The state change alone would reach storage, but only after the persist
@@ -601,12 +627,13 @@ export function SessionProvider({ children }) {
       isLoaded,
       toggleSessionStar,
       deleteSession,
+      dropSessionsDeletedElsewhere,
       clearAllSessions,
       mergeSessionsFromCloud,
       markSessionsSynced,
       releaseAccountSessions,
     }),
-    [sessionHistory, isLoaded, toggleSessionStar, deleteSession, clearAllSessions, mergeSessionsFromCloud, markSessionsSynced, releaseAccountSessions]
+    [sessionHistory, isLoaded, toggleSessionStar, deleteSession, dropSessionsDeletedElsewhere, clearAllSessions, mergeSessionsFromCloud, markSessionsSynced, releaseAccountSessions]
   );
 
   return (

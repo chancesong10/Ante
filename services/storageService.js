@@ -15,6 +15,8 @@ const KEYS = {
   SCHEMA_VERSION: 'ante:schemaVersion',
   // Which version of the Terms/Privacy Policy this device accepted, and when.
   LEGAL_CONSENT: 'ante:legalConsent',
+  // userId -> session ids deleted locally whose cloud delete hasn't succeeded.
+  PENDING_CLOUD_DELETES: 'ante:pendingCloudDeletes',
 };
 
 // The only keys a "clear my data" leaves behind. The device seed is anonymous
@@ -25,7 +27,11 @@ const KEYS = {
 // this device was shown the Terms and accepted them. Erasing session data is
 // not a withdrawal of that acceptance, and dropping the record would destroy
 // the only proof we have that the gate was ever answered.
-const PRESERVED_KEYS = [KEYS.DEVICE_ID, KEYS.LEGAL_CONSENT];
+//
+// Pending cloud deletes are kept because they record deletions the user
+// already made. Dropping them would let the next sync pull those sessions
+// back down from the account.
+const PRESERVED_KEYS = [KEYS.DEVICE_ID, KEYS.LEGAL_CONSENT, KEYS.PENDING_CLOUD_DELETES];
 
 // --- Device identity (anonymous, stable per-install) ---
 // This lets today's local-only data map cleanly onto a real user account later.
@@ -77,15 +83,23 @@ export async function saveLegalConsent(record) {
 }
 
 // --- Session history ---
+//
+// Resolves to `null`, not `[]`, when the stored history exists but can't be
+// read. The difference is the whole point: SessionProvider persists whatever
+// history it holds, so a read failure reported as "no sessions" would be
+// written straight back over the data it failed to read. That can happen on
+// a transient storage error, and on Android it's what a single oversized
+// value looks like ("Row too big to fit into CursorWindow").
 export async function loadSessionHistory() {
   try {
     const raw = await AsyncStorage.getItem(KEYS.SESSION_HISTORY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
+    // Valid JSON that isn't a list holds no sessions to protect.
     return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.error('storageService: failed to load session history', err);
-    return [];
+    return null;
   }
 }
 
@@ -146,6 +160,70 @@ export async function clearLegacyActiveSession() {
     console.error('storageService: failed to clear legacy active session', err);
     return false;
   }
+}
+
+// --- Pending cloud deletes ---
+//
+// A session deleted while offline (or while a delete request failed) still
+// exists in the cloud, and the next pull would merge it straight back in.
+// Recording the id here first means the sync engine can retry the delete and,
+// until it lands, refuse to re-import that session.
+//
+// Writes are chained so two quick read-modify-write updates can't interleave
+// and drop each other's ids.
+let pendingDeletesQueue = Promise.resolve();
+
+async function readPendingDeletesMap() {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.PENDING_CLOUD_DELETES);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (err) {
+    console.error('storageService: failed to load pending cloud deletes', err);
+    return {};
+  }
+}
+
+function updatePendingDeletes(userId, update) {
+  pendingDeletesQueue = pendingDeletesQueue.then(async () => {
+    try {
+      const map = await readPendingDeletesMap();
+      const next = update(new Set(Array.isArray(map[userId]) ? map[userId] : []));
+      if (next.size) map[userId] = [...next];
+      else delete map[userId];
+      if (Object.keys(map).length) {
+        await AsyncStorage.setItem(KEYS.PENDING_CLOUD_DELETES, JSON.stringify(map));
+      } else {
+        await AsyncStorage.removeItem(KEYS.PENDING_CLOUD_DELETES);
+      }
+    } catch (err) {
+      console.error('storageService: failed to save pending cloud deletes', err);
+    }
+  });
+  return pendingDeletesQueue;
+}
+
+export async function loadPendingCloudDeletes(userId) {
+  if (!userId) return [];
+  await pendingDeletesQueue;
+  const ids = (await readPendingDeletesMap())[userId];
+  return Array.isArray(ids) ? ids : [];
+}
+
+export function addPendingCloudDeletes(userId, ids) {
+  if (!userId || !ids?.length) return Promise.resolve();
+  return updatePendingDeletes(userId, (set) => {
+    ids.forEach((id) => set.add(id));
+    return set;
+  });
+}
+
+export function removePendingCloudDeletes(userId, ids) {
+  if (!userId || !ids?.length) return Promise.resolve();
+  return updatePendingDeletes(userId, (set) => {
+    ids.forEach((id) => set.delete(id));
+    return set;
+  });
 }
 
 // --- Preferences ---

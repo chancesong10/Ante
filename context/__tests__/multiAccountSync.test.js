@@ -28,6 +28,9 @@ jest.mock('../../services/storageService', () => ({
   loadActiveSessions: jest.fn(async () => ({})),
   saveActiveSessions: jest.fn(async () => true),
   clearLegacyActiveSession: jest.fn(async () => true),
+  loadPendingCloudDeletes: jest.fn(async () => []),
+  addPendingCloudDeletes: jest.fn(async () => {}),
+  removePendingCloudDeletes: jest.fn(async () => {}),
 }));
 
 jest.mock('../../services/syncService', () => ({
@@ -43,8 +46,15 @@ jest.mock('../AuthContext', () => ({
 const { SessionProvider, useSessionHistory, useActiveSession } = require('../SessionContext');
 const { useSyncEngine, TRANSIENT_RETRY_DELAY_MS } = require('../SyncContext');
 const { useAuth } = require('../AuthContext');
-const { pushSessions, pullSessions } = require('../../services/syncService');
-const { loadSessionHistory, loadActiveSessions } = require('../../services/storageService');
+const { pushSessions, pullSessions, deleteCloudSessions } = require('../../services/syncService');
+const {
+  loadSessionHistory,
+  loadActiveSessions,
+  saveSessionHistory,
+  loadPendingCloudDeletes,
+  addPendingCloudDeletes,
+  removePendingCloudDeletes,
+} = require('../../services/storageService');
 
 let latestApi = null;
 
@@ -72,6 +82,10 @@ async function advanceRetryDelay() {
   });
 }
 
+// Unmounted after each test so a foreground event emitted by a later test
+// doesn't also wake an earlier test's sync engine.
+const mounted = [];
+
 async function renderApp() {
   let renderer;
   await act(async () => {
@@ -81,6 +95,7 @@ async function renderApp() {
       </SessionProvider>
     );
   });
+  mounted.push(renderer);
   await flush();
   return renderer;
 }
@@ -113,11 +128,25 @@ beforeEach(() => {
   loadActiveSessions.mockResolvedValue({});
   pushSessions.mockResolvedValue({ error: null });
   pullSessions.mockResolvedValue({ sessions: [], error: null });
+  deleteCloudSessions.mockResolvedValue({ error: null });
+  loadPendingCloudDeletes.mockResolvedValue([]);
   useAuth.mockReturnValue({ user: null });
   latestApi = null;
 });
 
+// Simulates the app's foreground event, which re-runs reconciliation.
+async function foreground() {
+  const { AppState } = require('react-native');
+  await act(async () => {
+    AppState.__emit('active');
+  });
+  await flush();
+}
+
 afterEach(() => {
+  act(() => {
+    mounted.splice(0).forEach((renderer) => renderer.unmount());
+  });
   jest.useRealTimers();
 });
 
@@ -327,4 +356,147 @@ test('releasing one account\'s sessions leaves another account\'s sessions tagge
   const owners = latestApi.sessionHistory.map((s) => s.syncedUserId);
   expect(owners).toContain('B');
   expect(owners).not.toContain('A');
+});
+
+// --- Deletes stick, and a foreground sync only sends what changed ---
+
+function pushedIds() {
+  return pushSessions.mock.calls.flatMap(([, sessions]) => sessions.map((s) => s.id));
+}
+
+async function signInWithTwoSyncedSessions() {
+  const renderer = await renderApp();
+  createBuyInSession(100, 150);
+  createBuyInSession(50, 20);
+  await signIn(renderer, 'A');
+  const [first, second] = latestApi.sessionHistory;
+  expect(first.syncedUserId).toBe('A');
+  expect(second.syncedUserId).toBe('A');
+  // From here on the cloud holds both, as it would after that push.
+  pullSessions.mockResolvedValue({ sessions: [first, second], error: null });
+  pushSessions.mockClear();
+  return { renderer, first, second };
+}
+
+test('a foreground sync does not re-push sessions the cloud already has', async () => {
+  await signInWithTwoSyncedSessions();
+
+  await foreground();
+
+  expect(pullSessions).toHaveBeenCalled();
+  expect(pushedIds()).toEqual([]);
+  expect(latestApi.sessionHistory).toHaveLength(2);
+});
+
+test('a session deleted on another device is dropped here, not pushed back', async () => {
+  const { first, second } = await signInWithTwoSyncedSessions();
+  // Another device deleted `second`; the cloud now only has `first`.
+  pullSessions.mockResolvedValue({ sessions: [first], error: null });
+
+  await foreground();
+
+  expect(pushedIds()).not.toContain(second.id);
+  expect(latestApi.sessionHistory.map((s) => s.id)).toEqual([first.id]);
+});
+
+test('an empty cloud is not read as "delete everything here"', async () => {
+  await signInWithTwoSyncedSessions();
+  pullSessions.mockResolvedValue({ sessions: [], error: null });
+
+  await foreground();
+
+  // Kept locally (this may be the only copy left), and not pushed back either.
+  expect(latestApi.sessionHistory).toHaveLength(2);
+  expect(pushedIds()).toEqual([]);
+});
+
+test('a failed pull neither drops synced sessions nor re-pushes them', async () => {
+  await signInWithTwoSyncedSessions();
+  pullSessions.mockResolvedValue({ sessions: [], error: { message: 'offline' } });
+
+  await foreground();
+
+  expect(latestApi.sessionHistory).toHaveLength(2);
+  expect(pushedIds()).toEqual([]);
+});
+
+test('a star toggled locally is pushed on the next sync', async () => {
+  const { first } = await signInWithTwoSyncedSessions();
+  // Write-through push fails (offline), so only reconciliation can carry it.
+  pushSessions.mockResolvedValue({ error: { message: 'offline' } });
+  act(() => {
+    latestApi.toggleSessionStar(first.id);
+  });
+  await flush();
+  pushSessions.mockClear();
+  pushSessions.mockResolvedValue({ error: null });
+
+  await foreground();
+
+  expect(pushedIds()).toEqual([first.id]);
+});
+
+test('a session deleted while offline is not pulled back in, and its delete is retried', async () => {
+  const { first, second } = await signInWithTwoSyncedSessions();
+  deleteCloudSessions.mockResolvedValue({ error: { message: 'offline' } });
+
+  act(() => {
+    latestApi.deleteSession(second.id);
+  });
+  await flush();
+
+  expect(addPendingCloudDeletes).toHaveBeenCalledWith('A', [second.id]);
+  expect(removePendingCloudDeletes).not.toHaveBeenCalled();
+
+  // Still offline, and the cloud still has it: the pull must not restore it.
+  loadPendingCloudDeletes.mockResolvedValue([second.id]);
+  await foreground();
+  expect(latestApi.sessionHistory.map((s) => s.id)).toEqual([first.id]);
+  expect(pushedIds()).not.toContain(second.id);
+
+  // Back online: the retried delete lands and the pending record is cleared.
+  deleteCloudSessions.mockResolvedValue({ error: null });
+  deleteCloudSessions.mockClear();
+  await foreground();
+  expect(deleteCloudSessions).toHaveBeenCalledWith('A', [second.id]);
+  expect(removePendingCloudDeletes).toHaveBeenCalledWith('A', [second.id]);
+  expect(latestApi.sessionHistory.map((s) => s.id)).toEqual([first.id]);
+});
+
+// --- Unreadable history is never overwritten ---
+
+test('history that fails to load is not overwritten by later saves', async () => {
+  loadSessionHistory.mockResolvedValue(null);
+
+  await renderApp();
+  createBuyInSession(100, 150);
+  await flush();
+
+  // Retried once before giving up.
+  expect(loadSessionHistory).toHaveBeenCalledTimes(2);
+  expect(saveSessionHistory).not.toHaveBeenCalled();
+  // The session is still usable in memory for this run.
+  expect(latestApi.sessionHistory).toHaveLength(1);
+});
+
+test('history that loads on the retry is saved normally', async () => {
+  loadSessionHistory.mockResolvedValueOnce(null).mockResolvedValueOnce([]);
+
+  await renderApp();
+  createBuyInSession(100, 150);
+  await flush();
+
+  expect(saveSessionHistory).toHaveBeenCalled();
+});
+
+test('erasing all data re-enables saving over an unreadable history', async () => {
+  loadSessionHistory.mockResolvedValue(null);
+
+  await renderApp();
+  act(() => {
+    latestApi.clearAllSessions();
+  });
+  await flush();
+
+  expect(saveSessionHistory).toHaveBeenLastCalledWith([]);
 });

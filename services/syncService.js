@@ -42,16 +42,39 @@ export async function deleteCloudSessions(userId, sessionIds) {
   return { error };
 }
 
+const PULL_PAGE_SIZE = 500;
+
+// Returns the account's complete set of sessions, or an error. Never a partial
+// list: the sync engine treats a synced session missing from a successful pull
+// as deleted on another device, so a truncated pull would read as deletions.
+//
+// That's why this pages instead of issuing one request. PostgREST caps every
+// response at the project's max-rows setting (1000 by default on Supabase)
+// without reporting an error. Paging is keyset on `id` rather than by offset,
+// so rows inserted or deleted elsewhere mid-pull can't shift a page boundary
+// and skip one. It stops on an empty page rather than a short one, because a
+// server cap below PULL_PAGE_SIZE would make every page look like the last.
 export async function pullSessions(userId) {
   if (!userId) return { sessions: [], error: null };
-  const { data, error } = await supabase
-    .from('sessions')
-    .select('data')
-    .eq('user_id', userId)
-    .order('start_time', { ascending: false });
-  if (error) {
-    console.error('syncService: failed to pull sessions', error);
-    return { sessions: [], error };
+  const sessions = [];
+  let lastId = null;
+  for (;;) {
+    let query = supabase
+      .from('sessions')
+      .select('id, data')
+      .eq('user_id', userId)
+      .order('id', { ascending: true })
+      .limit(PULL_PAGE_SIZE);
+    if (lastId) query = query.gt('id', lastId);
+    const { data, error } = await query;
+    if (error) {
+      console.error('syncService: failed to pull sessions', error);
+      return { sessions: [], error };
+    }
+    const rows = data || [];
+    if (!rows.length) break;
+    rows.forEach((row) => sessions.push(row.data));
+    lastId = rows[rows.length - 1].id;
   }
-  return { sessions: (data || []).map((row) => row.data), error: null };
+  return { sessions, error: null };
 }

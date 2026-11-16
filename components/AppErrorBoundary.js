@@ -33,6 +33,7 @@ function CrashScreen({ error, attempts, onRetry }) {
     setNotice(null);
     try {
       const sessions = await loadSessionHistory();
+      if (!sessions) throw new Error('Session history unreadable');
       const { message } = await exportSessionsCsv(sessions);
       if (message) setNotice(message);
     } catch {

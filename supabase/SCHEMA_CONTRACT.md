@@ -30,10 +30,10 @@ Written by `services/syncService.js` (`toRow`).
 | `user_id` | `uuid` not null, FK → `auth.users(id)` on delete cascade | Every query filters on it. |
 | `game_type` | `text` not null | `session.gameType` |
 | `mode` | `text` not null, `check in ('buyInCashOut','hands')` | Matches the two shapes `finalizeSession` produces. **A third mode would be rejected by the database** — update this constraint alongside any new mode. |
-| `start_time` | `timestamptz` not null | `pullSessions` orders by it descending. |
+| `start_time` | `timestamptz` not null | |
 | `end_time` | `timestamptz` not null | |
 | `net_profit` | `numeric` not null default `0` | |
-| `data` | `jsonb` not null | The full record, and **the only column read back** — `pullSessions` selects `data` alone. The scalar columns exist for querying and integrity, not hydration. |
+| `data` | `jsonb` not null | The full record, and **the only column hydrated from** — `pullSessions` selects `id` (as its page cursor) and `data`. The scalar columns exist for querying and integrity, not hydration. |
 | `created_at` | `timestamptz` not null default `now()` | Not read by the client. |
 
 - [x] RLS enabled
@@ -96,8 +96,8 @@ matter once something else changed.
 ### Not captured: indexes
 
 The dashboard query in `capture-schema.sql` reads constraints, not indexes, so
-index coverage is unverified. `pullSessions` filters on `user_id` and orders by
-`start_time` — and Postgres does **not** create an index for a foreign key
+index coverage is unverified. `pullSessions` filters on `user_id` and pages by
+`id` (keyset: `id > last`, ordered by `id`) — and Postgres does **not** create an index for a foreign key
 automatically. Worth checking:
 
 ```sql
@@ -106,7 +106,7 @@ where schemaname = 'public' order by tablename;
 ```
 
 If there's nothing covering `user_id`, `create index on public.sessions
-(user_id, start_time desc);` matches the query exactly. Irrelevant at current
+(user_id, id);` matches the query exactly. Irrelevant at current
 row counts; cheap to add before it isn't.
 
 ## Auth configuration (dashboard, not captured by a schema dump)

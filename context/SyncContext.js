@@ -3,6 +3,11 @@ import { AppState } from 'react-native';
 import { useAuth } from './AuthContext';
 import { useSessionHistory } from './SessionContext';
 import { pushSessions, deleteCloudSessions, pullSessions } from '../services/syncService';
+import {
+  loadPendingCloudDeletes,
+  addPendingCloudDeletes,
+  removePendingCloudDeletes,
+} from '../services/storageService';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -79,7 +84,13 @@ export function useSyncStatus() {
 // update path — live hand-by-hand logging — is untouched by any of this.
 export function useSyncEngine() {
   const { user } = useAuth();
-  const { sessionHistory, isLoaded, mergeSessionsFromCloud, markSessionsSynced } = useSessionHistory();
+  const {
+    sessionHistory,
+    isLoaded,
+    mergeSessionsFromCloud,
+    markSessionsSynced,
+    dropSessionsDeletedElsewhere,
+  } = useSessionHistory();
   const { setStatus } = useSyncStatus();
 
   const reportSyncing = useCallback(
@@ -122,6 +133,16 @@ export function useSyncEngine() {
   // push the same not-yet-known-as-synced sessions a second time.
   const isReconciling = useRef(false);
   const lastForegroundNonce = useRef(0);
+  // In-memory twin of the stored pending-deletes list, updated synchronously.
+  // Storage writes are async, so a reconciliation starting in the instant
+  // between a local delete and its id reaching storage could otherwise pull
+  // that session straight back in.
+  const pendingDeletes = useRef(new Set());
+  // Bumped when a reconciliation finishes, so the write-through effect runs
+  // straight after it. Anything deleted mid-reconcile is skipped by the
+  // write-through (it bails while reconciling), and without this it would
+  // wait for some unrelated history change before reaching the cloud.
+  const [reconcileCount, setReconcileCount] = useState(0);
 
   // On sign-in (null -> user), run the one-time reconciliation across all
   // three (well, four) sync cases: backfill any legacy non-UUID ids so they
@@ -152,28 +173,84 @@ export function useSyncEngine() {
     (async () => {
       try {
         reportSyncing();
-        const { sessions: cloudSessions, error: pullError } = await withTransientRetry(() => pullSessions(userId));
-        if (pullError) reportFailed(pullError);
-        mergeSessionsFromCloud(cloudSessions.map((s) => ({ ...s, syncedUserId: userId })));
 
-        const toPush = sessionHistory.filter((s) => {
+        // Deletes that never reached the cloud go first. Whether or not they
+        // land now, their ids are kept out of what the pull merges back in.
+        const storedPending = await loadPendingCloudDeletes(userId);
+        const pending = new Set([...storedPending, ...pendingDeletes.current]);
+        if (pending.size) {
+          const ids = [...pending];
+          const { error: deleteError } = await withTransientRetry(() => deleteCloudSessions(userId, ids));
+          if (!deleteError) {
+            ids.forEach((id) => pendingDeletes.current.delete(id));
+            await removePendingCloudDeletes(userId, ids);
+          }
+        }
+
+        const { sessions: pulled, error: pullError } = await withTransientRetry(() => pullSessions(userId));
+        if (pullError) reportFailed(pullError);
+        const cloudSessions = pulled.filter((s) => s && !pending.has(s.id));
+        mergeSessionsFromCloud(cloudSessions.map((s) => ({ ...s, syncedUserId: userId })));
+        const cloudById = new Map(cloudSessions.map((s) => [s.id, s]));
+
+        const eligible = sessionHistory.filter((s) => {
           const owner = s.syncedUserId ?? null;
           if (owner && owner !== userId) return false;
           return isSyncable(s);
         });
 
+        // A session already synced to this account that a complete pull no
+        // longer returns was deleted on another device, so it goes here too.
+        // Pushing it back, as this used to, meant deletes never stuck.
+        //
+        // Skipped when the pull failed, since nothing can be inferred from a
+        // failed pull. Also skipped when the account came back completely
+        // empty: that's an "erase everything" on another device, but it's
+        // also what a wiped table or a broken select policy looks like, and
+        // this device's copy may then be the only one left.
+        const canInferDeletes = !pullError && cloudSessions.length > 0;
+        const deletedElsewhere = canInferDeletes
+          ? eligible.filter((s) => s.syncedUserId === userId && !cloudById.has(s.id)).map((s) => s.id)
+          : [];
+        const deletedElsewhereIds = new Set(deletedElsewhere);
+        if (deletedElsewhere.length) dropSessionsDeletedElsewhere(deletedElsewhere);
+
+        // Only push what the cloud doesn't already have: sessions never
+        // synced, and synced ones starred here more recently than the cloud
+        // copy. Re-upserting the whole history on every foreground was most
+        // of what each sync cost.
+        const toPush = eligible.filter((s) => {
+          if (s.syncedUserId !== userId) return true;
+          const cloud = cloudById.get(s.id);
+          return !!cloud && syncVersion(s) > syncVersion(cloud);
+        });
+        const toPushIds = new Set(toPush.map((s) => s.id));
+
         const { error } = await withTransientRetry(() => pushSessions(userId, toPush));
-        const pushed = error ? [] : toPush;
         if (error) reportFailed(error);
         else if (!pullError) reportSynced();
-        if (pushed.length) markSessionsSynced(pushed.map((s) => s.id), userId);
-        knownVersions.current = new Map([
-          ...cloudSessions.map((s) => [s.id, syncVersion(s)]),
-          ...pushed.map((s) => [s.id, syncVersion(s)]),
-        ]);
+        if (!error && toPush.length) markSessionsSynced(toPush.map((s) => s.id), userId);
+
+        // Everything is "known" at its current version except what still
+        // needs pushing, so the write-through effect retries exactly that.
+        // Synced sessions the pull couldn't vouch for are known too, which
+        // stops write-through re-pushing (and resurrecting) them.
+        const known = new Map(cloudSessions.map((s) => [s.id, syncVersion(s)]));
+        eligible.forEach((s) => {
+          if (deletedElsewhereIds.has(s.id)) return;
+          if (toPushIds.has(s.id)) {
+            if (!error) known.set(s.id, syncVersion(s));
+            return;
+          }
+          if (!known.has(s.id)) known.set(s.id, syncVersion(s));
+        });
+        knownVersions.current = known;
+      } catch (err) {
+        reportFailed(err);
       } finally {
         hasReconciled.current = true;
         isReconciling.current = false;
+        setReconcileCount((n) => n + 1);
       }
     })();
   }, [
@@ -182,6 +259,7 @@ export function useSyncEngine() {
     sessionHistory,
     mergeSessionsFromCloud,
     markSessionsSynced,
+    dropSessionsDeletedElsewhere,
     foregroundNonce,
     reportSyncing,
     reportSynced,
@@ -232,16 +310,24 @@ export function useSyncEngine() {
         }
       }
       if (removedIds.length) {
+        // Recorded before the request, so a delete that fails (or never gets
+        // sent because the app dies) is retried by the next reconciliation
+        // instead of being undone by its pull.
+        removedIds.forEach((id) => pendingDeletes.current.add(id));
+        await addPendingCloudDeletes(userId, removedIds);
         const { error } = await withTransientRetry(() => deleteCloudSessions(userId, removedIds));
         if (error) {
           failure = failure || error;
           removedIds.forEach((id) => knownVersions.current.set(id, 0));
+        } else {
+          removedIds.forEach((id) => pendingDeletes.current.delete(id));
+          await removePendingCloudDeletes(userId, removedIds);
         }
       }
       if (failure) reportFailed(failure);
       else reportSynced();
     })();
-  }, [sessionHistory, isLoaded, user, markSessionsSynced, reportSyncing, reportSynced, reportFailed]);
+  }, [sessionHistory, isLoaded, user, markSessionsSynced, reportSyncing, reportSynced, reportFailed, reconcileCount]);
 
   // Reset local sync bookkeeping on sign-out so a later sign-in re-runs
   // reconciliation instead of assuming the previous account's state.
@@ -250,6 +336,9 @@ export function useSyncEngine() {
       hasReconciled.current = false;
       isReconciling.current = false;
       knownVersions.current = new Map();
+      // The stored list is per account and survives this; only the
+      // in-memory copy belongs to the account that just signed out.
+      pendingDeletes.current = new Set();
       setStatus(IDLE_STATUS);
     }
   }, [user, setStatus]);
@@ -270,9 +359,16 @@ export function useCloudRefresh() {
   return useMemo(() => {
     if (!userId) return null;
     return async () => {
-      const { sessions, error } = await pullSessions(userId);
+      const [{ sessions, error }, pending] = await Promise.all([
+        pullSessions(userId),
+        loadPendingCloudDeletes(userId),
+      ]);
       if (error) return;
-      mergeSessionsFromCloud(sessions.map((s) => ({ ...s, syncedUserId: userId })));
+      // Sessions deleted here whose cloud delete hasn't landed yet stay deleted.
+      const pendingIds = new Set(pending);
+      mergeSessionsFromCloud(
+        sessions.filter((s) => s && !pendingIds.has(s.id)).map((s) => ({ ...s, syncedUserId: userId }))
+      );
     };
   }, [userId, mergeSessionsFromCloud]);
 }

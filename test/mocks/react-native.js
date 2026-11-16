@@ -9,11 +9,18 @@
 // Only the surface the contexts actually touch is modelled. Anything else
 // should fail loudly rather than silently return undefined, so add to this
 // deliberately rather than broadening it.
+const appStateListeners = new Set();
+
 module.exports = {
   AppState: {
     currentState: 'active',
     // Returns the subscription shape the callers unsubscribe through.
-    addEventListener: () => ({ remove: () => {} }),
+    addEventListener: (_type, listener) => {
+      appStateListeners.add(listener);
+      return { remove: () => appStateListeners.delete(listener) };
+    },
+    // Test-only: delivers an app-state change to every live listener.
+    __emit: (state) => appStateListeners.forEach((listener) => listener(state)),
   },
   Platform: {
     OS: 'ios',
