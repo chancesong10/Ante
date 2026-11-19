@@ -13,7 +13,7 @@
 <p align="center">
   <img alt="platform" src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-3B2F28" />
   <img alt="status" src="https://img.shields.io/badge/status-Google%20Play%20closed%20testing-B8472A" />
-  <img alt="tests" src="https://img.shields.io/badge/tests-363%20passing-2A734A" />
+  <img alt="tests" src="https://img.shields.io/badge/tests-378%20passing-2A734A" />
 </p>
 
 ---
@@ -129,7 +129,7 @@ Deeper poker analytics with position-aware stats, bankroll goals and budgeting b
 | Storage | AsyncStorage, local-first; auth tokens encrypted with AES-256-CTR, key held in Keychain / Keystore |
 | Backend | Supabase — Postgres, Auth (email + Google OAuth with PKCE), row-level security on every table |
 | Payments | RevenueCat (`react-native-purchases`, RevenueCat Paywalls) |
-| Quality | Jest (363 tests, 21 suites), ESLint 9, GitHub Actions on pushes to `main` and on every PR |
+| Quality | Jest (378 tests, 23 suites), ESLint 9, GitHub Actions on pushes to `main` and on every PR |
 | Release | EAS Build, EAS Update, Google Play Console |
 
 ### Project layout
