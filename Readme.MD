@@ -129,7 +129,7 @@ Deeper poker analytics with position-aware stats, bankroll goals and budgeting b
 | Storage | AsyncStorage, local-first; auth tokens encrypted with AES-256-CTR, key held in Keychain / Keystore |
 | Backend | Supabase — Postgres, Auth (email + Google OAuth with PKCE), row-level security on every table |
 | Payments | RevenueCat (`react-native-purchases`, RevenueCat Paywalls) |
-| Quality | Jest (363 tests, 21 suites), ESLint 9, GitHub Actions on every push and PR |
+| Quality | Jest (363 tests, 21 suites), ESLint 9, GitHub Actions on pushes to `main` and on every PR |
 | Release | EAS Build, EAS Update, Google Play Console |
 
 ### Project layout
@@ -192,10 +192,10 @@ The version code increments automatically. Upload the `.aab` to Play Console.
 **An over-the-air update** — for JavaScript and asset changes only. No store review, no reinstall.
 
 ```bash
-eas update --channel production --message "What changed"
+eas update --channel production --environment production --message "What changed"
 ```
 
-The app checks on launch, downloads in the background, and runs the update the next time it's opened. Builds use a fingerprint runtime version, so an update only reaches builds with matching native code; one that needs a new native build waits for it instead of crashing older installs. Channels are `development`, `preview`, and `production`, one per build profile.
+The app checks on launch, downloads in the background, and runs the update the next time it's opened. `--environment production` matters: without it, `eas update` bundles whatever is in your local `.env`, so a dev Supabase project or test RevenueCat key would ship to real users. Builds use a fingerprint runtime version, so an update only reaches builds with matching native code; one that needs a new native build waits for it instead of crashing older installs. Channels are `development`, `preview`, and `production`, one per build profile.
 
 The Android and iOS folders are gitignored and generated at build time from `app.json`, so native config belongs there rather than in `android/`.
 

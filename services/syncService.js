@@ -1,5 +1,10 @@
 import { supabase } from './supabaseClient';
 
+// Guest-only builds have no client (see supabaseClient.js). Signed out is the
+// only state they can be in, so these are never reached with a user id there;
+// the check just turns a would-be crash into an ordinary sync error.
+const NOT_CONFIGURED = { message: 'Sync is not available in this build' };
+
 // Access control lives in the database, not here. The `.eq('user_id', ...)`
 // filters below narrow a query — they do not enforce anything: the anon key
 // ships inside the app binary, so anyone can extract it and issue their own
@@ -25,6 +30,7 @@ function toRow(userId, session) {
 
 export async function pushSessions(userId, sessions) {
   if (!userId || !sessions?.length) return { error: null };
+  if (!supabase) return { error: NOT_CONFIGURED };
   const rows = sessions.map((s) => toRow(userId, s));
   const { error } = await supabase.from('sessions').upsert(rows, { onConflict: 'id' });
   if (error) console.error('syncService: failed to push sessions', error);
@@ -33,6 +39,7 @@ export async function pushSessions(userId, sessions) {
 
 export async function deleteCloudSessions(userId, sessionIds) {
   if (!userId || !sessionIds?.length) return { error: null };
+  if (!supabase) return { error: NOT_CONFIGURED };
   const { error } = await supabase
     .from('sessions')
     .delete()
@@ -56,6 +63,7 @@ const PULL_PAGE_SIZE = 500;
 // server cap below PULL_PAGE_SIZE would make every page look like the last.
 export async function pullSessions(userId) {
   if (!userId) return { sessions: [], error: null };
+  if (!supabase) return { sessions: [], error: NOT_CONFIGURED };
   const sessions = [];
   let lastId = null;
   for (;;) {

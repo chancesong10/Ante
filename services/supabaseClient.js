@@ -74,22 +74,37 @@ class LargeSecureStore {
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: new LargeSecureStore(),
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-    flowType: 'pkce',
-  },
-});
+// Without both keys the app runs guest-only. createClient throws on a missing
+// URL, and it would do so while this module loads, taking the whole app down
+// on launch. So the client is simply absent instead, and every caller checks.
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured) {
+  console.warn(
+    'supabaseClient: EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY not set — accounts and sync are disabled.'
+  );
+}
+
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storage: new LargeSecureStore(),
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+        flowType: 'pkce',
+      },
+    })
+  : null;
 
 // RN doesn't pause JS timers on backgrounding the way a browser tab does,
 // so auto-refresh has to be driven explicitly off app state.
-AppState.addEventListener('change', (state) => {
-  if (state === 'active') {
-    supabase.auth.startAutoRefresh();
-  } else {
-    supabase.auth.stopAutoRefresh();
-  }
-});
+if (supabase) {
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}

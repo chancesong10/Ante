@@ -500,3 +500,32 @@ test('erasing all data re-enables saving over an unreadable history', async () =
 
   expect(saveSessionHistory).toHaveBeenLastCalledWith([]);
 });
+
+// --- Ending a session is written through immediately ---
+
+test('ending a session removes it from storage at once, not after the debounce', async () => {
+  const { saveActiveSessions } = require('../../services/storageService');
+  await renderApp();
+  act(() => {
+    latestApi.startSession('Poker');
+  });
+  act(() => {
+    latestApi.setSessionBuyInCashOut('Poker', 100, null);
+  });
+  // Let the debounced write persist the live session first.
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(600);
+  });
+  expect(saveActiveSessions).toHaveBeenLastCalledWith(
+    expect.objectContaining({ Poker: expect.objectContaining({ buyIn: 100 }) })
+  );
+  saveActiveSessions.mockClear();
+
+  act(() => {
+    latestApi.endActiveSession('Poker', 100, 150);
+  });
+
+  // Synchronously, with no timers advanced: a kill now can't resurrect it.
+  expect(saveActiveSessions).toHaveBeenCalledWith({});
+  expect(latestApi.sessionHistory).toHaveLength(1);
+});

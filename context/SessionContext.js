@@ -251,6 +251,24 @@ export function resumeStale(session, now = Date.now()) {
   return { ...rest, pausedMs: (session.pausedMs || 0) + Math.max(0, now - staleSince) };
 }
 
+// The live-session map as it's written to storage: empty sessions left out,
+// each stamped with the last moment the app was known to be alive.
+//
+// A session still waiting on the user's answer keeps the timestamp it was last
+// genuinely alive at, so dying a second time before they answer doesn't reset
+// the gap to zero and make it look freshly active. `staleSince` itself is
+// never persisted — it's rederived from `lastActiveAt` on the way back in,
+// which is where the threshold lives.
+function toPersistedActiveSessions(activeSessions, now = Date.now()) {
+  const toPersist = {};
+  Object.entries(activeSessions).forEach(([gameType, session]) => {
+    if (!sessionWorthRestoring(session)) return;
+    const { staleSince, ...rest } = session;
+    toPersist[gameType] = { ...rest, lastActiveAt: staleSince ?? now };
+  });
+  return toPersist;
+}
+
 export function SessionProvider({ children }) {
   // Live sessions, keyed by game type — at most one per game, so Blackjack,
   // Poker, Sports Betting and General can all be running at once. Keying by
@@ -329,20 +347,7 @@ export function SessionProvider({ children }) {
   useEffect(() => {
     if (!isLoaded) return undefined;
     const t = setTimeout(() => {
-      const now = Date.now();
-      const toPersist = {};
-      Object.entries(activeSessions).forEach(([gameType, session]) => {
-        if (!sessionWorthRestoring(session)) return;
-        const { staleSince, ...rest } = session;
-        // A session still waiting on the user's answer keeps the timestamp it
-        // was last genuinely alive at, so dying a second time before they
-        // answer doesn't reset the gap to zero and make it look freshly
-        // active. `staleSince` itself is never persisted — it's rederived
-        // from `lastActiveAt` on the way back in, which is where the
-        // threshold lives.
-        toPersist[gameType] = { ...rest, lastActiveAt: staleSince ?? now };
-      });
-      saveActiveSessions(toPersist);
+      saveActiveSessions(toPersistedActiveSessions(activeSessions));
     }, 500);
     return () => clearTimeout(t);
   }, [activeSessions, isLoaded]);
@@ -356,7 +361,18 @@ export function SessionProvider({ children }) {
     });
   }, []);
 
+  // Also writes the change straight to storage rather than waiting out the
+  // persist effect's debounce. Ending a session saves it to History at once,
+  // so a kill inside that 500ms window would otherwise bring it back on
+  // relaunch as still running — and ending it again would record the same
+  // session twice.
   const dropSession = useCallback((gameType) => {
+    const current = activeSessionsRef.current;
+    if (current[gameType]) {
+      const remaining = { ...current };
+      delete remaining[gameType];
+      saveActiveSessions(toPersistedActiveSessions(remaining));
+    }
     setActiveSessions((prev) => {
       if (!prev[gameType]) return prev;
       const next = { ...prev };

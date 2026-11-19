@@ -62,7 +62,11 @@ function EmptyAddSlot() {
   return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
 }
 
-function MainTabNavigator({ onOpenAddModal }) {
+// Memoized because its parent, AppContent, re-renders on every hand logged
+// (it watches live sessions for the stop-loss alert). With a stable
+// onOpenAddModal, that no longer re-renders the whole tab navigator, Home
+// included, on the app's hottest update path.
+const MainTabNavigator = React.memo(function MainTabNavigator({ onOpenAddModal }) {
   const insets = useSafeAreaInsets();
 
   // Dynamic calculation for bottom floating tab bar across iOS home indicators & Android gesture/button bars
@@ -220,7 +224,7 @@ function MainTabNavigator({ onOpenAddModal }) {
     </Tab.Navigator>
     </View>
   );
-}
+});
 
 // Holds the navigation ref and the end-session provider, so that everything
 // below — AppContent itself, the start-session sheet, and every screen — can
@@ -373,19 +377,32 @@ function AppContent({ navigationRef, navStateRef, appReady, onAppReady }) {
 
 
 
+  const openAddModal = useCallback(() => {
+    hapticLight();
+    setAddModalVisible(true);
+  }, []);
+
   // Paints the gap behind screen transitions in the page colour, instead of
   // React Navigation's default white/black flashing between two cream pages.
-  const navigationTheme = {
-    ...(COLORS.statusBar === 'light' ? DarkTheme : DefaultTheme),
-    colors: {
-      ...(COLORS.statusBar === 'light' ? DarkTheme : DefaultTheme).colors,
-      background: COLORS.background,
-      card: COLORS.card,
-      border: COLORS.cardBorder,
-      text: COLORS.textPrimary,
-      primary: COLORS.accent,
-    },
-  };
+  //
+  // Built once per mount: a new object every render would change the
+  // navigator's theme context on every hand logged and re-render everything
+  // reading it. A palette change still lands, because it remounts this whole
+  // component (see the key in AppShell).
+  const navigationTheme = useMemo(() => {
+    const base = COLORS.statusBar === 'light' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: COLORS.background,
+        card: COLORS.card,
+        border: COLORS.cardBorder,
+        text: COLORS.textPrimary,
+        primary: COLORS.accent,
+      },
+    };
+  }, []);
 
   return (
     <View style={styles.rootContainer}>
@@ -402,14 +419,7 @@ function AppContent({ navigationRef, navStateRef, appReady, onAppReady }) {
       >
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           <Stack.Screen name="MainTabs">
-            {() => (
-              <MainTabNavigator
-                onOpenAddModal={() => {
-                  hapticLight();
-                  setAddModalVisible(true);
-                }}
-              />
-            )}
+            {() => <MainTabNavigator onOpenAddModal={openAddModal} />}
           </Stack.Screen>
           <Stack.Screen name="Blackjack" component={BlackjackScreen} />
           <Stack.Screen name="Poker" component={PokerScreen} />

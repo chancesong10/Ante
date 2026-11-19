@@ -9,13 +9,22 @@ const AuthContext = createContext();
 
 const redirectTo = Linking.createURL('');
 
+// The Supabase client, or a clear error when this build has no Supabase keys
+// (see supabaseClient.js). Every account action goes through here, so the
+// screens' existing error handling shows the message instead of the app
+// crashing on a null client.
+function client() {
+  if (!supabase) throw new Error("Accounts aren't available in this build.");
+  return supabase;
+}
+
 async function exchangeCodeFromUrl(url) {
-  if (!url) return null;
+  if (!url || !supabase) return null;
   const { queryParams } = Linking.parse(url);
   const code = queryParams?.code;
   if (!code) return null;
   try {
-    const { data } = await supabase.auth.exchangeCodeForSession(code);
+    const { data } = await client().auth.exchangeCodeForSession(code);
     return data ?? null;
   } catch (err) {
     // A code can arrive twice (once via openAuthSessionAsync's return value,
@@ -51,7 +60,7 @@ function isNewAuthUser(user) {
 function waitForNextSignIn(timeoutMs = 12000) {
   return new Promise((resolve) => {
     let settled = false;
-    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: sub } = client().auth.onAuthStateChange((event, newSession) => {
       if (settled || event !== 'SIGNED_IN' || !newSession?.user) return;
       settled = true;
       sub.subscription.unsubscribe();
@@ -69,7 +78,8 @@ function waitForNextSignIn(timeoutMs = 12000) {
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Nothing to load in a build without Supabase keys.
+  const [isLoading, setIsLoading] = useState(!!supabase);
   const hasInitialized = useRef(false);
 
   const fetchProfile = useCallback(async (userId) => {
@@ -77,7 +87,7 @@ export function AuthProvider({ children }) {
       setProfile(null);
       return;
     }
-    const { data, error } = await supabase
+    const { data, error } = await client()
       .from('profiles')
       .select('id, username, email')
       .eq('id', userId)
@@ -93,8 +103,12 @@ export function AuthProvider({ children }) {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
+    // Guest-only build: there's no session to restore or listen for, and
+    // isLoading started out false for the same reason.
+    if (!supabase) return undefined;
+
     (async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await client().auth.getSession();
       setSession(data.session);
       if (data.session?.user) {
         await fetchProfile(data.session.user.id);
@@ -102,7 +116,7 @@ export function AuthProvider({ children }) {
       setIsLoading(false);
     })();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: authListener } = client().auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession?.user) {
         fetchProfile(newSession.user.id);
@@ -125,12 +139,12 @@ export function AuthProvider({ children }) {
   }, [fetchProfile]);
 
   const signInWithEmail = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await client().auth.signInWithPassword({ email, password });
     if (error) throw error;
   }, []);
 
   const signUpWithEmail = useCallback(async (email, password, username) => {
-    const { error } = await supabase.auth.signUp({
+    const { error } = await client().auth.signUp({
       email,
       password,
       options: {
@@ -142,7 +156,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await client().auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: true },
     });
@@ -162,12 +176,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await client().auth.signOut();
     if (error) throw error;
   }, []);
 
   const resetPassword = useCallback(async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    const { error } = await client().auth.resetPasswordForEmail(email, { redirectTo });
     if (error) throw error;
   }, []);
 
@@ -185,13 +199,13 @@ export function AuthProvider({ children }) {
       const email = session?.user?.email;
       if (!email) throw new Error('You need to be signed in to change your password.');
 
-      const { error: reauthError } = await supabase.auth.signInWithPassword({
+      const { error: reauthError } = await client().auth.signInWithPassword({
         email,
         password: currentPassword,
       });
       if (reauthError) throw new Error('That current password is not correct.');
 
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await client().auth.updateUser({ password: newPassword });
       if (error) throw error;
     },
     [session]
@@ -200,12 +214,12 @@ export function AuthProvider({ children }) {
   // Google accounts have no password to check, so identity is proved by a
   // one-time code Supabase emails to the address on the account.
   const sendPasswordChangeCode = useCallback(async () => {
-    const { error } = await supabase.auth.reauthenticate();
+    const { error } = await client().auth.reauthenticate();
     if (error) throw error;
   }, []);
 
   const updatePasswordWithCode = useCallback(async (code, newPassword) => {
-    const { error } = await supabase.auth.updateUser({
+    const { error } = await client().auth.updateUser({
       password: newPassword,
       nonce: code.trim(),
     });
@@ -214,7 +228,7 @@ export function AuthProvider({ children }) {
 
   const updateUsername = useCallback(async (newUsername) => {
     if (!session?.user) return;
-    const { error } = await supabase
+    const { error } = await client()
       .from('profiles')
       .update({ username: newUsername, updated_at: new Date().toISOString() })
       .eq('id', session.user.id);
@@ -249,21 +263,21 @@ export function AuthProvider({ children }) {
       if (!session?.user) throw new Error('You need to be signed in to delete your account.');
 
       if (hasPasswordLogin) {
-        const { error: reauthError } = await supabase.auth.signInWithPassword({
+        const { error: reauthError } = await client().auth.signInWithPassword({
           email,
           password: currentPassword || '',
         });
         if (reauthError) throw new Error('That password is not correct.');
       }
 
-      const { error } = await supabase.rpc('delete_account');
+      const { error } = await client().rpc('delete_account');
       if (error) throw error;
 
       // A failure here leaves the account already gone on the server but the
       // stale session still on the device, so don't let it surface as if the
       // deletion itself failed — the next request would 401 anyway.
       try {
-        await supabase.auth.signOut();
+        await client().auth.signOut();
       } catch (err) {
         console.error('AuthContext: sign-out after account deletion failed', err);
       }
